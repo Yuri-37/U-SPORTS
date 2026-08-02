@@ -1,5 +1,6 @@
 # Local env (contains secrets)
 .env
+.env.*.local
 
 # Miscellaneous
 *.class
