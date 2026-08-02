@@ -10,6 +10,8 @@ export interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string }
 }
 
+const STAFF_ROLES = new Set(['Admin', 'Organizer', 'Coach'])
+
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -27,12 +29,33 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
     .from('profiles')
     .select('role')
     .eq('id', data.user.id)
-    .single()
+    .maybeSingle()
+
+  let role = profile?.role as string | null | undefined
+  if (!role) {
+    const { data: athlete } = await supabase
+      .from('athletes')
+      .select('id')
+      .eq('profile_id', data.user.id)
+      .maybeSingle()
+    role = athlete ? 'Athlete' : 'Guest'
+  }
+
+  if (role === 'Organizer' || role === 'Coach') {
+    const { data: org } = await supabase
+      .from('organizers')
+      .select('is_active')
+      .eq('profile_id', data.user.id)
+      .maybeSingle()
+    if (org && !org.is_active) {
+      return res.status(401).json({ error: 'Account deactivated. Contact your admin.' })
+    }
+  }
 
   req.user = {
     id: data.user.id,
     email: data.user.email!,
-    role: profile?.role ?? 'athlete',
+    role,
   }
 
   next()
@@ -46,4 +69,8 @@ export function requireRole(...roles: string[]) {
     }
     next()
   }
+}
+
+export function isStaffRole(role: string | undefined) {
+  return Boolean(role && STAFF_ROLES.has(role))
 }

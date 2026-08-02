@@ -108,3 +108,18 @@ CREATE POLICY "vdocs_select" ON verification_documents FOR SELECT USING (
 CREATE POLICY "vdocs_insert_athlete" ON verification_documents FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM athletes a WHERE a.id = athlete_id AND a.profile_id = auth.uid())
 );
+
+-- Institution / sports_config (tables from 001_institution.sql): write policies reference profiles
+CREATE POLICY "institution_write_super_admin" ON institution
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
+CREATE POLICY "sports_config_write_super_admin" ON sports_config
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );

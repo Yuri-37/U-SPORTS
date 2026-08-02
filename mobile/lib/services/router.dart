@@ -1,50 +1,135 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../screens/home_screen.dart';
-import '../screens/leaderboard_screen.dart';
-import '../screens/events_screen.dart';
-import '../screens/event_detail_screen.dart';
-import '../screens/athlete_profile_screen.dart';
-import '../screens/notifications_screen.dart';
+
+import '../providers/auth_provider.dart';
+import '../screens/athlete/athlete_dashboard_screen.dart';
 import '../screens/auth_screen.dart';
 import '../screens/bracket_screen.dart';
+import '../screens/event_detail_screen.dart';
+import '../screens/events_screen.dart';
+import '../screens/home_screen.dart';
+import '../screens/leaderboard_screen.dart';
+import '../screens/notifications_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/athlete_profile_screen.dart';
+import '../screens/sport_detail_screen.dart';
+import '../screens/team_detail_screen.dart';
+import '../widgets/app_shell.dart';
+
+bool _isGuestAllowedPath(String path) {
+  if (path == '/' || path == '/auth/login') return true;
+  if (path.startsWith('/leaderboards')) return true;
+  if (path.startsWith('/events')) return true;
+  if (path.startsWith('/athletes')) return true;
+  if (path.startsWith('/teams')) return true;
+  if (path.startsWith('/sport/')) return true;
+  if (path == '/settings') return true;
+  return false;
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final supabase = Supabase.instance.client;
+  final refresh = ref.watch(authRefreshNotifierProvider);
 
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
-      final user = supabase.auth.currentUser;
-      final isAuthRoute = state.uri.path.startsWith('/auth');
+    refreshListenable: refresh,
+    redirect: (context, state) async {
+      final path = state.uri.path;
+      final user = Supabase.instance.client.auth.currentUser;
 
-      if (user == null && !isAuthRoute) {
+      if (user == null) {
+        if (_isGuestAllowedPath(path)) return null;
         return '/auth/login';
       }
 
-      // Block organizer/admin from mobile
-      // (enforced server-side; here for UX only)
+      final profile = await ref.read(profileProvider.future);
+      final role = profile?.role ?? 'guest';
+
+      if (path == '/settings') {
+        if (role == 'athlete') return '/athlete/settings';
+        return null;
+      }
+
+      // Staff (Admin/Organizer/Coach — plus legacy super_admin/organizer) must use the web platform.
+      const staffRoles = {'Admin', 'Organizer', 'Coach', 'super_admin', 'organizer'};
+      if (staffRoles.contains(role)) {
+        await Supabase.instance.client.auth.signOut();
+        return '/auth/login';
+      }
+
+      if (path.startsWith('/notifications')) {
+        if (role != 'athlete') return '/';
+        return null;
+      }
+
+      // Athlete "profile" is deprecated — the dashboard is the athlete home.
+      if (path == '/athlete/profile') {
+        return role == 'athlete' ? '/athlete/dashboard' : '/';
+      }
+
+      if (path.startsWith('/athlete/')) {
+        if (role != 'athlete') return '/';
+        return null;
+      }
+
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (ctx, _) => const HomeScreen()),
-      GoRoute(path: '/leaderboards', builder: (ctx, _) => const LeaderboardScreen()),
-      GoRoute(path: '/events', builder: (ctx, _) => const EventsScreen()),
+      // Four persistent tab branches, wrapped in AppShell's bottom nav bar.
+      // Each branch keeps its own Navigator/state across tab switches.
+      StatefulShellRoute.indexedStack(
+        builder: (ctx, state, navigationShell) => AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/', builder: (ctx, _) => const HomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/leaderboards', builder: (ctx, _) => const LeaderboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/events', builder: (ctx, _) => const EventsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/athlete/dashboard', builder: (ctx, _) => const AthleteDashboardScreen()),
+          ]),
+        ],
+      ),
+      // Full-screen routes pushed on top of the shell (no bottom nav).
       GoRoute(
         path: '/events/:id',
-        builder: (ctx, state) => EventDetailScreen(eventId: state.pathParameters['id']!),
+        builder: (ctx, st) => EventDetailScreen(
+          eventId: st.pathParameters['id']!,
+          initialTab: st.uri.queryParameters['tab'] == 'matches' ? 1 : 0,
+        ),
       ),
       GoRoute(
         path: '/events/:id/bracket',
-        builder: (ctx, state) => BracketScreen(eventId: state.pathParameters['id']!),
+        builder: (ctx, st) => BracketScreen(eventId: st.pathParameters['id']!),
       ),
       GoRoute(
         path: '/athletes/:id',
-        builder: (ctx, state) => AthleteProfileScreen(athleteId: state.pathParameters['id']!),
+        builder: (ctx, st) => AthleteProfileScreen(athleteId: st.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/teams/:id',
+        builder: (ctx, st) => TeamDetailScreen(teamId: st.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/sport/:sport',
+        builder: (ctx, st) => SportDetailScreen(sport: st.pathParameters['sport']!),
       ),
       GoRoute(path: '/notifications', builder: (ctx, _) => const NotificationsScreen()),
       GoRoute(path: '/auth/login', builder: (ctx, _) => const AuthScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (ctx, _) => const SettingsScreen(shell: SettingsShell.guest),
+      ),
+      // /athlete/profile is redirected to /athlete/dashboard (see redirect above).
+      GoRoute(
+        path: '/athlete/settings',
+        builder: (ctx, _) => const SettingsScreen(shell: SettingsShell.athlete),
+      ),
     ],
   );
 });

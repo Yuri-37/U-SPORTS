@@ -1,0 +1,116 @@
+{
+  "seasonName": "[MOCK] Three-sport showcase",
+  "demoPassword": "MockLeague123!",
+  "officialCompetitionEvents": [
+    "[MOCK] Official — Basketball Championship",
+    "[MOCK] Official — Volleyball Championship",
+    "[MOCK] Official — Table Tennis Doubles Open"
+  ],
+  "officialEventStatus": "in_progress",
+  "startingLineups": "team_members.lineup_slot set for all teams whose name starts with [MOCK] (BB 5, VB 6, TT 2 active slots)",
+  "bracketsAfterSqlSeed": "From repo root: pnpm seed:mock-brackets (requires apps/server/.env with Supabase service role)",
+  "tryoutPoolEvents": [
+    "[MOCK] Tryout pool — Basketball",
+    "[MOCK] Tryout pool — Volleyball",
+    "[MOCK] Tryout pool — Table Tennis"
+  ],
+  "emailDomain": "Resolved from public.institution.student_email_domain (fallback students.nu-dasma.edu.ph)",
+  "emailPrefixes": {
+    "basketballTryout": "mock-bb-try-001 … mock-bb-try-050",
+    "basketballOfficial": "mock-bb-off-001 … mock-bb-off-050",
+    "volleyballTryout": "mock-vb-try-001 … mock-vb-try-060",
+    "volleyballOfficial": "mock-vb-off-001 … mock-vb-off-060",
+    "tableTennisTryout": "mock-tt-try-001 … mock-tt-try-020",
+    "tableTennisOfficial": "mock-tt-off-001 … mock-tt-off-020"
+  },
+  "basketball": {
+    "tryoutPlayerCount": 50,
+    "tryoutSquads": "teams.roster_context = tryout; team_members.student_profile_id",
+    "tryoutTeamCount": 10,
+    "tryoutRosterSize": 5,
+    "tryoutTeamNames": [
+      "[MOCK] BB Tryout — Copper Court",
+      "[MOCK] BB Tryout — Slate Squad",
+      "[MOCK] BB Tryout — Amber Arc",
+      "[MOCK] BB Tryout — Indigo Heat",
+      "[MOCK] BB Tryout — Pine Press",
+      "[MOCK] BB Tryout — Coral Cutters",
+      "[MOCK] BB Tryout — Opal Outlet",
+      "[MOCK] BB Tryout — Teal Tempo",
+      "[MOCK] BB Tryout — Ruby Rim",
+      "[MOCK] BB Tryout — Onyx Drive"
+    ],
+    "officialPlayerCount": 50,
+    "officialTeamCount": 5,
+    "officialRosterSize": 10,
+    "officialTeamNames": [
+      "[MOCK] Crimson Court Crushers",
+      "[MOCK] Metro Midnight Dunkers",
+      "[MOCK] Harbor Hoop Collective",
+      "[MOCK] Summit Steel Guards",
+      "[MOCK] Varsity Voltage"
+    ]
+  },
+  "volleyball": {
+    "tryoutPlayerCount": 60,
+    "tryoutSquads": "teams.roster_context = tryout; team_members.student_profile_id",
+    "tryoutTeamCount": 10,
+    "tryoutRosterSize": 6,
+    "tryoutTeamNames": [
+      "[MOCK] VB Tryout — Crest Crew",
+      "[MOCK] VB Tryout — Drift Division",
+      "[MOCK] VB Tryout — Echo Elite",
+      "[MOCK] VB Tryout — Forge Five",
+      "[MOCK] VB Tryout — Glide Group",
+      "[MOCK] VB Tryout — Haven Hitters",
+      "[MOCK] VB Tryout — Ion Impact",
+      "[MOCK] VB Tryout — Jolt Junction",
+      "[MOCK] VB Tryout — Keel Keys",
+      "[MOCK] VB Tryout — Lumen Line"
+    ],
+    "officialPlayerCount": 60,
+    "officialTeamCount": 5,
+    "officialRosterSize": 12,
+    "officialTeamNames": [
+      "[MOCK] Coastal Spike Syndicate",
+      "[MOCK] Granite Block Brigade",
+      "[MOCK] Aurora Ace Attackers",
+      "[MOCK] Pacific Setter Squad",
+      "[MOCK] Crown Court Royals"
+    ]
+  },
+  "tableTennis": {
+    "format": "doubles",
+    "tryoutPlayerCount": 20,
+    "tryoutSquads": "teams.roster_context = tryout; team_members.student_profile_id",
+    "tryoutPairCount": 10,
+    "tryoutRosterSize": 2,
+    "tryoutTeamNames": [
+      "[MOCK] TT Tryout — Pair Nova",
+      "[MOCK] TT Tryout — Pair Comet",
+      "[MOCK] TT Tryout — Pair Atlas",
+      "[MOCK] TT Tryout — Pair Vega",
+      "[MOCK] TT Tryout — Pair Orion",
+      "[MOCK] TT Tryout — Pair Lyra",
+      "[MOCK] TT Tryout — Pair Sirius",
+      "[MOCK] TT Tryout — Pair Polaris",
+      "[MOCK] TT Tryout — Pair Zenith",
+      "[MOCK] TT Tryout — Pair Apex"
+    ],
+    "officialPlayerCount": 20,
+    "officialPairCount": 10,
+    "officialRosterSize": 2,
+    "officialTeamNames": [
+      "[MOCK] TT Doubles — Raven Blacktops",
+      "[MOCK] TT Doubles — Silver Spinners",
+      "[MOCK] TT Doubles — Jade Spin Doctors",
+      "[MOCK] TT Doubles — Cobalt Corners",
+      "[MOCK] TT Doubles — Amber Arches",
+      "[MOCK] TT Doubles — Vertex Volleys",
+      "[MOCK] TT Doubles — Neon Net Nomads",
+      "[MOCK] TT Doubles — Quartz Quickhands",
+      "[MOCK] TT Doubles — Ember Edge Pair",
+      "[MOCK] TT Doubles — Orion Paddle Pros"
+    ]
+  }
+}

@@ -8,6 +8,8 @@ interface NotificationState {
   fetchNotifications: (userId: string) => Promise<void>
   markRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
+  deleteNotification: (id: string, userId: string) => Promise<void>
+  clearAll: (userId: string) => Promise<void>
   addNotification: (notification: Notification) => void
 }
 
@@ -16,26 +18,42 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   unreadCount: 0,
 
   fetchNotifications: async (userId) => {
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('recipient_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50)
+    const [listRes, countRes] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .eq('read', false),
+    ])
 
-    const notifications = data ?? []
+    const notifications = listRes.data ?? []
+    const unreadCount =
+      typeof countRes.count === 'number'
+        ? countRes.count
+        : notifications.filter((n) => !n.read).length
     set({
       notifications,
-      unreadCount: notifications.filter((n) => !n.read).length,
+      unreadCount,
     })
   },
 
   markRead: async (id) => {
+    const recipientId = get().notifications.find((n) => n.id === id)?.recipient_id
     await supabase.from('notifications').update({ read: true }).eq('id', id)
-    set((state) => ({
-      notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-      unreadCount: Math.max(0, state.unreadCount - 1),
-    }))
+    if (recipientId) {
+      await get().fetchNotifications(recipientId)
+    } else {
+      set((state) => ({
+        notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        unreadCount: Math.max(0, state.unreadCount - 1),
+      }))
+    }
   },
 
   markAllRead: async (userId) => {
@@ -44,16 +62,26 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       .update({ read: true })
       .eq('recipient_id', userId)
       .eq('read', false)
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
-      unreadCount: 0,
-    }))
+    await get().fetchNotifications(userId)
+  },
+
+  deleteNotification: async (id, userId) => {
+    await supabase.from('notifications').delete().eq('id', id).eq('recipient_id', userId)
+    await get().fetchNotifications(userId)
+  },
+
+  clearAll: async (userId) => {
+    await supabase.from('notifications').delete().eq('recipient_id', userId)
+    await get().fetchNotifications(userId)
   },
 
   addNotification: (notification) => {
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-      unreadCount: state.unreadCount + (notification.read ? 0 : 1),
-    }))
+    set((state) => {
+      if (state.notifications.some((n) => n.id === notification.id)) return state
+      return {
+        notifications: [notification, ...state.notifications],
+        unreadCount: state.unreadCount + (notification.read ? 0 : 1),
+      }
+    })
   },
 }))

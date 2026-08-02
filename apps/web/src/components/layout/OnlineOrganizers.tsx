@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { getInitials, cn } from '../../lib/utils'
 import { useNavigate } from 'react-router'
+import { sessionScopedProfile } from '../../lib/sessionProfile'
 
 interface PresenceState {
   user_id: string
@@ -13,7 +14,8 @@ interface PresenceState {
 }
 
 export default function OnlineOrganizers() {
-  const { profile } = useAuthStore()
+  const { profile, session } = useAuthStore()
+  const scopedProfile = sessionScopedProfile(session, profile)
   const [online, setOnline] = useState<PresenceState[]>([])
   const [expanded, setExpanded] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -22,10 +24,16 @@ export default function OnlineOrganizers() {
   const [isIdle, setIsIdle] = useState(false)
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'organizer' && profile.role !== 'super_admin')) return
+    if (
+      !scopedProfile ||
+      (scopedProfile.role !== 'Organizer' &&
+        scopedProfile.role !== 'Coach' &&
+        scopedProfile.role !== 'Admin')
+    )
+      return
 
     const channel = supabase.channel('organizer-presence', {
-      config: { presence: { key: profile.id } },
+      config: { presence: { key: scopedProfile.id } },
     })
 
     channelRef.current = channel
@@ -34,14 +42,14 @@ export default function OnlineOrganizers() {
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState<PresenceState>()
         const all = Object.values(state).flat()
-        setOnline(all.filter((s) => s.user_id !== profile.id))
+        setOnline(all.filter((s) => s.user_id !== scopedProfile.id))
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
-            user_id: profile.id,
-            full_name: profile.full_name,
-            role: profile.role,
+            user_id: scopedProfile.id,
+            full_name: scopedProfile.full_name,
+            role: scopedProfile.role,
             current_page: window.location.pathname,
             online_at: new Date().toISOString(),
           })
@@ -63,7 +71,7 @@ export default function OnlineOrganizers() {
       window.removeEventListener('keydown', resetIdle)
       if (idleTimer.current) clearTimeout(idleTimer.current)
     }
-  }, [profile])
+  }, [scopedProfile])
 
   if (online.length === 0) return null
 
@@ -80,12 +88,12 @@ export default function OnlineOrganizers() {
           <div
             className={cn(
               'absolute bottom-0 right-0 w-2 h-2 rounded-full border-2 border-[var(--surface-card)]',
-              isIdle ? 'bg-yellow-400' : 'bg-[#00FF88]'
+              isIdle ? 'bg-amber-400' : 'bg-[var(--success)]'
             )}
           />
           {/* Tooltip */}
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-            <p className="font-semibold text-white">{user.full_name}</p>
+            <p className="font-semibold text-[var(--text-primary)]">{user.full_name}</p>
             <p className="text-[var(--text-muted)] capitalize">{user.role.replace('_', ' ')}</p>
             <p className="text-[var(--text-muted)] truncate">{user.current_page}</p>
           </div>
@@ -94,7 +102,7 @@ export default function OnlineOrganizers() {
       {overflow > 0 && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-7 h-7 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)] hover:text-white"
+          className="w-7 h-7 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)]"
         >
           +{overflow}
         </button>

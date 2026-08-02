@@ -1,16 +1,15 @@
 ﻿import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
+import 'event_detail_screen.dart';
+
+/// Kept for backward-compatible deep links; bracket lives in [EventDetailScreen] tab 0.
 class BracketScreen extends StatelessWidget {
-  final String eventId;
   const BracketScreen({super.key, required this.eventId});
+
+  final String eventId;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgPrimary,
-      appBar: AppBar(title: const Text('Bracket'), ),
-      body: const Center(child: Text('Loading...', style: TextStyle(color: AppTheme.textMuted))),
-    );
+    return EventDetailScreen(eventId: eventId, initialTab: 0);
   }
 }

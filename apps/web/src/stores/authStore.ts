@@ -11,6 +11,8 @@ interface AuthState {
   athlete: Athlete | null
   organizer: Organizer | null
   loading: boolean
+  /** Clears persisted profile rows when session user changes or signs out */
+  clearStaleRoleData: () => void
   setSession: (session: Session | null) => void
   setProfile: (profile: Profile | null) => void
   setAthlete: (athlete: Athlete | null) => void
@@ -36,34 +38,55 @@ export const useAuthStore = create<AuthState>()(
       setOrganizer: (organizer) => set({ organizer }),
       setLoading: (loading) => set({ loading }),
 
+      clearStaleRoleData: () => set({ profile: null, athlete: null, organizer: null }),
+
       fetchProfile: async (userId: string) => {
         try {
-          const { data: profile } = await supabase
+          const { data: profileRow } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .single()
+            .maybeSingle()
 
-          if (!profile) return
-          set({ profile })
+          if (!profileRow) return
 
-          if (profile.role === 'athlete') {
-            const { data: athlete } = await supabase
-              .from('athletes')
-              .select('*')
-              .eq('profile_id', userId)
-              .single()
-            set({ athlete: athlete ?? null })
-          }
+          // Post-037: profiles.role is one of Admin/Organizer/Coach or null.
+          const dbRole = (profileRow.role ?? null) as 'Admin' | 'Organizer' | 'Coach' | null
 
-          if (profile.role === 'organizer') {
-            const { data: organizer } = await supabase
+          // Organizers and Coaches both have an organizers row (sport scope, active flag).
+          let organizer: Organizer | null = null
+          if (dbRole === 'Organizer' || dbRole === 'Coach') {
+            const { data } = await supabase
               .from('organizers')
               .select('*')
               .eq('profile_id', userId)
-              .single()
-            set({ organizer: organizer ?? null })
+              .maybeSingle()
+            organizer = data ?? null
           }
+
+          // Athlete identity is the presence of an athletes row (DB role is null for them).
+          let athlete: Athlete | null = null
+          if (!dbRole) {
+            const { data } = await supabase
+              .from('athletes')
+              .select('*')
+              .eq('profile_id', userId)
+              .maybeSingle()
+            athlete = data ?? null
+          }
+
+          const effectiveRole: Profile['role'] =
+            dbRole === 'Admin'
+              ? 'Admin'
+              : dbRole === 'Organizer'
+              ? 'Organizer'
+              : dbRole === 'Coach'
+              ? 'Coach'
+              : athlete
+              ? 'Athlete'
+              : 'Guest'
+
+          set({ profile: { ...profileRow, role: effectiveRole }, athlete, organizer })
         } catch (err) {
           console.error('Failed to fetch profile:', err)
         }

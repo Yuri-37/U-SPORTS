@@ -1,0 +1,37 @@
+/** Keys mirror actionTypeToStatKeys() in apps/server/src/services/matchReviewData.ts. */
+export const STAT_KEYS: Record<string, { key: string; label: string }[]> = {
+  basketball: [
+    { key: 'total_points', label: 'PTS' },
+    { key: 'fg_made', label: 'FGM' },
+    { key: 'fg_attempted', label: 'FGA' },
+    { key: 'three_made', label: '3PM' },
+    { key: 'three_attempted', label: '3PA' },
+    { key: 'ft_made', label: 'FTM' },
+    { key: 'ft_attempted', label: 'FTA' },
+    { key: 'total_rebounds', label: 'REB' },
+    { key: 'off_rebounds', label: 'OREB' },
+    { key: 'total_assists', label: 'AST' },
+    { key: 'total_steals', label: 'STL' },
+    { key: 'total_blocks', label: 'BLK' },
+    { key: 'turnovers', label: 'TO' },
+    { key: 'fouls', label: 'PF' },
+  ],
+  volleyball: [
+    { key: 'pts_scored', label: 'PTS' },
+    { key: 'kills', label: 'Kills' },
+    { key: 'attacks', label: 'Att' },
+    { key: 'aces', label: 'Aces' },
+    { key: 'digs', label: 'Digs' },
+    { key: 'blocks', label: 'Blocks' },
+    { key: 'assists', label: 'Sets' },
+    { key: 'errors', label: 'Err' },
+    { key: 'serve_errors', label: 'Srv Err' },
+    { key: 'reception_errors', label: 'Rcv Err' },
+  ],
+  'table-tennis': [
+    { key: 'pts_scored', label: 'PTS' },
+    { key: 'winners', label: 'Winners' },
+    { key: 'aces', label: 'Aces' },
+    { key: 'errors', label: 'Err' },
+  ],
+}

@@ -35,6 +35,8 @@ u-sports/
 
 Create a project at [supabase.com](https://supabase.com). Copy **Project URL**, **anon** key, and **service_role** key from **Project Settings → API**.
 
+For production auth email (confirmation, password reset), use **custom SMTP** so you are not limited to Supabase’s shared mail quota. Free-tier options and dashboard steps: [`supabase/SMTP.md`](supabase/SMTP.md).
+
 ### 2. Apply database migrations (pick one)
 
 **Option A — SQL Editor (no CLI):**

@@ -15,6 +15,17 @@ major_version = 15
 [studio]
 port = 54323
 
+# Local email catcher (Supabase CLI runs Mailpit; this table name is kept for compatibility).
+# After `supabase start`, open the inbox at http://127.0.0.1:54324
+[inbucket]
+enabled = true
+port = 54324
+
+# Loosen local auth throttling so signup / magic-link / OTP testing is not blocked.
+[auth.rate_limit]
+sign_in_sign_ups = 100
+token_verifications = 100
+
 [auth]
 site_url = "http://localhost:5173"
 additional_redirect_urls = ["https://localhost:5173"]
@@ -24,7 +35,9 @@ enable_signup = true
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = true
+# Must be false for student registration to upload COR in the same session (storage RLS needs auth.uid()).
+# On hosted Supabase: Auth → Email → disable "Confirm email" for the same flow, or confirm email then sign in and upload COR from profile.
+enable_confirmations = false
 
 [storage]
 enabled = true

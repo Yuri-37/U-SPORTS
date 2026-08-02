@@ -10,12 +10,24 @@
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:server": "pnpm --filter server dev",
-    "dev": "pnpm run dev:web & pnpm run dev:server",
+    "dev": "concurrently -n web,server -c cyan,magenta \"pnpm dev:web\" \"pnpm dev:server\"",
     "build:web": "pnpm --filter web build",
     "build:server": "pnpm --filter server build",
     "env:init": "powershell -ExecutionPolicy Bypass -File scripts/init-local-env.ps1",
     "db:combine": "powershell -ExecutionPolicy Bypass -File scripts/combine-migrations.ps1",
     "db:push": "npx supabase db push",
-    "db:link": "npx supabase link"
+    "db:reset": "npx supabase db reset",
+    "db:seed:dev": "npx supabase db query --local -f supabase/seed_dev_people.sql --agent=no",
+    "db:link": "npx supabase link",
+    "db:repair-baseline": "powershell -ExecutionPolicy Bypass -File scripts/supabase-repair-baseline.ps1",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
+    "seed:insights-demo": "pnpm --filter server seed:insights-demo",
+    "seed:insights-demo:player": "pnpm --filter server seed:insights-demo:player",
+    "seed:mock-brackets": "pnpm --filter server seed:mock-brackets"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

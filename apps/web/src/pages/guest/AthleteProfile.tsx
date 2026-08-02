@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
-import { Card, Badge, Skeleton } from '../../components/ui'
+import { useNavigate, useParams } from 'react-router'
+import { ArrowLeft } from 'lucide-react'
+import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 
 export default function GuestAthleteProfile() {
+  const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const [athlete, setAthlete] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
@@ -14,19 +16,66 @@ export default function GuestAthleteProfile() {
   useEffect(() => {
     if (!id) return
     Promise.all([
-      supabase.from('athletes').select('*, profile:profiles(full_name, avatar_url)').eq('id', id).eq('verification_status', 'approved').single(),
-      supabase.from('player_season_stats').select('*').eq('athlete_id', id).order('updated_at', { ascending: false }).limit(1).single(),
+      supabase.from('athletes').select('*, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url)').eq('id', id).maybeSingle(),
+      supabase.from('player_season_stats').select('*').eq('athlete_id', id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('insights').select('*').eq('entity_type', 'player').eq('entity_id', id).limit(3),
     ]).then(([a, s, ins]) => {
       setAthlete(a.data); setStats(s.data); setInsights(ins.data ?? [])
     }).finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <div className="max-w-xl mx-auto px-4 py-8 space-y-4">{Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-24" />)}</div>
-  if (!athlete) return <div className="text-center py-16 text-[var(--text-muted)]">Athlete not found</div>
+  const goBack = () => {
+    navigate(-1)
+  }
+
+  if (loading)
+    return (
+      <div className="max-w-xl mx-auto px-4 py-8 space-y-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft className="w-4 h-4" />}
+          className="-ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          onClick={goBack}
+        >
+          Back
+        </Button>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
+      </div>
+    )
+  if (!athlete)
+    return (
+      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft className="w-4 h-4" />}
+          className="-ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          onClick={goBack}
+        >
+          Back
+        </Button>
+        <div className="text-center py-16 text-[var(--text-muted)]">Athlete not found</div>
+      </div>
+    )
 
   return (
     <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        icon={<ArrowLeft className="w-4 h-4" />}
+        className="-ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        onClick={goBack}
+      >
+        Back
+      </Button>
+
       <Card className="flex items-center gap-5">
         <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xl font-bold text-[var(--school-secondary)]">
           {getInitials(athlete.profile?.full_name ?? '?')}

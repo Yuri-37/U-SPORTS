@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Local Supabase/API use http:// — cleartext is blocked by default on Android 9+. -->
     <application
         android:label="u_sports_mobile"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
+        <!-- Required on Android 13+ (API 33+): without this, the OS bypasses
+             Flutter's PopScope/back handling and just finishes the Activity
+             on a single back press, breaking DoubleBackToExit app-wide. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

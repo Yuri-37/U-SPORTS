@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { getSportLabel, getSportIcon, formatDate } from '../../lib/utils'
+import { getSportLabel, getSportIcon, eventPublicLifecycleLabel } from '../../lib/utils'
 
 export default function AthleteEvents() {
   const { athlete } = useAuthStore()
@@ -17,13 +17,30 @@ export default function AthleteEvents() {
       .select('team_id, team:teams(id, name, sport, events:event_participants(event:events(*)))')
       .eq('athlete_id', athlete.id)
       .then(({ data }) => {
-        const allMatches: any[] = []
-        ;(data ?? []).forEach((tm: any) => {
-          tm.team?.events?.forEach((ep: any) => {
-            if (ep.event) allMatches.push({ ...ep.event, teamName: tm.team?.name })
-          })
-        })
-        setMatches(allMatches)
+        const byEventId = new Map<string, Record<string, unknown> & { id: string; teamName?: string }>()
+        for (const tm of data ?? []) {
+          const rows = tm as { team?: { name?: string; events?: Array<{ event?: Record<string, unknown> & { id?: string } }> } }
+          for (const ep of rows.team?.events ?? []) {
+            const ev = ep.event as (Record<string, unknown> & { id?: string }) | null | undefined
+            const id = typeof ev?.id === 'string' ? ev.id : undefined
+            if (!id) continue
+
+            const tname = rows.team?.name
+            const existing = byEventId.get(id)
+            if (!existing) {
+              byEventId.set(id, {
+                ...(ev as Record<string, unknown> & { id: string }),
+                teamName: tname,
+              } as Record<string, unknown> & { id: string; teamName?: string })
+              continue
+            }
+
+            const parts = [...String(existing.teamName ?? '').split(',').map((s) => s.trim()).filter(Boolean)]
+            if (tname && !parts.includes(tname)) parts.push(tname)
+            if (parts.length > 0) existing.teamName = parts.join(', ')
+          }
+        }
+        setMatches([...byEventId.values()])
         setLoading(false)
       })
   }, [athlete])
@@ -49,7 +66,7 @@ export default function AthleteEvents() {
                 <p className="text-xs text-[var(--text-muted)]">{getSportLabel(e.sport as any)} · {e.teamName}</p>
               </div>
               <Badge variant={e.status === 'in_progress' ? 'danger' : e.status === 'completed' ? 'success' : 'default'}>
-                {e.status}
+                {eventPublicLifecycleLabel(e.status)}
               </Badge>
             </Card>
           ))}

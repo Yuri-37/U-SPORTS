@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Institution, SportConfig } from '../types'
 import { supabase } from '../lib/supabase'
 import { applyTheme } from '../lib/utils'
+import { resolveInstitutionLogoUrl } from '../lib/institutionLogoUrl'
 
 interface InstitutionState {
   institution: Institution | null
@@ -19,23 +20,43 @@ export const useInstitutionStore = create<InstitutionState>()((set) => ({
   fetchInstitution: async () => {
     set({ loading: true })
     try {
-      const { data: institution } = await supabase
+      const { data: institution, error: instError } = await supabase
         .from('institution')
         .select('*')
         .maybeSingle()
 
-      const { data: sports } = await supabase
+      if (instError) {
+        console.error('Failed to fetch institution:', instError.message)
+        set({ institution: null, sports: [] })
+        return
+      }
+
+      const { data: sports, error: sportsError } = await supabase
         .from('sports_config')
         .select('*')
         .eq('is_active', true)
         .order('display_name')
 
+      if (sportsError) {
+        console.error('Failed to fetch sports_config:', sportsError.message)
+      }
+
       if (institution) {
         applyTheme(institution.primary_color, institution.secondary_color)
-        set({ institution, sports: sports ?? [] })
       }
+      const inst = institution
+        ? {
+            ...institution,
+            logo_url: resolveInstitutionLogoUrl(institution.logo_url) ?? institution.logo_url,
+          }
+        : null
+      set({
+        institution: inst,
+        sports: sportsError ? [] : sports ?? [],
+      })
     } catch (err) {
       console.error('Failed to fetch institution:', err)
+      set({ institution: null, sports: [] })
     } finally {
       set({ loading: false })
     }
@@ -43,6 +64,11 @@ export const useInstitutionStore = create<InstitutionState>()((set) => ({
 
   setInstitution: (institution) => {
     applyTheme(institution.primary_color, institution.secondary_color)
-    set({ institution })
+    set({
+      institution: {
+        ...institution,
+        logo_url: resolveInstitutionLogoUrl(institution.logo_url) ?? institution.logo_url,
+      },
+    })
   },
 }))

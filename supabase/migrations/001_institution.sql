@@ -36,21 +36,8 @@ ALTER TABLE sports_config ENABLE ROW LEVEL SECURITY;
 -- Anyone can read institution (needed for setup check, guest hub branding)
 CREATE POLICY "institution_read_all" ON institution FOR SELECT USING (TRUE);
 
--- Only super admin can write institution
-CREATE POLICY "institution_write_super_admin" ON institution
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'
-    )
-  );
+-- Super-admin institution/sports_config write policies live in 002_profiles_roles.sql
+-- (profiles must exist before policies can reference it).
 
 -- Anyone can read sports config
 CREATE POLICY "sports_config_read_all" ON sports_config FOR SELECT USING (TRUE);
-
--- Only super admin can write sports config
-CREATE POLICY "sports_config_write_super_admin" ON sports_config
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'
-    )
-  );

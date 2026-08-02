@@ -1,8 +1,16 @@
-export type Role = 'super_admin' | 'organizer' | 'athlete'
+/** Staff roles stored on `profiles.role` (post-migration 037). Athletes carry a null DB role. */
+export type StaffRole = 'Admin' | 'Organizer' | 'Coach'
+
+/**
+ * Effective role used throughout the UI. `Admin`/`Organizer`/`Coach` come from
+ * `profiles.role`; `Athlete` is derived from the presence of an `athletes` row;
+ * `Guest` is any signed-in user with neither.
+ */
+export type Role = StaffRole | 'Athlete' | 'Guest'
+
+export type EnrollmentStatus = 'unverified' | 'verified'
 
 export type Sport = 'basketball' | 'volleyball' | 'table-tennis'
-
-export type VerificationStatus = 'pending' | 'under_review' | 'approved' | 'rejected'
 
 export type SeasonStatus = 'active' | 'inactive'
 
@@ -20,7 +28,7 @@ export type AnnouncementUrgency = 'critical' | 'high' | 'normal' | 'low'
 
 export type AudienceType = 'all' | 'sport' | 'event' | 'team'
 
-export type InsightType = 'trending_up' | 'trending_down' | 'streak' | 'milestone'
+export type InsightType = 'trending_up' | 'trending_down' | 'streak' | 'milestone' | 'debut_standout' | 'first_win'
 
 export type ParticipantType = 'team' | 'athlete' | 'doubles_pair'
 
@@ -35,9 +43,6 @@ export interface Institution {
   banner_url: string | null
   address: string
   region: string
-  staff_email_domain: string
-  student_email_domain: string
-  is_setup_complete: boolean
   created_at: string
 }
 
@@ -65,6 +70,14 @@ export interface Profile {
   avatar_url: string | null
   email: string
   created_at: string
+  enrollment_status?: EnrollmentStatus | null
+  /** Set when an organizer moved enrollment from verified → unverified; drives resubmit-COR copy in the app. */
+  enrollment_verification_reset_at?: string | null
+  student_id?: string | null
+  year_level?: string | null
+  department?: string | null
+  /** Null means the user has never used self-service change-password. */
+  password_changed_at?: string | null
 }
 
 export interface Organizer {
@@ -85,20 +98,8 @@ export interface Athlete {
   jersey_number: string | null
   year_level: string
   department: string
-  verification_status: VerificationStatus
   season_status: SeasonStatus
-  reviewer_id: string | null
-  review_notes: string | null
-  reviewed_at: string | null
   profile?: Profile
-}
-
-export interface VerificationDocument {
-  id: string
-  athlete_id: string
-  document_type: 'cor' | 'medical_cert'
-  file_url: string
-  uploaded_at: string
 }
 
 export interface Team {
@@ -107,6 +108,7 @@ export interface Team {
   sport: Sport
   season_id: string
   captain_id: string | null
+  department?: string | null
   members?: Athlete[]
   coaches?: Organizer[]
 }
@@ -128,18 +130,12 @@ export interface Event {
   format: EventFormat
   status: EventStatus
   category: string | null
+  description?: string | null
   created_by: string
   created_at: string
   season?: Season
 }
 
-export interface EventParticipant {
-  id: string
-  event_id: string
-  participant_id: string
-  participant_type: ParticipantType
-  seed: number | null
-}
 
 export interface Bracket {
   id: string
@@ -166,6 +162,13 @@ export interface Match {
   venue: string | null
   scored_by: string | null
   scoring_locked_by: string | null
+  finalized_at: string | null
+  /** Persisted game clock (basketball) — see migration 055. Null until a scorer starts the clock. */
+  clock_seconds?: number | null
+  clock_running?: boolean
+  shot_clock_seconds?: number | null
+  shot_clock_running?: boolean
+  clock_updated_at?: string | null
 }
 
 export interface MatchScore {
@@ -178,6 +181,8 @@ export interface MatchScore {
   q3?: number
   q4?: number
   ot?: number
+  ot2?: number
+  ot3?: number
   total?: number
   set1?: number
   set2?: number
@@ -190,6 +195,8 @@ export interface MatchScore {
   game3?: number
   game4?: number
   game5?: number
+  game6?: number
+  game7?: number
   games_won?: number
 }
 
@@ -246,6 +253,7 @@ export interface Insight {
   entity_type: 'player' | 'team'
   entity_id: string
   sport: Sport
+  season_id?: string | null
   insight_text: string
   insight_type: InsightType
   data: Record<string, unknown>
@@ -259,13 +267,17 @@ export interface Announcement {
   type: AnnouncementType
   title: string
   body: string
+  /** Auto-derived from type by DB trigger (emergency→critical, reschedule→high, system→low, reminder→normal). */
   urgency: AnnouncementUrgency
   audience_type: AudienceType
   audience_id: string | null
+  /** Set when audience_type === 'sport'; holds the sport slug (basketball/volleyball/table-tennis). */
+  audience_sport: string | null
   is_public: boolean
   linked_match_id: string | null
   new_scheduled_at: string | null
   new_venue: string | null
+  display_mode: 'banner' | 'notification_only' | 'hero_slider'
   published_at: string
   expires_at: string | null
   creator?: Profile

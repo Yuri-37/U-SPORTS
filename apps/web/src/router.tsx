@@ -2,67 +2,75 @@ import React from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 import App from './App'
 
-// Layouts
+// Layouts (small, always needed — kept eager)
 import AppLayout from './components/layout/AppLayout'
+import RootRedirect from './components/RootRedirect'
 import GuestLayout from './components/layout/GuestLayout'
 
-// Setup
-import SetupPage from './pages/setup/SetupPage'
+// Errors (must render even if a lazy chunk fails to load — kept eager)
+import RouteErrorPage from './pages/error/RouteErrorPage'
 
 // Auth
-import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'))
 
 // Super Admin
-import SuperAdminDashboard from './pages/super-admin/Dashboard'
-import SuperAdminOrganizers from './pages/super-admin/Organizers'
-import SuperAdminSeasons from './pages/super-admin/Seasons'
-import SuperAdminSettings from './pages/super-admin/Settings'
-import SuperAdminAudit from './pages/super-admin/AuditLogs'
+const SuperAdminLoginPage = React.lazy(() => import('./pages/super-admin/SuperAdminLoginPage'))
+const SuperAdminDashboard = React.lazy(() => import('./pages/super-admin/Dashboard'))
+const SuperAdminOrganizers = React.lazy(() => import('./pages/super-admin/Organizers'))
+const SuperAdminSeasons = React.lazy(() => import('./pages/super-admin/Seasons'))
+const SuperAdminSettings = React.lazy(() => import('./pages/super-admin/Settings'))
+const SuperAdminPreferences = React.lazy(() => import('./pages/super-admin/Preferences'))
+const SuperAdminAudit = React.lazy(() => import('./pages/super-admin/AuditLogs'))
 
 // Organizer
-import OrganizerDashboard from './pages/organizer/Dashboard'
-import OrganizerEvents from './pages/organizer/Events'
-import OrganizerEventDetail from './pages/organizer/EventDetail'
-import OrganizerAthletes from './pages/organizer/Athletes'
-import OrganizerTeams from './pages/organizer/Teams'
-import OrganizerScoring from './pages/organizer/Scoring'
-import OrganizerAnalytics from './pages/organizer/Analytics'
-import OrganizerAnnouncements from './pages/organizer/Announcements'
-import OrganizerSettings from './pages/organizer/Settings'
+const OrganizerDashboard = React.lazy(() => import('./pages/organizer/Dashboard'))
+const OrganizerEvents = React.lazy(() => import('./pages/organizer/Events'))
+const OrganizerEventDetail = React.lazy(() => import('./pages/organizer/EventDetail'))
+const OrganizerAthletes = React.lazy(() => import('./pages/organizer/Athletes'))
+const OrganizerTeams = React.lazy(() => import('./pages/organizer/Teams'))
+const OrganizerScoring = React.lazy(() => import('./pages/organizer/Scoring'))
+const MatchReview = React.lazy(() => import('./pages/organizer/MatchReview'))
+const ScoreSheet = React.lazy(() => import('./pages/organizer/ScoreSheet'))
+const OrganizerAnalytics = React.lazy(() => import('./pages/organizer/Analytics'))
+const OrganizerAnnouncements = React.lazy(() => import('./pages/organizer/Announcements'))
+const OrganizerSettings = React.lazy(() => import('./pages/organizer/Settings'))
 
 // Athlete
-import AthleteDashboard from './pages/athlete/Dashboard'
-import AthleteProfile from './pages/athlete/Profile'
-import AthleteEvents from './pages/athlete/Events'
-import AthleteNotifications from './pages/athlete/Notifications'
+const AthleteDashboard = React.lazy(() => import('./pages/athlete/Dashboard'))
+const AthleteEventDetail = React.lazy(() => import('./pages/athlete/EventDetail'))
+const AthleteProfile = React.lazy(() => import('./pages/athlete/Profile'))
+const AthleteEvents = React.lazy(() => import('./pages/athlete/Events'))
+const AthleteNotifications = React.lazy(() => import('./pages/athlete/Notifications'))
+const AthleteSettings = React.lazy(() => import('./pages/athlete/Settings'))
 
 // Guest
-import GuestHub from './pages/guest/Hub'
-import GuestLeaderboards from './pages/guest/Leaderboards'
-import GuestEvents from './pages/guest/Events'
-import GuestEventDetail from './pages/guest/EventDetail'
-import GuestAthleteProfile from './pages/guest/AthleteProfile'
+const GuestHub = React.lazy(() => import('./pages/guest/Hub'))
+const GuestLeaderboards = React.lazy(() => import('./pages/guest/Leaderboards'))
+const GuestEvents = React.lazy(() => import('./pages/guest/Events'))
+const GuestEventDetail = React.lazy(() => import('./pages/guest/EventDetail'))
+const GuestAthleteProfile = React.lazy(() => import('./pages/guest/AthleteProfile'))
+const GuestTeamDetail = React.lazy(() => import('./pages/guest/TeamDetail'))
+const GuestSettings = React.lazy(() => import('./pages/guest/GuestSettings'))
 
 // Jumbotron
-import JumbotronPage from './pages/jumbotron/JumbotronPage'
+const JumbotronPage = React.lazy(() => import('./pages/jumbotron/JumbotronPage'))
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+    errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/auth/login" replace /> },
-
-      // Setup wizard
-      { path: 'setup', element: <SetupPage /> },
+      { index: true, element: <RootRedirect /> },
 
       // Auth
       { path: 'auth/login', element: <LoginPage /> },
-      { path: 'auth/register', element: <RegisterPage /> },
 
       // Jumbotron (no auth, no layout)
       { path: 'jumbotron/:matchId', element: <JumbotronPage /> },
+
+      // Super Admin login (no layout, public)
+      { path: 'super-admin/login', element: <SuperAdminLoginPage /> },
 
       // Guest (public layout)
       {
@@ -73,6 +81,9 @@ const router = createBrowserRouter([
           { path: 'guest/events', element: <GuestEvents /> },
           { path: 'guest/events/:id', element: <GuestEventDetail /> },
           { path: 'guest/athletes/:id', element: <GuestAthleteProfile /> },
+          { path: 'guest/teams/:id', element: <GuestTeamDetail /> },
+          { path: 'guest/settings', element: <GuestSettings /> },
+          { path: 'student', element: <Navigate to="/guest" replace /> },
         ],
       },
 
@@ -85,24 +96,30 @@ const router = createBrowserRouter([
           { path: 'super-admin/organizers', element: <SuperAdminOrganizers /> },
           { path: 'super-admin/seasons', element: <SuperAdminSeasons /> },
           { path: 'super-admin/settings', element: <SuperAdminSettings /> },
+          { path: 'super-admin/preferences', element: <SuperAdminPreferences /> },
           { path: 'super-admin/audit', element: <SuperAdminAudit /> },
 
           // Organizer
           { path: 'organizer', element: <OrganizerDashboard /> },
           { path: 'organizer/events', element: <OrganizerEvents /> },
           { path: 'organizer/events/:id', element: <OrganizerEventDetail /> },
+
           { path: 'organizer/athletes', element: <OrganizerAthletes /> },
           { path: 'organizer/teams', element: <OrganizerTeams /> },
           { path: 'organizer/scoring/:matchId', element: <OrganizerScoring /> },
+          { path: 'organizer/match-review/:matchId', element: <MatchReview /> },
+          { path: 'organizer/match-review/:matchId/score-sheet', element: <ScoreSheet /> },
           { path: 'organizer/analytics', element: <OrganizerAnalytics /> },
           { path: 'organizer/announcements', element: <OrganizerAnnouncements /> },
           { path: 'organizer/settings', element: <OrganizerSettings /> },
 
           // Athlete
           { path: 'athlete', element: <AthleteDashboard /> },
+          { path: 'athlete/events/:id', element: <AthleteEventDetail /> },
           { path: 'athlete/profile', element: <AthleteProfile /> },
           { path: 'athlete/events', element: <AthleteEvents /> },
           { path: 'athlete/notifications', element: <AthleteNotifications /> },
+          { path: 'athlete/settings', element: <AthleteSettings /> },
         ],
       },
     ],

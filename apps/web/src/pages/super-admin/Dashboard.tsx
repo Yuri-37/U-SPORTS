@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Users, Trophy, Shield, ClipboardCheck, TrendingUp } from 'lucide-react'
+import { Users, Trophy, Shield, ClipboardCheck, TrendingUp, Globe } from 'lucide-react'
 import { StatCard, Card, Skeleton, Badge } from '../../components/ui'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import api from '../../lib/api'
@@ -10,7 +10,6 @@ interface PlatformStats {
   totalAthletes: number
   activeEvents: number
   currentSeason: { name: string; status: string } | null
-  pendingVerifications: number
 }
 
 export default function SuperAdminDashboard() {
@@ -38,23 +37,17 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)
         ) : (
           <>
-            <StatCard label="Active Athletes" value={stats?.totalAthletes ?? 0} subValue="Verified" />
+            <StatCard label="Active Athletes" value={stats?.totalAthletes ?? 0} subValue="Active" />
             <StatCard label="Live Events" value={stats?.activeEvents ?? 0} subValue="In Progress" />
             <StatCard
               label="Current Season"
               value={stats?.currentSeason?.name ?? 'None'}
               subValue={stats?.currentSeason?.status ?? ''}
-            />
-            <StatCard
-              label="Pending Verifications"
-              value={stats?.pendingVerifications ?? 0}
-              subValue="Awaiting review"
-              trend={stats?.pendingVerifications ? 'warning' as any : undefined}
             />
           </>
         )}
@@ -67,11 +60,12 @@ export default function SuperAdminDashboard() {
             <Shield className="w-5 h-5 text-[#0066FF]" />
             Admin Actions
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
+              { label: 'Guest hub (public)', href: '/guest', icon: Globe },
               { label: 'Manage Organizers', href: '/super-admin/organizers', icon: Users },
               { label: 'Season Settings', href: '/super-admin/seasons', icon: Trophy },
-              { label: 'Review Verifications', href: '/organizer/athletes', icon: ClipboardCheck },
+              { label: 'Student roster', href: '/organizer/athletes', icon: ClipboardCheck },
               { label: 'Analytics', href: '/organizer/analytics', icon: TrendingUp },
             ].map((a) => {
               const Icon = a.icon

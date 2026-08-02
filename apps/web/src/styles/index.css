@@ -1,23 +1,42 @@
 @import './fonts.css';
 @import 'tailwindcss';
 
+/*
+  Theme tokens: default is light (`:root`). Dark uses `[data-theme="dark"]`
+  on `<html>` (see appearanceStore + main.tsx hydrate).
+*/
 :root {
-  --bg-primary: #0A0A0F;
-  --bg-secondary: #111118;
-  --surface-card: #16161E;
-  --surface-elevated: #1E1E2A;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --text-primary: #FFFFFF;
-  --text-secondary: #8888A0;
-  --text-muted: #55556A;
-  --accent-default: #0066FF;
-  --success: #00FF88;
-  --warning: #FFB800;
-  --danger: #FF3355;
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #e2e8f0;
+  --surface-card: #ffffff;
+  --surface-elevated: #f8fafc;
+  --border-subtle: rgba(15, 23, 42, 0.1);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent-default: #0066ff;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
 
   /* Dynamic school branding - overridden by JS from institution table */
-  --school-primary: #002D62;
-  --school-secondary: #FFD700;
+  --school-primary: #002d62;
+  --school-secondary: #ffd700;
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --surface-card: #16161e;
+  --surface-elevated: #1e1e2a;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #8888a0;
+  --text-muted: #7e7e9a;
+  --accent-default: #0066ff;
+  --success: #22c55e;
+  --warning: #ffb800;
+  --danger: #ff3355;
 }
 
 * {
@@ -67,10 +86,19 @@ code, pre, .mono {
   .bg-bg-primary { background-color: var(--bg-primary); }
   .bg-bg-secondary { background-color: var(--bg-secondary); }
   .border-subtle { border-color: var(--border-subtle); }
+  .bg-surface-card { background-color: var(--surface-card); }
+  .bg-surface-elevated { background-color: var(--surface-elevated); }
+  .bg-bg-primary { background-color: var(--bg-primary); }
+  .bg-bg-secondary { background-color: var(--bg-secondary); }
+  .border-subtle { border-color: var(--border-subtle); }
   .text-muted { color: var(--text-muted); }
   .text-secondary-custom { color: var(--text-secondary); }
   .accent { color: var(--accent-default); }
   .bg-accent { background-color: var(--accent-default); }
+  .text-danger { color: var(--danger); }
+  .text-warning { color: var(--warning); }
+  .text-success { color: var(--success); }
+  .text-accent { color: var(--accent-default); }
   .bg-school-primary { background-color: var(--school-primary); }
   .bg-school-secondary { background-color: var(--school-secondary); }
   .text-school-primary { color: var(--school-primary); }
@@ -104,4 +132,15 @@ code, pre, .mono {
 }
 .animate-slide-down {
   animation: slide-down 0.3s ease-out;
+}
+
+/*
+  Hero announcement ticker.
+  Two identical copies side by side (each min-width: 100vw).
+  Translating by -50% moves exactly one copy's width to the left for a seamless loop.
+  Animation is driven by inline style so prefers-reduced-motion cannot suppress it.
+*/
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }

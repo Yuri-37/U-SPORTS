@@ -2,9 +2,14 @@ import React from 'react'
 import { Card, Badge } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
+import { sessionScopedProfile } from '../../lib/sessionProfile'
+import AppearanceSection from '../../components/settings/AppearanceSection'
+import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
 export default function OrganizerSettings() {
-  const { profile, organizer } = useAuthStore()
+  const { profile, organizer, session } = useAuthStore()
+  const scopedProfile = sessionScopedProfile(session, profile)
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -13,16 +18,18 @@ export default function OrganizerSettings() {
         <p className="text-[var(--text-muted)] text-sm">Your organizer account details</p>
       </div>
 
+      <AppearanceSection />
+
       <Card>
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xl font-bold text-[var(--school-secondary)]">
-            {getInitials(profile?.full_name ?? 'O')}
+            {getInitials(scopedProfile?.full_name ?? 'O')}
           </div>
           <div>
-            <h2 className="font-bold text-lg">{profile?.full_name}</h2>
-            <p className="text-sm text-[var(--text-muted)]">{profile?.email}</p>
+            <h2 className="font-bold text-lg">{scopedProfile?.full_name}</h2>
+            <p className="text-sm text-[var(--text-muted)]">{scopedProfile?.email}</p>
             <Badge variant="info" size="sm" className="mt-1">
-              {profile?.role === 'super_admin' ? 'Super Admin' : 'Organizer'}
+              {scopedProfile?.role === 'Admin' ? 'Super Admin' : scopedProfile?.role ?? 'Organizer'}
             </Badge>
           </div>
         </div>
@@ -51,6 +58,10 @@ export default function OrganizerSettings() {
           </div>
         </div>
       </Card>
+
+      <ChangePasswordSection />
+
+      <SettingsSignOutSection />
     </div>
   )
 }

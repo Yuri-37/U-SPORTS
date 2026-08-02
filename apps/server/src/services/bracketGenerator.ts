@@ -91,36 +91,42 @@ function buildSingleElim(
     }
   }
 
-  // Seed first round (round index 0)
-  // Standard seeding: 1 vs last, 2 vs second-last, etc.
+  // Seed first round (round index 0).
+  // Pad to power-of-two size, then assign byes so every R1 slot has at least one team.
+  // Old logic paired seeded[0..n-1] into consecutive slots; when n < size that left
+  // trailing slots as null vs null ("ghost" games). Correct model: (size - n) top seeds
+  // get first-round byes; remaining teams play (n - byeCount) / 2 contested matches.
   const firstRound = roundBrackets[0]
-  const byeCount = size - seeded.length
+  const n = seeded.length
+  const byeCount = size - n
+  const byeRecipients = seeded.slice(0, byeCount)
+  const playingTeams = seeded.slice(byeCount)
+  const contestedMatchCount = playingTeams.length / 2
+  const nextRound = roundBrackets[1]
 
-  // Place top seeds, rest get byes
-  for (let i = 0; i < firstRound.length; i++) {
-    const aIdx = i * 2
-    const bIdx = i * 2 + 1
-    const participantA = seeded[aIdx] ?? null
-    const participantB = seeded[bIdx] ?? null
-
-    firstRound[i].participant_a_id = participantA?.id ?? null
-    firstRound[i].participant_b_id = participantB?.id ?? null
-
-    if (!participantB && participantA) {
-      // Bye: participant A advances automatically
-      firstRound[i].is_bye = true
-      firstRound[i].winner_id = participantA.id
-      // Auto-advance to next round
-      if (firstRound[i].next_bracket_id) {
-        const nextRound = roundBrackets[1]
-        const parentIdx = Math.floor(i / 2)
-        if (i % 2 === 0) {
-          nextRound[parentIdx].participant_a_id = participantA.id
-        } else {
-          nextRound[parentIdx].participant_b_id = participantA.id
-        }
+  let slot = 0
+  for (let j = 0; j < contestedMatchCount; j++) {
+    const a = playingTeams[j * 2]
+    const b = playingTeams[j * 2 + 1]
+    firstRound[slot].participant_a_id = a.id
+    firstRound[slot].participant_b_id = b.id
+    slot++
+  }
+  for (let j = 0; j < byeCount; j++) {
+    const t = byeRecipients[j]
+    firstRound[slot].participant_a_id = t.id
+    firstRound[slot].participant_b_id = null
+    firstRound[slot].is_bye = true
+    firstRound[slot].winner_id = t.id
+    if (firstRound[slot].next_bracket_id) {
+      const parentIdx = Math.floor(slot / 2)
+      if (slot % 2 === 0) {
+        nextRound[parentIdx].participant_a_id = t.id
+      } else {
+        nextRound[parentIdx].participant_b_id = t.id
       }
     }
+    slot++
   }
 
   // Flatten and create matches for non-bye brackets
@@ -144,10 +150,15 @@ function buildSingleElim(
   return { brackets, matches }
 }
 
-// Round Robin: every participant plays every other
-function buildRoundRobin(
+/** When team count is greater than this, round robin is split into two pools plus crossover semis + final. */
+export const ROUND_ROBIN_SPLIT_THRESHOLD = 10
+
+// Round Robin within one pool / single table
+function buildRoundRobinPool(
   eventId: string,
-  participants: Participant[]
+  participants: Participant[],
+  round: number,
+  bracketType: string
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   const brackets: BracketNode[] = []
   const matches: MatchStub[] = []
@@ -158,14 +169,14 @@ function buildRoundRobin(
       const bracket: BracketNode = {
         id: uuid(),
         event_id: eventId,
-        round: 1,
+        round,
         match_order: matchOrder++,
         participant_a_id: participants[i].id,
         participant_b_id: participants[j].id,
         winner_id: null,
         next_bracket_id: null,
         is_bye: false,
-        bracket_type: 'round_robin',
+        bracket_type: bracketType,
       }
       brackets.push(bracket)
       matches.push({
@@ -180,6 +191,106 @@ function buildRoundRobin(
   }
 
   return { brackets, matches }
+}
+
+/** Single round-robin table (≤ ROUND_ROBIN_SPLIT_THRESHOLD teams). */
+function buildRoundRobin(
+  eventId: string,
+  participants: Participant[]
+): { brackets: BracketNode[]; matches: MatchStub[] } {
+  return buildRoundRobinPool(eventId, participants, 1, 'round_robin')
+}
+
+/**
+ * Two pools (rounds 1–2), each plays full RR, then crossover semis (typical 1A vs 2B / 1B vs 2A)
+ * and final. Semis/final start unassigned — use PATCH …/brackets/matches/:id/participants after pool play.
+ */
+function buildSplitRoundRobinWithCrossover(
+  eventId: string,
+  participants: Participant[]
+): { brackets: BracketNode[]; matches: MatchStub[] } {
+  const seeded = seedParticipants(participants)
+  const n = seeded.length
+  const nA = Math.ceil(n / 2)
+  const poolA = seeded.slice(0, nA)
+  const poolB = seeded.slice(nA)
+
+  if (poolA.length < 2 || poolB.length < 2) {
+    throw new Error('Split round robin requires at least 2 teams in each pool')
+  }
+
+  const { brackets: bA, matches: mA } = buildRoundRobinPool(eventId, poolA, 1, 'rr_pool_a')
+  const { brackets: bB, matches: mB } = buildRoundRobinPool(eventId, poolB, 2, 'rr_pool_b')
+
+  const finalBracket: BracketNode = {
+    id: uuid(),
+    event_id: eventId,
+    round: 4,
+    match_order: 0,
+    participant_a_id: null,
+    participant_b_id: null,
+    winner_id: null,
+    next_bracket_id: null,
+    is_bye: false,
+    bracket_type: 'knockout_final',
+  }
+
+  const semi1: BracketNode = {
+    id: uuid(),
+    event_id: eventId,
+    round: 3,
+    match_order: 0,
+    participant_a_id: null,
+    participant_b_id: null,
+    winner_id: null,
+    next_bracket_id: finalBracket.id,
+    is_bye: false,
+    bracket_type: 'crossover_semi',
+  }
+  const semi2: BracketNode = {
+    id: uuid(),
+    event_id: eventId,
+    round: 3,
+    match_order: 1,
+    participant_a_id: null,
+    participant_b_id: null,
+    winner_id: null,
+    next_bracket_id: finalBracket.id,
+    is_bye: false,
+    bracket_type: 'crossover_semi',
+  }
+
+  const matchesKo: MatchStub[] = [
+    {
+      id: uuid(),
+      event_id: eventId,
+      bracket_id: semi1.id,
+      participant_a_id: null,
+      participant_b_id: null,
+      status: 'scheduled',
+    },
+    {
+      id: uuid(),
+      event_id: eventId,
+      bracket_id: semi2.id,
+      participant_a_id: null,
+      participant_b_id: null,
+      status: 'scheduled',
+    },
+    {
+      id: uuid(),
+      event_id: eventId,
+      bracket_id: finalBracket.id,
+      participant_a_id: null,
+      participant_b_id: null,
+      status: 'scheduled',
+    },
+  ]
+
+  return {
+    brackets: [...bA, ...bB, semi1, semi2, finalBracket],
+    matches: [...mA, ...mB, ...matchesKo],
+  }
 }
 
 // Double Elimination (simplified: winners + losers brackets)
@@ -282,7 +393,10 @@ export async function generateBracket(
       ;({ brackets, matches } = buildDoubleElim(eventId, participants))
       break
     case 'round_robin':
-      ;({ brackets, matches } = buildRoundRobin(eventId, participants))
+      ;({ brackets, matches } =
+        participants.length > ROUND_ROBIN_SPLIT_THRESHOLD
+          ? buildSplitRoundRobinWithCrossover(eventId, participants)
+          : buildRoundRobin(eventId, participants))
       break
     default:
       throw new Error(`Unknown format: ${format}`)
@@ -299,8 +413,8 @@ export async function generateBracket(
   const { error: matchError } = await supabase.from('matches').insert(matches)
   if (matchError) throw new Error(`Failed to insert matches: ${matchError.message}`)
 
-  // Update event status
-  await supabase.from('events').update({ status: 'in_progress' }).eq('id', eventId)
+  // Do NOT change event status here — the bracket is generated but the event stays
+  // in its current status (draft/registration) until the organizer explicitly clicks Start.
 
   return { success: true, bracketCount: brackets.length, matchCount: matches.length }
 }
@@ -322,13 +436,16 @@ export async function advanceWinner(matchId: string, winnerId: string): Promise<
   // Get next bracket
   const { data: bracket } = await supabase
     .from('brackets')
-    .select('next_bracket_id, match_order, round')
+    .select('next_bracket_id, match_order, round, bracket_type')
     .eq('id', match.bracket_id)
     .single()
 
   if (!bracket?.next_bracket_id) {
-    // This was the final - mark event as completed
-    await supabase.from('events').update({ status: 'completed' }).eq('id', match.event_id)
+    const t = bracket?.bracket_type ?? ''
+    const isPoolRoundRobin = ['round_robin', 'rr_pool_a', 'rr_pool_b'].includes(t)
+    if (!isPoolRoundRobin) {
+      await supabase.from('events').update({ status: 'completed' }).eq('id', match.event_id)
+    }
     return
   }
 
@@ -342,6 +459,30 @@ export async function advanceWinner(matchId: string, winnerId: string): Promise<
   if (!nextBracket) return
 
   const field = bracket.match_order % 2 === 0 ? 'participant_a_id' : 'participant_b_id'
+
+  // Refuse to rewrite a downstream match that has already been played.
+  // Overwriting its participant used to leave the bracket internally
+  // inconsistent: the next round would name a team that never played it, while
+  // its scores, box score and recorded winner still belonged to the old team.
+  const { data: downstream } = await supabase
+    .from('matches')
+    .select('id, status')
+    .eq('bracket_id', bracket.next_bracket_id)
+
+  const alreadyPlayed = (downstream ?? []).filter(
+    (m) => (m as { status?: string }).status === 'live' || (m as { status?: string }).status === 'completed',
+  )
+  if (alreadyPlayed.length > 0) {
+    const current = (nextBracket as Record<string, unknown>)[field]
+    if (current && current !== winnerId) {
+      throw new Error(
+        'The next round has already started with a different team. ' +
+          'Reset that match before changing this result.',
+      )
+    }
+    return
+  }
+
   await supabase
     .from('brackets')
     .update({ [field]: winnerId })
