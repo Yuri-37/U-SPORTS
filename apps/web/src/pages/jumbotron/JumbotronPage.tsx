@@ -358,7 +358,7 @@ export default function JumbotronPage() {
                   {bbColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreA[key]}</p>
+                      <p className="text-white font-bold text-lg">{scoreA[key as keyof ScoreState]}</p>
                     </div>
                   ))}
                 </div>
@@ -380,7 +380,7 @@ export default function JumbotronPage() {
                   {ttColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreA[key]}</p>
+                      <p className="text-white font-bold text-lg">{scoreA[key as keyof ScoreState]}</p>
                     </div>
                   ))}
                 </div>
@@ -458,7 +458,7 @@ export default function JumbotronPage() {
                   {ttColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreB[key]}</p>
+                      <p className="text-white font-bold text-lg">{scoreB[key as keyof ScoreState]}</p>
                     </div>
                   ))}
                 </div>
