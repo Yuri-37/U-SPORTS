@@ -496,13 +496,28 @@ router.patch(
 
       const { data: match } = await supabase
         .from('matches')
-        .select('status, scoring_locked_by')
+        .select('status, clock_locked_by')
         .eq('id', matchId)
         .maybeSingle()
       if (!match) return res.status(404).json({ error: 'Match not found' })
       if (match.status !== 'live') return res.status(400).json({ error: 'Match is not live' })
-      if (match.scoring_locked_by !== req.user!.id) {
-        return res.status(403).json({ error: 'You do not have scoring lock for this match' })
+
+      // The clock lock is independent of scoring_locked_by, so a second
+      // organizer can run the clock while someone else scores. Nobody has to
+      // explicitly claim it — whoever touches the clock first while it's
+      // unclaimed becomes the holder, same auto-claim spirit as /start.
+      const isFirstClaim = !match.clock_locked_by
+      if (!isFirstClaim && match.clock_locked_by !== req.user!.id) {
+        const { data: locker } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', match.clock_locked_by)
+          .single()
+        return res.status(403).json({
+          error: 'CLOCK_LOCKED',
+          lockedBy: (locker as { full_name: string } | null)?.full_name ?? 'Another organizer',
+          lockedById: match.clock_locked_by,
+        })
       }
 
       const sport = await getMatchSport(matchId)
@@ -516,6 +531,10 @@ router.patch(
           shot_clock_seconds: body.shotClockSeconds ?? null,
           shot_clock_running: body.shotClockRunning ?? false,
           clock_updated_at: new Date().toISOString(),
+          clock_locked_by: req.user!.id,
+          // Only stamp a fresh claim time on the actual claim, not on every
+          // routine start/pause/reset call from the same holder.
+          ...(isFirstClaim ? { clock_locked_at: new Date().toISOString() } : {}),
         })
         .eq('id', matchId)
 
@@ -523,6 +542,50 @@ router.patch(
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Could not update clock' })
     }
+  },
+)
+
+// Transfer the clock lock (independent of the scoring lock — see /clock above)
+router.post(
+  '/:matchId/clock/transfer-lock',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const matchId = req.params.matchId as string
+
+    const { data: before } = await supabase
+      .from('matches')
+      .select('clock_locked_by, clock_locked_at, status')
+      .eq('id', matchId)
+      .maybeSingle()
+    if (!before) return res.status(404).json({ error: 'Match not found' })
+    if (before.status === 'completed') {
+      return res.status(400).json({ error: 'Match is already completed' })
+    }
+
+    const sport = await getMatchSport(matchId)
+    if (sport !== 'basketball') {
+      return res.status(400).json({ error: `${sport} has no game clock` })
+    }
+    if (await respondIfSportForbidden(req, res, sport)) return
+
+    await supabase
+      .from('matches')
+      .update({ clock_locked_by: req.user!.id, clock_locked_at: new Date().toISOString() })
+      .eq('id', matchId)
+
+    await writeAuditLog({
+      actorId: req.user!.id,
+      action: 'clock_lock_transferred',
+      entityType: 'match',
+      entityId: matchId,
+      details: {
+        previous_holder_id: before.clock_locked_by ?? null,
+        previous_locked_at: before.clock_locked_at ?? null,
+      },
+    })
+
+    res.json({ success: true })
   },
 )
 
@@ -900,7 +963,7 @@ router.post(
 
       await supabase
         .from('matches')
-        .update({ status: 'completed', scoring_locked_by: null })
+        .update({ status: 'completed', scoring_locked_by: null, clock_locked_by: null })
         .eq('id', matchId)
 
       const seasonId = await aggregateOfficialSeasonStatsForMatch(

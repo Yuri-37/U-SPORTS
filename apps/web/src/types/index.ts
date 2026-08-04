@@ -169,6 +169,9 @@ export interface Match {
   shot_clock_seconds?: number | null
   shot_clock_running?: boolean
   clock_updated_at?: string | null
+  /** Independent of scoring_locked_by — see migration 057. Lets a different organizer run the clock. */
+  clock_locked_by?: string | null
+  clock_locked_at?: string | null
 }
 
 export interface MatchScore {

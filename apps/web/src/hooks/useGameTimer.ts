@@ -29,6 +29,9 @@ interface UseGameTimerOptions {
   initialSeconds?: number
   /** When false, no realtime channel (e.g. volleyball / table tennis — no shot clock) */
   enabled?: boolean
+  /** Called when a persist write is rejected (e.g. someone else holds the clock lock) —
+   *  the local tick keeps ticking regardless, this is just how the caller finds out. */
+  onPersistError?: (err: unknown) => void
 }
 
 const SHOT_CLOCK_FULL = 24
@@ -67,6 +70,7 @@ export function useGameTimer({
   mode,
   initialSeconds = 600,
   enabled = true,
+  onPersistError,
 }: UseGameTimerOptions) {
   const [seconds, setSeconds] = useState(mode === 'countdown' ? initialSeconds : 0)
   const [running, setRunning] = useState(false)
@@ -82,6 +86,8 @@ export function useGameTimer({
   shotSecondsRef.current = shotClockSeconds
 
   const channelName = `timer-${matchId}`
+  const onPersistErrorRef = useRef(onPersistError)
+  onPersistErrorRef.current = onPersistError
 
   const broadcast = useCallback((state: TimerState) => {
     channelRef.current?.send({
@@ -105,7 +111,7 @@ export function useGameTimer({
           shotClockSeconds: state.shotClockSeconds,
           shotClockRunning: state.shotClockRunning,
         })
-        .catch(() => {})
+        .catch((err) => onPersistErrorRef.current?.(err))
     },
     [enabled, matchId],
   )

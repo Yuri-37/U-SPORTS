@@ -7,8 +7,11 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { useGameTimer } from '../../hooks/useGameTimer'
+import { useMatchPresence } from '../../hooks/useMatchPresence'
 import { cn } from '../../lib/utils'
 import type { Match } from '../../types'
+import MatchPresenceAvatars from '../../components/scoring/MatchPresenceAvatars'
+import MatchActivityFeed from '../../components/scoring/MatchActivityFeed'
 
 interface ScoreState {
   q1: number
@@ -193,6 +196,9 @@ export default function OrganizerScoring() {
   const validateSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLive, setIsLive] = useState(false)
   const [lockWarning, setLockWarning] = useState<{ name: string } | null>(null)
+  const [clockLockWarning, setClockLockWarning] = useState<{ name: string } | null>(null)
+  const [dismissedScoringHandoff, setDismissedScoringHandoff] = useState(false)
+  const [dismissedClockHandoff, setDismissedClockHandoff] = useState(false)
   const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
   const [endConfirm, setEndConfirm] = useState(false)
@@ -248,6 +254,36 @@ export default function OrganizerScoring() {
 
   // Is this organizer the current scoring lock holder?
   const isLockHolder = !!match?.scoring_locked_by && match.scoring_locked_by === user?.id
+  // Clock control is independent of the scoring lock — a different organizer
+  // can hold it, so a second person can run the clock while someone else scores.
+  const clockHeldByOther = !!match?.clock_locked_by && match.clock_locked_by !== user?.id
+
+  // Single presence subscription, shared by the header avatars, the activity
+  // feed, and the auto-disconnect handoff prompt below.
+  const { online, disconnectedHolder } = useMatchPresence({
+    matchId,
+    scopedProfile,
+    scoringLockHolderId: match?.scoring_locked_by ?? null,
+    clockLockHolderId: match?.clock_locked_by ?? null,
+  })
+  // A dismissal only covers the disconnect that prompted it — a fresh one
+  // (holder reconnects, then drops again; or the lock changes hands) should
+  // surface the prompt again rather than staying silenced for the rest of the
+  // page's life. Adjusted during render (React's documented pattern for
+  // resetting state on a prop/derived-value change — see "Adjusting state
+  // when a prop changes" in the React docs) rather than in an effect, so
+  // there's no extra render cycle; a ref can't be used here since refs must
+  // not be read/written during render.
+  const [prevDisconnected, setPrevDisconnected] = useState(disconnectedHolder)
+  if (disconnectedHolder !== prevDisconnected) {
+    if (disconnectedHolder.scoring && !prevDisconnected.scoring) {
+      setDismissedScoringHandoff(false)
+    }
+    if (disconnectedHolder.clock && !prevDisconnected.clock) {
+      setDismissedClockHandoff(false)
+    }
+    setPrevDisconnected(disconnectedHolder)
+  }
 
   const timerMode = sport === 'basketball' ? ('countdown' as const) : ('stopwatch' as const)
   const quarterMinutes = 10
@@ -257,6 +293,15 @@ export default function OrganizerScoring() {
     mode: timerMode,
     initialSeconds: quarterMinutes * 60,
     enabled: timerEnabled,
+    onPersistError: (err) => {
+      const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      if (code === 'CLOCK_LOCKED') {
+        const lockedBy = (err as { response?: { data?: { lockedBy?: string } } })?.response?.data
+          ?.lockedBy
+        setClockLockWarning({ name: lockedBy ?? 'Another organizer' })
+      }
+      void loadState()
+    },
   })
 
   const statFor = (pid: string, key: string) => teamStats[pid]?.[key] ?? 0
@@ -827,6 +872,13 @@ export default function OrganizerScoring() {
         </div>
         <div className="flex-1" />
         {isLive && (
+          <MatchPresenceAvatars
+            online={online}
+            scoringLockHolderId={match?.scoring_locked_by ?? null}
+            clockLockHolderId={match?.clock_locked_by ?? null}
+          />
+        )}
+        {isLive && (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-live" />
             <Badge variant="danger">LIVE</Badge>
@@ -867,6 +919,78 @@ export default function OrganizerScoring() {
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setLockWarning(null)}>
               Cancel
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {clockLockWarning && (
+        <Alert type="warning">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{clockLockWarning.name} controls the game clock. Take over?</span>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                await api.post(`/scoring/${matchId}/clock/transfer-lock`)
+                setClockLockWarning(null)
+                loadState()
+              }}
+            >
+              Take Clock Control
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setClockLockWarning(null)}>
+              Cancel
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {isLive && disconnectedHolder.scoring && !dismissedScoringHandoff && (
+        <Alert type="warning">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>The organizer scoring this match appears to have disconnected.</span>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                await api.post(`/scoring/${matchId}/transfer-lock`)
+                setDismissedScoringHandoff(true)
+                loadState()
+              }}
+            >
+              Claim Scoring Control
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setDismissedScoringHandoff(true)}>
+              Dismiss
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {isLive && disconnectedHolder.clock && !dismissedClockHandoff && (
+        <Alert type="warning">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>The organizer running the clock appears to have disconnected.</span>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                await api.post(`/scoring/${matchId}/clock/transfer-lock`)
+                setDismissedClockHandoff(true)
+                loadState()
+              }}
+            >
+              Claim Clock Control
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setDismissedClockHandoff(true)}>
+              Dismiss
             </Button>
           </div>
         </Alert>
@@ -1147,12 +1271,13 @@ export default function OrganizerScoring() {
                 />
               ) : (
                 <span
-                  title="Click to edit"
+                  title={clockHeldByOther ? 'Another organizer controls the clock' : 'Click to edit'}
                   onClick={() => {
+                    if (clockHeldByOther) return
                     setClockEditValue(timer.formatTime(timer.seconds))
                     setClockEditing(true)
                   }}
-                  className="text-3xl font-mono font-bold tabular-nums tracking-wider cursor-pointer hover:text-[var(--accent-default)] select-none"
+                  className={`text-3xl font-mono font-bold tabular-nums tracking-wider select-none ${clockHeldByOther ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:text-[var(--accent-default)]'}`}
                 >
                   {timer.formatTime(timer.seconds)}
                 </span>
@@ -1169,7 +1294,12 @@ export default function OrganizerScoring() {
             </div>
             <div className="flex gap-2 flex-wrap">
               {!timer.running ? (
-                <Button size="sm" icon={<Play className="w-3 h-3" />} onClick={timer.start}>
+                <Button
+                  size="sm"
+                  icon={<Play className="w-3 h-3" />}
+                  onClick={timer.start}
+                  disabled={clockHeldByOther}
+                >
                   {timer.seconds === quarterMinutes * 60 ? 'Start' : 'Resume'}
                 </Button>
               ) : (
@@ -1178,11 +1308,17 @@ export default function OrganizerScoring() {
                   variant="secondary"
                   icon={<Square className="w-3 h-3" />}
                   onClick={timer.pause}
+                  disabled={clockHeldByOther}
                 >
                   Pause
                 </Button>
               )}
-              <Button size="sm" variant="outline" onClick={() => timer.resetMainClock()}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => timer.resetMainClock()}
+                disabled={clockHeldByOther}
+              >
                 Reset
               </Button>
             </div>
@@ -1213,12 +1349,13 @@ export default function OrganizerScoring() {
                 />
               ) : (
                 <span
-                  title="Click to edit"
+                  title={clockHeldByOther ? 'Another organizer controls the clock' : 'Click to edit'}
                   onClick={() => {
+                    if (clockHeldByOther) return
                     setShotClockEditValue(String(timer.shotClockSeconds))
                     setShotClockEditing(true)
                   }}
-                  className={`text-2xl font-mono font-bold tabular-nums cursor-pointer hover:text-[var(--accent-default)] select-none ${timer.shotClockSeconds <= 5 ? 'text-[#FF3355]' : 'text-white'}`}
+                  className={`text-2xl font-mono font-bold tabular-nums select-none ${clockHeldByOther ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:text-[var(--accent-default)]'} ${timer.shotClockSeconds <= 5 ? 'text-[#FF3355]' : 'text-white'}`}
                 >
                   {String(timer.shotClockSeconds).padStart(2, '0')}
                 </span>
@@ -1240,6 +1377,7 @@ export default function OrganizerScoring() {
                   variant="secondary"
                   icon={<Play className="w-3 h-3" />}
                   onClick={timer.startShotClock}
+                  disabled={clockHeldByOther}
                 >
                   Start
                 </Button>
@@ -1249,6 +1387,7 @@ export default function OrganizerScoring() {
                   variant="secondary"
                   icon={<Square className="w-3 h-3" />}
                   onClick={timer.pauseShotClock}
+                  disabled={clockHeldByOther}
                 >
                   Stop
                 </Button>
@@ -1256,19 +1395,39 @@ export default function OrganizerScoring() {
               <button
                 type="button"
                 onClick={() => timer.resetShotClock(true)}
-                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium"
+                disabled={clockHeldByOther}
+                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 24
               </button>
               <button
                 type="button"
                 onClick={() => timer.resetShotClock(false)}
-                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium"
+                disabled={clockHeldByOther}
+                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 14
               </button>
             </div>
           </div>
+          {clockHeldByOther && (
+            <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs text-[var(--text-muted)]">
+                <span className="font-medium">Clock View Only</span> — another organizer controls
+                the game clock.
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  await api.post(`/scoring/${matchId}/clock/transfer-lock`)
+                  loadState()
+                }}
+              >
+                Take Clock Control
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -1341,6 +1500,24 @@ export default function OrganizerScoring() {
             </Card>
           )
         })()}
+
+      {isLive && matchId && (
+        <MatchActivityFeed
+          matchId={matchId}
+          online={online}
+          selfId={scopedProfile?.id ?? null}
+          selfName={scopedProfile?.full_name ?? null}
+          nameA={nameA}
+          nameB={nameB}
+          participantAId={participantAId}
+          participantBId={participantBId}
+          currentPeriod={currentPeriod}
+          periodLabel={periodConfigFor(sport).label}
+          recentActions={recentActions}
+          scoringLockedBy={match?.scoring_locked_by ?? null}
+          clockLockedBy={match?.clock_locked_by ?? null}
+        />
+      )}
 
       {/* Serve tracking + timeouts/subs (volleyball & table tennis only) */}
       {isLive && (sport === 'volleyball' || sport === 'table-tennis') && (
