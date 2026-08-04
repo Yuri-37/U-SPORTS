@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "62016870276",
+    "project_id": "u-sports-43d59",
+    "storage_bucket": "u-sports-43d59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62016870276:android:f96cea282f56f2457dafd1",
+        "android_client_info": {
+          "package_name": "com.example.u_sports_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDp71ci6GOePFI_XXCtzadio2TbbY4YYW8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
