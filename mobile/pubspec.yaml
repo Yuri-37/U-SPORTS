@@ -26,6 +26,7 @@ dependencies:
   http: ^1.2.2
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -33,6 +34,7 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   build_runner: ^2.4.10
   riverpod_generator: ^2.4.3
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
@@ -40,3 +42,16 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+# App icon generation: drop a 1024x1024 PNG (square, no transparency needed
+# for Android adaptive icons but fine for iOS) at assets/icons/app_icon.png,
+# then run:
+#   dart run flutter_launcher_icons
+# This regenerates every Android mipmap density and the full iOS
+# AppIcon.appiconset in one shot — no manual per-size exporting.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icons/app_icon.png
+  adaptive_icon_background: '#002D62'
+  adaptive_icon_foreground: assets/icons/app_icon.png

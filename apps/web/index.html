@@ -2,7 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!--
+      Drop the real files into apps/web/public/ (create the folder if it
+      doesn't exist yet — Vite serves anything there as-is from the site
+      root, unprocessed). Recommended set:
+        favicon.ico        32x32 (legacy browsers/bookmarks)
+        favicon.svg        vector, any modern browser
+        apple-touch-icon.png 180x180 (iOS "Add to Home Screen")
+      Until those exist these just 404 silently and the browser falls back
+      to its default icon — nothing breaks in the meantime.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>U-Sports</title>
   </head>
