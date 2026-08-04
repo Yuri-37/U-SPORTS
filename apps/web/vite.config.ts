@@ -10,4 +10,17 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor code changes far less often than app code between deploys —
+        // splitting it out lets browsers keep it cached across releases
+        // instead of re-downloading React/Supabase on every deploy.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 })
