@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Local Supabase/API use http:// — cleartext is blocked by default on Android 9+. -->
     <application
-        android:label="u_sports_mobile"
+        android:label="U-Sports"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
