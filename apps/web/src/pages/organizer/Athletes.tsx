@@ -42,7 +42,12 @@ function describeApiLoadError(err: unknown): string {
     if (status && msg) return `${msg} (HTTP ${status}).`
     if (status) return `Request failed with HTTP ${status}. ${base}`
   }
-  if (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === 'ECONNABORTED') {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    (err as { code?: string }).code === 'ECONNABORTED'
+  ) {
     return `Request timed out. ${base}`
   }
   if (err && typeof err === 'object' && 'message' in err) {
@@ -74,8 +79,14 @@ export default function OrganizerAthletes() {
   const isSuperAdmin = profile?.role === 'Admin'
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
-  const [bulkConfirmAction, setBulkConfirmAction] = useState<'set_inactive' | 'set_active' | null>(null)
-  const [seasonToggleConfirm, setSeasonToggleConfirm] = useState<{ id: string; name: string; nextInactive: boolean } | null>(null)
+  const [bulkConfirmAction, setBulkConfirmAction] = useState<'set_inactive' | 'set_active' | null>(
+    null,
+  )
+  const [seasonToggleConfirm, setSeasonToggleConfirm] = useState<{
+    id: string
+    name: string
+    nextInactive: boolean
+  } | null>(null)
 
   // Roster import state (CSV or Excel)
   const [showImport, setShowImport] = useState(false)
@@ -131,7 +142,8 @@ export default function OrganizerAthletes() {
         } else if (typeof raw === 'string') {
           try {
             const parsed = JSON.parse(raw) as unknown
-            if (Array.isArray(parsed)) opts = parsed.filter((x): x is string => typeof x === 'string')
+            if (Array.isArray(parsed))
+              opts = parsed.filter((x): x is string => typeof x === 'string')
           } catch {
             /* ignore malformed JSON */
           }
@@ -250,8 +262,8 @@ export default function OrganizerAthletes() {
                 ...(hasPositionPicker ? { position: rosterPosition.trim() } : {}),
                 jersey_number: rosterJersey.trim() || null,
               }
-            : x
-        )
+            : x,
+        ),
       )
       setRosterSaveSuccess(true)
     } catch (e: unknown) {
@@ -272,7 +284,17 @@ export default function OrganizerAthletes() {
   }
 
   const handleExport = () => {
-    const headers = ['full_name', 'email', 'sport', 'student_id', 'year_level', 'department', 'season_status', 'position', 'jersey_number']
+    const headers = [
+      'full_name',
+      'email',
+      'sport',
+      'student_id',
+      'year_level',
+      'department',
+      'season_status',
+      'position',
+      'jersey_number',
+    ]
     const rows = filteredAthletes.map((a) =>
       [
         a.profile?.full_name ?? '',
@@ -309,7 +331,10 @@ export default function OrganizerAthletes() {
       link.click()
       URL.revokeObjectURL(url)
     } catch {
-      setImportResult({ created: [], errors: [{ row: 0, error: 'Could not download template. Is the API running?' }] })
+      setImportResult({
+        created: [],
+        errors: [{ row: 0, error: 'Could not download template. Is the API running?' }],
+      })
     } finally {
       setDownloadingTemplate(false)
     }
@@ -322,15 +347,16 @@ export default function OrganizerAthletes() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await api.post<{ rows: ImportPreviewRow[]; validCount: number; invalidCount: number }>(
-        '/students/import/preview',
-        fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      )
+      const res = await api.post<{
+        rows: ImportPreviewRow[]
+        validCount: number
+        invalidCount: number
+      }>('/students/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setPreviewRows(res.data.rows)
     } catch (e: unknown) {
       const msg =
-        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error ===
+        'string'
           ? (e as { response: { data: { error: string } } }).response.data.error
           : 'Could not preview this file.'
       setPreviewError(msg)
@@ -372,7 +398,8 @@ export default function OrganizerAthletes() {
       if (res.data.created.length > 0) fetchAthletes()
     } catch (e: unknown) {
       const msg =
-        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error ===
+        'string'
           ? (e as { response: { data: { error: string } } }).response.data.error
           : 'Import failed'
       setImportResult({ created: [], errors: [{ row: 0, error: msg }] })
@@ -416,13 +443,33 @@ export default function OrganizerAthletes() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={() => { setImportResult(null); setImportFile(null); setShowImport(true) }}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Upload className="w-4 h-4" />}
+            onClick={() => {
+              setImportResult(null)
+              setImportFile(null)
+              setShowImport(true)
+            }}
+          >
             Import roster
           </Button>
-          <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />} onClick={handleExport}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Download className="w-4 h-4" />}
+            onClick={handleExport}
+          >
             Export CSV
           </Button>
-          <Button size="sm" variant="ghost" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchAthletes} aria-label="Refresh" />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<RefreshCw className="w-4 h-4" />}
+            onClick={fetchAthletes}
+            aria-label="Refresh"
+          />
         </div>
       </div>
 
@@ -443,7 +490,7 @@ export default function OrganizerAthletes() {
               'px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize',
               seasonFilter === s
                 ? 'bg-[var(--surface-card)] text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
             )}
           >
             {s === 'active' ? 'Activated' : 'Deactivated'}
@@ -558,17 +605,33 @@ export default function OrganizerAthletes() {
 
       {selectedIds.size > 0 && (
         <div className="fixed bottom-0 inset-x-0 z-40 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]">
-          <p className="text-sm font-medium tabular-nums text-[var(--text-secondary)]">{selectedIds.size} selected</p>
+          <p className="text-sm font-medium tabular-nums text-[var(--text-secondary)]">
+            {selectedIds.size} selected
+          </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={bulkBusy}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={bulkBusy}
+            >
               Clear selection
             </Button>
             {seasonFilter === 'active' ? (
-              <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setBulkConfirmAction('set_inactive')}>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={bulkBusy}
+                onClick={() => setBulkConfirmAction('set_inactive')}
+              >
                 Set inactive
               </Button>
             ) : (
-              <Button size="sm" disabled={bulkBusy} onClick={() => setBulkConfirmAction('set_active')}>
+              <Button
+                size="sm"
+                disabled={bulkBusy}
+                onClick={() => setBulkConfirmAction('set_active')}
+              >
                 Set active
               </Button>
             )}
@@ -578,7 +641,9 @@ export default function OrganizerAthletes() {
 
       <Modal
         open={bulkConfirmAction !== null}
-        onClose={() => { if (!bulkBusy) setBulkConfirmAction(null) }}
+        onClose={() => {
+          if (!bulkBusy) setBulkConfirmAction(null)
+        }}
         title="Confirm bulk action"
         size="md"
       >
@@ -587,17 +652,23 @@ export default function OrganizerAthletes() {
             {bulkConfirmAction === 'set_inactive' ? (
               <>
                 Set season status to <strong>inactive</strong> for{' '}
-                <span className="font-semibold tabular-nums">{selectedIds.size}</span> selected athletes?
+                <span className="font-semibold tabular-nums">{selectedIds.size}</span> selected
+                athletes?
               </>
             ) : (
               <>
                 Set season status to <strong>active</strong> for{' '}
-                <span className="font-semibold tabular-nums">{selectedIds.size}</span> selected athletes?
+                <span className="font-semibold tabular-nums">{selectedIds.size}</span> selected
+                athletes?
               </>
             )}
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setBulkConfirmAction(null)} disabled={bulkBusy}>
+            <Button
+              variant="secondary"
+              onClick={() => setBulkConfirmAction(null)}
+              disabled={bulkBusy}
+            >
               Cancel
             </Button>
             <Button loading={bulkBusy} onClick={() => void confirmBulkAthletes()}>
@@ -618,12 +689,14 @@ export default function OrganizerAthletes() {
             <p className="text-sm text-[var(--text-secondary)]">
               {seasonToggleConfirm.nextInactive ? (
                 <>
-                  Deactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for this season?
-                  They will no longer appear as eligible for roster placement while inactive.
+                  Deactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for
+                  this season? They will no longer appear as eligible for roster placement while
+                  inactive.
                 </>
               ) : (
                 <>
-                  Reactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for this season?
+                  Reactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for
+                  this season?
                 </>
               )}
             </p>
@@ -666,7 +739,8 @@ export default function OrganizerAthletes() {
               <div>
                 <p className="text-[var(--text-muted)] text-xs">Sport / position</p>
                 <p>
-                  {getSportLabel(selected.sport as any)} · {selected.position?.trim() ? selected.position : 'Not set'}
+                  {getSportLabel(selected.sport as any)} ·{' '}
+                  {selected.position?.trim() ? selected.position : 'Not set'}
                 </p>
               </div>
             </div>
@@ -720,29 +794,48 @@ export default function OrganizerAthletes() {
       {/* Roster import modal (CSV or Excel) */}
       <Modal
         open={showImport}
-        onClose={() => { if (!importing) { setShowImport(false); resetImportState() } }}
+        onClose={() => {
+          if (!importing) {
+            setShowImport(false)
+            resetImportState()
+          }
+        }}
         title="Import athletes from CSV or Excel"
         size="lg"
       >
         <div className="space-y-5">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">What to include in your spreadsheet</p>
-              <Button size="sm" variant="secondary" icon={<Download className="w-3.5 h-3.5" />} loading={downloadingTemplate} onClick={handleDownloadTemplate}>
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                What to include in your spreadsheet
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Download className="w-3.5 h-3.5" />}
+                loading={downloadingTemplate}
+                onClick={handleDownloadTemplate}
+              >
                 Download template
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">Full Name <span className="text-[var(--danger)]">*</span></p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Full Name <span className="text-[var(--danger)]">*</span>
+                </p>
                 <p className="text-[var(--text-muted)]">Student's complete name</p>
               </div>
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">Student ID <span className="text-[var(--danger)]">*</span></p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Student ID <span className="text-[var(--danger)]">*</span>
+                </p>
                 <p className="text-[var(--text-muted)]">School ID number</p>
               </div>
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">Department <span className="text-[var(--danger)]">*</span></p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Department <span className="text-[var(--danger)]">*</span>
+                </p>
                 <p className="text-[var(--text-muted)]">SBMA, SECA, SASE, or SHS</p>
               </div>
               <div>
@@ -767,7 +860,9 @@ export default function OrganizerAthletes() {
               </div>
             </div>
             <p className="text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-2">
-              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto login — Email: <em>studentid@ursports.local</em> &nbsp;·&nbsp; Password: <em>UrSports-studentid-2026!</em>
+              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto login —
+              Email: <em>studentid@ursports.local</em> &nbsp;·&nbsp; Password:{' '}
+              <em>UrSports-studentid-2026!</em>
             </p>
           </div>
 
@@ -800,11 +895,15 @@ export default function OrganizerAthletes() {
               {importFile ? (
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{importFile.name}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{(importFile.size / 1024).toFixed(1)} KB · click to change</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {(importFile.size / 1024).toFixed(1)} KB · click to change
+                  </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-[var(--text-muted)]">Click to choose a .csv or .xlsx file</p>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Click to choose a .csv or .xlsx file
+                  </p>
                   <p className="text-xs text-[var(--text-muted)]">Max 5 MB</p>
                 </div>
               )}
@@ -818,9 +917,7 @@ export default function OrganizerAthletes() {
             </div>
           )}
 
-          {previewError && !previewing && (
-            <Alert type="danger">{previewError}</Alert>
-          )}
+          {previewError && !previewing && <Alert type="danger">{previewError}</Alert>}
 
           {previewRows && !previewing && !importResult && (
             <div className="space-y-2">
@@ -851,7 +948,9 @@ export default function OrganizerAthletes() {
                   ]}
                   data={previewRows.map((r) => ({
                     status: r.valid ? (
-                      <Badge variant="success" size="sm">OK</Badge>
+                      <Badge variant="success" size="sm">
+                        OK
+                      </Badge>
                     ) : (
                       <Badge variant="danger" size="sm" className="whitespace-normal text-left">
                         {r.error}
@@ -872,19 +971,25 @@ export default function OrganizerAthletes() {
             <div className="space-y-3">
               {importResult.created.length > 0 && (
                 <Alert type="success">
-                  <span className="font-semibold">{importResult.created.length} athlete{importResult.created.length !== 1 ? 's' : ''} imported successfully.</span>
-                  {' '}They are immediately active.
+                  <span className="font-semibold">
+                    {importResult.created.length} athlete
+                    {importResult.created.length !== 1 ? 's' : ''} imported successfully.
+                  </span>{' '}
+                  They are immediately active.
                 </Alert>
               )}
               {importResult.errors.length > 0 && (
                 <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 space-y-1.5 max-h-48 overflow-y-auto">
                   <p className="text-xs font-semibold text-[var(--danger)] flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    {importResult.errors.length} row{importResult.errors.length !== 1 ? 's' : ''} failed
+                    {importResult.errors.length} row{importResult.errors.length !== 1 ? 's' : ''}{' '}
+                    failed
                   </p>
                   {importResult.errors.map((e, i) => (
                     <p key={i} className="text-xs text-[var(--text-secondary)]">
-                      {e.row > 0 ? <span className="font-mono text-[var(--text-muted)]">Row {e.row}: </span> : null}
+                      {e.row > 0 ? (
+                        <span className="font-mono text-[var(--text-muted)]">Row {e.row}: </span>
+                      ) : null}
                       {e.error}
                     </p>
                   ))}
@@ -894,7 +999,14 @@ export default function OrganizerAthletes() {
           )}
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" disabled={importing} onClick={() => { setShowImport(false); resetImportState() }}>
+            <Button
+              variant="secondary"
+              disabled={importing}
+              onClick={() => {
+                setShowImport(false)
+                resetImportState()
+              }}
+            >
               {importResult ? 'Close' : 'Cancel'}
             </Button>
             {!importResult && previewRows && (
@@ -907,14 +1019,13 @@ export default function OrganizerAthletes() {
                 Confirm import ({previewRows.filter((r) => r.valid).length})
               </Button>
             )}
-            {importResult && importResult.errors.length > 0 && importResult.created.length === 0 && (
-              <Button
-                icon={<Upload className="w-4 h-4" />}
-                onClick={resetImportState}
-              >
-                Try again
-              </Button>
-            )}
+            {importResult &&
+              importResult.errors.length > 0 &&
+              importResult.created.length === 0 && (
+                <Button icon={<Upload className="w-4 h-4" />} onClick={resetImportState}>
+                  Try again
+                </Button>
+              )}
           </div>
         </div>
       </Modal>

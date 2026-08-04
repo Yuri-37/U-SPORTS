@@ -6,10 +6,19 @@ import { CreateEventModal } from '../../components/organizer/CreateEventModal'
 import api from '../../lib/api'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import type { Event } from '../../types'
-import { getSportIcon, getSportLabel, formatEnumLabel, organizerEventStatusLabel } from '../../lib/utils'
+import {
+  getSportIcon,
+  getSportLabel,
+  formatEnumLabel,
+  organizerEventStatusLabel,
+} from '../../lib/utils'
 
 const STATUS_VARIANTS: Record<string, 'default' | 'info' | 'success' | 'warning' | 'danger'> = {
-  draft: 'default', registration: 'info', in_progress: 'danger', completed: 'success', cancelled: 'default'
+  draft: 'default',
+  registration: 'info',
+  in_progress: 'danger',
+  completed: 'success',
+  cancelled: 'default',
 }
 
 export default function OrganizerEvents() {
@@ -40,7 +49,8 @@ export default function OrganizerEvents() {
       .catch((err: unknown) => {
         if (gen !== fetchGeneration.current) return
         if (!silent) setEvents([])
-        let msg = 'Could not load events. Check that the API server is running (e.g. pnpm dev) and try again.'
+        let msg =
+          'Could not load events. Check that the API server is running (e.g. pnpm dev) and try again.'
         if (err && typeof err === 'object') {
           const ax = err as { response?: { data?: { error?: string } }; message?: string }
           const apiErr = ax.response?.data?.error
@@ -62,7 +72,7 @@ export default function OrganizerEvents() {
 
   const canCreateEvents = sportOptionsForForms.length > 0
 
-  const filtered = events.filter(e => {
+  const filtered = events.filter((e) => {
     if (tab === 'active') return ['in_progress', 'registration', 'draft'].includes(e.status)
     if (tab === 'completed') return e.status === 'completed'
     if (tab === 'cancelled') return e.status === 'cancelled'
@@ -72,20 +82,27 @@ export default function OrganizerEvents() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/organizer')} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded" aria-label="Back to dashboard">
+        <button
+          type="button"
+          onClick={() => navigate('/organizer')}
+          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
+          aria-label="Back to dashboard"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Events</h1>
             <p className="text-[var(--text-muted)] text-sm">
-            {loading ? 'Loading events…' : `${events.length} total events`}
-            {!hasFullSportAccess && assignedSports.length > 0 ? (
-              <span className="block mt-1 text-xs">
-                You can edit events for {assignedSports.map((s) => getSportLabel(s as any)).join(', ')} only. Other sports are view-only.
-              </span>
-            ) : null}
-          </p>
+              {loading ? 'Loading events…' : `${events.length} total events`}
+              {!hasFullSportAccess && assignedSports.length > 0 ? (
+                <span className="block mt-1 text-xs">
+                  You can edit events for{' '}
+                  {assignedSports.map((s) => getSportLabel(s as any)).join(', ')} only. Other sports
+                  are view-only.
+                </span>
+              ) : null}
+            </p>
           </div>
           <Button
             icon={<Plus className="w-4 h-4" />}
@@ -109,7 +126,10 @@ export default function OrganizerEvents() {
       />
 
       {loadError && (
-        <Alert type="danger" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Alert
+          type="danger"
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
           <span>{loadError}</span>
           <Button type="button" size="sm" variant="secondary" onClick={() => fetchEvents()}>
             Retry
@@ -119,7 +139,9 @@ export default function OrganizerEvents() {
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({length:6}).map((_,i) => <Skeleton key={i} className="h-32" />)}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
       ) : filtered.length === 0 && !loadError ? (
         events.length > 0 ? (
@@ -142,8 +164,12 @@ export default function OrganizerEvents() {
         )
       ) : filtered.length > 0 ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(e => (
-            <Card key={e.id} className="cursor-pointer hover:border-white/20 transition-colors" onClick={() => navigate(`/organizer/events/${e.id}`)}>
+          {filtered.map((e) => (
+            <Card
+              key={e.id}
+              className="cursor-pointer hover:border-white/20 transition-colors"
+              onClick={() => navigate(`/organizer/events/${e.id}`)}
+            >
               <div className="flex items-start justify-between mb-3">
                 <span className="text-2xl">{getSportIcon(e.sport as any)}</span>
                 <Badge variant={STATUS_VARIANTS[e.status]} size="sm">
@@ -152,20 +178,26 @@ export default function OrganizerEvents() {
               </div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h3 className="font-bold">{e.name}</h3>
-{!canConfigureSport(e.sport) ? (
+                {!canConfigureSport(e.sport) ? (
                   <Badge size="sm" variant="default">
                     View only
                   </Badge>
                 ) : null}
               </div>
-              <p className="text-xs text-[var(--text-muted)] capitalize">{formatEnumLabel(e.format)} · {getSportLabel(e.sport as any)}</p>
+              <p className="text-xs text-[var(--text-muted)] capitalize">
+                {formatEnumLabel(e.format)} · {getSportLabel(e.sport as any)}
+              </p>
               {e.category && <p className="text-xs text-[var(--text-muted)] mt-1">{e.category}</p>}
             </Card>
           ))}
         </div>
       ) : null}
 
-      <CreateEventModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => fetchEvents({ silent: true })} />
+      <CreateEventModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => fetchEvents({ silent: true })}
+      />
     </div>
   )
 }

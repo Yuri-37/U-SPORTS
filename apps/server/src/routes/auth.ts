@@ -16,7 +16,10 @@ const COOLDOWN_MS = PASSWORD_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password is too long'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password is too long'),
 })
 
 router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
@@ -28,7 +31,10 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
   const userId = req.user!.id
   const email = req.user!.email
 
-  const { error: verifyError } = await anonClient.auth.signInWithPassword({ email, password: currentPassword })
+  const { error: verifyError } = await anonClient.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  })
   if (verifyError) {
     // 400, not 401 — the web client's axios interceptor treats any 401 as an
     // expired session and force-signs-out; a wrong *current* password here is
@@ -60,7 +66,9 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
-  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, { password: newPassword })
+  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  })
   if (updateError) return res.status(400).json({ error: updateError.message })
 
   const now = new Date().toISOString()
@@ -68,7 +76,8 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
     .from('profiles')
     .update({ password_changed_at: now })
     .eq('id', userId)
-  if (stampError) console.warn('[change-password] failed to stamp password_changed_at:', stampError.message)
+  if (stampError)
+    console.warn('[change-password] failed to stamp password_changed_at:', stampError.message)
 
   await writeAuditLog({
     actorId: userId,

@@ -2,13 +2,27 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { ChevronDown, Download, FileText, Lightbulb, Loader2, RefreshCw, Search, Trophy, TrendingUp } from 'lucide-react'
+import {
+  ChevronDown,
+  Download,
+  FileText,
+  Lightbulb,
+  Loader2,
+  RefreshCw,
+  Search,
+  Trophy,
+  TrendingUp,
+} from 'lucide-react'
 import { Card, TabBar, Select, Button, Badge, Skeleton, Input, Alert } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
 import type { Insight, Season } from '../../types'
 import { getSportLabel, formatEnumLabel, formatDate } from '../../lib/utils'
-import { deriveEliminationPodium, placementRankLabel, type EventPlacement } from '../../lib/eventPlacements'
+import {
+  deriveEliminationPodium,
+  placementRankLabel,
+  type EventPlacement,
+} from '../../lib/eventPlacements'
 import { fetchParticipantLabels } from '../../lib/participantLabels'
 import { buildSeasonAggregateInsights } from '../../lib/analyticsComputedInsights'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
@@ -38,7 +52,11 @@ const INSIGHT_FILTER_LABELS: Record<string, string> = {
 function InsightExpandedDetail({ insight }: { insight: Insight }) {
   const d = insight.data as Record<string, unknown>
 
-  if (insight.insight_type === 'debut_standout' && d.full_stats && typeof d.full_stats === 'object') {
+  if (
+    insight.insight_type === 'debut_standout' &&
+    d.full_stats &&
+    typeof d.full_stats === 'object'
+  ) {
     const defs = STAT_KEYS[insight.sport] ?? []
     const stats = d.full_stats as Record<string, number>
     return (
@@ -82,7 +100,10 @@ function InsightActions({ insight }: { insight: Insight }) {
       <button
         type="button"
         className="text-[var(--accent-default)] hover:underline font-medium"
-        onClick={(e) => { e.stopPropagation(); navigate(insightNavigationTarget(insight)) }}
+        onClick={(e) => {
+          e.stopPropagation()
+          navigate(insightNavigationTarget(insight))
+        }}
       >
         View {insight.entity_type === 'player' ? 'profile' : 'team'} →
       </button>
@@ -90,7 +111,10 @@ function InsightActions({ insight }: { insight: Insight }) {
         <button
           type="button"
           className="text-[var(--accent-default)] hover:underline font-medium"
-          onClick={(e) => { e.stopPropagation(); navigate(`/organizer/match-review/${matchId}/score-sheet`) }}
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/organizer/match-review/${matchId}/score-sheet`)
+          }}
         >
           View match →
         </button>
@@ -119,9 +143,9 @@ export default function OrganizerAnalytics() {
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [teamStats, setTeamStats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [eventPodiums, setEventPodiums] = useState<{ event: { id: string; name: string }; placements: EventPlacement[] }[]>(
-    []
-  )
+  const [eventPodiums, setEventPodiums] = useState<
+    { event: { id: string; name: string }; placements: EventPlacement[] }[]
+  >([])
   const [podiumLabels, setPodiumLabels] = useState<Record<string, string>>({})
   const [insightsRefreshing, setInsightsRefreshing] = useState(false)
   const [departmentFilter, setDepartmentFilter] = useState('')
@@ -188,7 +212,9 @@ export default function OrganizerAnalytics() {
         const [lb, ts] = await Promise.all([
           supabase
             .from('player_season_stats')
-            .select('*, athlete:athletes(student_id, department, profile:profiles!athletes_profile_id_fkey(full_name))')
+            .select(
+              '*, athlete:athletes(student_id, department, profile:profiles!athletes_profile_id_fkey(full_name))',
+            )
             .eq('sport', sport)
             .eq('season_id', seasonId)
             .order('games_played', { ascending: false })
@@ -203,7 +229,9 @@ export default function OrganizerAnalytics() {
         if (cancelled) return
 
         try {
-          const ins = await api.get(`/insights?sport=${encodeURIComponent(sport)}&season_id=${seasonId}`)
+          const ins = await api.get(
+            `/insights?sport=${encodeURIComponent(sport)}&season_id=${seasonId}`,
+          )
           if (!cancelled) setInsights(ins.data ?? [])
         } catch {
           if (!cancelled) setInsights([])
@@ -214,7 +242,8 @@ export default function OrganizerAnalytics() {
         setLeaderboard(lbRows)
         setTeamStats(tsRows)
 
-        const podiumRows: { event: { id: string; name: string }; placements: EventPlacement[] }[] = []
+        const podiumRows: { event: { id: string; name: string }; placements: EventPlacement[] }[] =
+          []
         const { data: doneEv } = await supabase
           .from('events')
           .select('id,name')
@@ -227,7 +256,9 @@ export default function OrganizerAnalytics() {
         for (const ev of doneEv ?? []) {
           const { data: br } = await supabase
             .from('brackets')
-            .select('round,match_order,participant_a_id,participant_b_id,winner_id,is_bye,bracket_type')
+            .select(
+              'round,match_order,participant_a_id,participant_b_id,winner_id,is_bye,bracket_type',
+            )
             .eq('event_id', ev.id)
           const placements = deriveEliminationPodium(br ?? [])
           if (!placements) continue
@@ -269,7 +300,9 @@ export default function OrganizerAnalytics() {
         { seasonId: effectiveSeasonId, sport },
         { timeout: 120000 },
       )
-      const ins = await api.get(`/insights?sport=${encodeURIComponent(sport)}&season_id=${effectiveSeasonId}`)
+      const ins = await api.get(
+        `/insights?sport=${encodeURIComponent(sport)}&season_id=${effectiveSeasonId}`,
+      )
       setInsights(ins.data ?? [])
       return true
     } catch {
@@ -281,7 +314,14 @@ export default function OrganizerAnalytics() {
 
   /** Completed matches may pre-date server-side insight jobs — scan once per browser session when this tab is empty. */
   useEffect(() => {
-    if (tab !== 'insights' || loading || seasonsLoading || !effectiveSeasonId || insights.length > 0) return
+    if (
+      tab !== 'insights' ||
+      loading ||
+      seasonsLoading ||
+      !effectiveSeasonId ||
+      insights.length > 0
+    )
+      return
     const key = `analytics-auto-insights:v1:${effectiveSeasonId}:${sport}`
     try {
       if (sessionStorage.getItem(key)) return
@@ -306,9 +346,15 @@ export default function OrganizerAnalytics() {
     setScoreSheetsLoading(true)
     api
       .get('/scoring/finalized-matches', { params: { seasonId: effectiveSeasonId, sport } })
-      .then((res) => { if (!cancelled) setFinalizedMatches(res.data?.matches ?? []) })
-      .catch(() => { if (!cancelled) setFinalizedMatches([]) })
-      .finally(() => { if (!cancelled) setScoreSheetsLoading(false) })
+      .then((res) => {
+        if (!cancelled) setFinalizedMatches(res.data?.matches ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setFinalizedMatches([])
+      })
+      .finally(() => {
+        if (!cancelled) setScoreSheetsLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -316,7 +362,7 @@ export default function OrganizerAnalytics() {
 
   const aggregateInsights = useMemo(
     () => buildSeasonAggregateInsights(sport, leaderboard, teamStats),
-    [sport, leaderboard, teamStats]
+    [sport, leaderboard, teamStats],
   )
 
   const filteredInsights = useMemo(() => {
@@ -326,24 +372,30 @@ export default function OrganizerAnalytics() {
   }, [insights, insightFilter])
 
   const teamStatsForSport = useMemo(
-    () => teamStats.filter((ts) => {
-      if (ts.team?.sport !== sport) return false
-      if (departmentFilter && (ts.team?.department ?? '') !== departmentFilter) return false
-      return true
-    }),
-    [teamStats, sport, departmentFilter]
+    () =>
+      teamStats.filter((ts) => {
+        if (ts.team?.sport !== sport) return false
+        if (departmentFilter && (ts.team?.department ?? '') !== departmentFilter) return false
+        return true
+      }),
+    [teamStats, sport, departmentFilter],
   )
 
   const filteredLeaderboard = useMemo(
-    () => departmentFilter
-      ? leaderboard.filter((p) => (p.athlete?.department ?? '') === departmentFilter)
-      : leaderboard,
-    [leaderboard, departmentFilter]
+    () =>
+      departmentFilter
+        ? leaderboard.filter((p) => (p.athlete?.department ?? '') === departmentFilter)
+        : leaderboard,
+    [leaderboard, departmentFilter],
   )
 
   // A blob: URL carries no HTTP headers of its own, so the server's Content-Disposition
   // is never seen here — whatever name we set below is the one the browser saves.
-  const safeFilenamePart = (s: string) => s.replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '-')
+  const safeFilenamePart = (s: string) =>
+    s
+      .replace(/[^a-zA-Z0-9 _-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
   const downloadBlob = (data: Blob, filename: string) => {
     const url = URL.createObjectURL(data)
     const a = document.createElement('a')
@@ -365,14 +417,22 @@ export default function OrganizerAnalytics() {
         // Downloads whatever category is selected on screen right now — the detail
         // sheet is scoped to it, though the Summary sheet's counts always cover the
         // whole sport regardless of filter.
-        const qs = new URLSearchParams({ seasonId: effectiveSeasonId, sport, filter: insightFilter })
-        const r = await api.get(`/reports/analytics/insights-xlsx?${qs.toString()}`, { responseType: 'blob' as const })
+        const qs = new URLSearchParams({
+          seasonId: effectiveSeasonId,
+          sport,
+          filter: insightFilter,
+        })
+        const r = await api.get(`/reports/analytics/insights-xlsx?${qs.toString()}`, {
+          responseType: 'blob' as const,
+        })
         const filterSuffix = insightFilter === 'all' ? '' : `-${insightFilter}`
         downloadBlob(r.data, `${namePrefix}-insights${filterSuffix}-${dateStamp}.xlsx`)
         return
       }
       const qs = new URLSearchParams({ seasonId: effectiveSeasonId, sport, tab })
-      const r = await api.get(`/reports/analytics/csv?${qs.toString()}`, { responseType: 'blob' as const })
+      const r = await api.get(`/reports/analytics/csv?${qs.toString()}`, {
+        responseType: 'blob' as const,
+      })
       downloadBlob(r.data, `${namePrefix}-${tab}-${dateStamp}.csv`)
     } catch (e: unknown) {
       // responseType is 'blob', so an axios error body arrives as a Blob even
@@ -402,7 +462,8 @@ export default function OrganizerAnalytics() {
     ...(sport === 'basketball'
       ? {
           PPG: p.games_played > 0 ? ((p.stats?.total_points ?? 0) / p.games_played).toFixed(1) : 0,
-          RPG: p.games_played > 0 ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1) : 0,
+          RPG:
+            p.games_played > 0 ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1) : 0,
         }
       : sport === 'volleyball'
         ? {
@@ -419,7 +480,9 @@ export default function OrganizerAnalytics() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-[var(--text-muted)] text-sm">Performance insights, placements, and leaderboards</p>
+          <p className="text-[var(--text-muted)] text-sm">
+            Performance insights, placements, and leaderboards
+          </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end w-full lg:w-auto lg:max-w-3xl">
           <Input
@@ -516,7 +579,9 @@ export default function OrganizerAnalytics() {
                     }}
                   />
                   <Bar
-                    dataKey={sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Kills' : 'Wins'}
+                    dataKey={
+                      sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Kills' : 'Wins'
+                    }
                     fill="#0066FF"
                     radius={[4, 4, 0, 0]}
                   />
@@ -536,28 +601,52 @@ export default function OrganizerAnalytics() {
               <table className="w-full text-sm">
                 <thead className="bg-[var(--surface-elevated)]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">#</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Athlete</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">GP</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      #
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Athlete
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                      GP
+                    </th>
                     {sport === 'basketball' && (
                       <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">PPG</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">RPG</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">APG</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          PPG
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          RPG
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          APG
+                        </th>
                       </>
                     )}
                     {sport === 'volleyball' && (
                       <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">Kills</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">Aces</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">Kill%</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          Kills
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          Aces
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          Kill%
+                        </th>
                       </>
                     )}
                     {sport === 'table-tennis' && (
                       <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">MP</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">W</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">Win%</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          MP
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          W
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                          Win%
+                        </th>
                       </>
                     )}
                   </tr>
@@ -568,19 +657,29 @@ export default function OrganizerAnalytics() {
                       key={p.id}
                       className="border-t border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)]"
                     >
-                      <td className="px-4 py-3 text-[var(--text-muted)] font-mono text-xs">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium">{p.athlete?.profile?.full_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] font-mono text-xs">
+                        {i + 1}
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {p.athlete?.profile?.full_name ?? '—'}
+                      </td>
                       <td className="px-4 py-3 text-center">{p.games_played}</td>
                       {sport === 'basketball' && (
                         <>
                           <td className="px-4 py-3 text-center font-bold">
-                            {p.games_played > 0 ? ((p.stats?.total_points ?? 0) / p.games_played).toFixed(1) : '0.0'}
+                            {p.games_played > 0
+                              ? ((p.stats?.total_points ?? 0) / p.games_played).toFixed(1)
+                              : '0.0'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {p.games_played > 0 ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1) : '0.0'}
+                            {p.games_played > 0
+                              ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1)
+                              : '0.0'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {p.games_played > 0 ? ((p.stats?.total_assists ?? 0) / p.games_played).toFixed(1) : '0.0'}
+                            {p.games_played > 0
+                              ? ((p.stats?.total_assists ?? 0) / p.games_played).toFixed(1)
+                              : '0.0'}
                           </td>
                         </>
                       )}
@@ -622,17 +721,24 @@ export default function OrganizerAnalytics() {
               <div>
                 <h3 className="font-bold text-sm mb-1">Season snapshots</h3>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
-                  Derived from recorded season totals for the selected season and sport (same aggregates as the leaderboard below).
+                  Derived from recorded season totals for the selected season and sport (same
+                  aggregates as the leaderboard below).
                 </p>
                 {aggregateInsights.length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)]">Need more logged games before narratives appear.</p>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Need more logged games before narratives appear.
+                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {aggregateInsights.map((row) => (
                       <li key={row.id} className="flex gap-2 text-sm">
                         <span
                           className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-                            row.tone === 'positive' ? 'bg-[var(--success)]' : row.tone === 'watch' ? 'bg-[var(--warning)]' : 'bg-[var(--text-muted)]'
+                            row.tone === 'positive'
+                              ? 'bg-[var(--success)]'
+                              : row.tone === 'watch'
+                                ? 'bg-[var(--warning)]'
+                                : 'bg-[var(--text-muted)]'
                           }`}
                         />
                         <span className="text-[var(--text-secondary)]">
@@ -674,12 +780,14 @@ export default function OrganizerAnalytics() {
           </div>
           {insights.length > 0 && (
             <div className="flex gap-2 flex-wrap">
-              {([
-                ['all', 'All'],
-                ['debuts', 'Debuts'],
-                ['trending', 'Trending'],
-                ['team', 'Team form'],
-              ] as const).map(([key, label]) => (
+              {(
+                [
+                  ['all', 'All'],
+                  ['debuts', 'Debuts'],
+                  ['trending', 'Trending'],
+                  ['team', 'Team form'],
+                ] as const
+              ).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -699,10 +807,16 @@ export default function OrganizerAnalytics() {
             <Card className="text-center py-12">
               <Lightbulb className="w-10 h-10 mx-auto text-[var(--text-muted)] mb-3" />
               <p className="text-[var(--text-muted)] text-sm max-w-md mx-auto mb-4">
-                Insights appear after the first completed match — debut standouts, win streaks, and score trends. Use Refresh insights if this section stays empty after ending matches.
+                Insights appear after the first completed match — debut standouts, win streaks, and
+                score trends. Use Refresh insights if this section stays empty after ending matches.
               </p>
               {!insightsRefreshing && (
-                <Button type="button" variant="primary" size="sm" onClick={() => void runInsightsBackfill()}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void runInsightsBackfill()}
+                >
                   Scan recent matches now
                 </Button>
               )}
@@ -714,64 +828,75 @@ export default function OrganizerAnalytics() {
               )}
             </Card>
           ) : filteredInsights.length === 0 ? (
-            <Card className="text-center py-8 text-[var(--text-muted)] text-sm">No insights in this filter yet.</Card>
+            <Card className="text-center py-8 text-[var(--text-muted)] text-sm">
+              No insights in this filter yet.
+            </Card>
           ) : (
             <div className="space-y-3">
               {filteredInsights.map((insight) => {
                 const expanded = expandedInsightId === insight.id
                 return (
-                <div
-                  key={insight.id}
-                  role="button"
-                  tabIndex={0}
-                  className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] cursor-pointer"
-                  onClick={() => setExpandedInsightId(expanded ? null : insight.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setExpandedInsightId(expanded ? null : insight.id)
-                    }
-                  }}
-                >
-                  <Card className="flex gap-3 hover:border-[var(--accent-default)]/35 transition-colors">
-                    <div
-                      className={`w-1 rounded-full flex-shrink-0 ${
-                        insight.insight_type === 'trending_up' || insight.insight_type === 'debut_standout' || insight.insight_type === 'first_win'
-                          ? 'bg-[var(--success)]'
-                          : insight.insight_type === 'trending_down'
-                            ? 'bg-[var(--danger)]'
-                            : 'bg-[var(--warning)]'
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge size="sm" variant={insight.entity_type === 'player' ? 'info' : 'default'}>
-                          {formatEnumLabel(insight.entity_type)}
-                        </Badge>
-                        <Badge
-                          size="sm"
-                          variant={
-                            insight.insight_type === 'trending_up' || insight.insight_type === 'debut_standout' || insight.insight_type === 'first_win'
-                              ? 'success'
-                              : insight.insight_type === 'trending_down'
-                                ? 'danger'
-                                : 'warning'
-                          }
-                        >
-                          {formatEnumLabel(insight.insight_type)}
-                        </Badge>
-                        <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] ml-auto transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                      </div>
-                      <p className="text-sm">{insight.insight_text}</p>
-                      {expanded && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <InsightExpandedDetail insight={insight} />
-                          <InsightActions insight={insight} />
+                  <div
+                    key={insight.id}
+                    role="button"
+                    tabIndex={0}
+                    className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)] cursor-pointer"
+                    onClick={() => setExpandedInsightId(expanded ? null : insight.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setExpandedInsightId(expanded ? null : insight.id)
+                      }
+                    }}
+                  >
+                    <Card className="flex gap-3 hover:border-[var(--accent-default)]/35 transition-colors">
+                      <div
+                        className={`w-1 rounded-full flex-shrink-0 ${
+                          insight.insight_type === 'trending_up' ||
+                          insight.insight_type === 'debut_standout' ||
+                          insight.insight_type === 'first_win'
+                            ? 'bg-[var(--success)]'
+                            : insight.insight_type === 'trending_down'
+                              ? 'bg-[var(--danger)]'
+                              : 'bg-[var(--warning)]'
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge
+                            size="sm"
+                            variant={insight.entity_type === 'player' ? 'info' : 'default'}
+                          >
+                            {formatEnumLabel(insight.entity_type)}
+                          </Badge>
+                          <Badge
+                            size="sm"
+                            variant={
+                              insight.insight_type === 'trending_up' ||
+                              insight.insight_type === 'debut_standout' ||
+                              insight.insight_type === 'first_win'
+                                ? 'success'
+                                : insight.insight_type === 'trending_down'
+                                  ? 'danger'
+                                  : 'warning'
+                            }
+                          >
+                            {formatEnumLabel(insight.insight_type)}
+                          </Badge>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-[var(--text-muted)] ml-auto transition-transform ${expanded ? 'rotate-180' : ''}`}
+                          />
                         </div>
-                      )}
-                    </div>
-                  </Card>
-                </div>
+                        <p className="text-sm">{insight.insight_text}</p>
+                        {expanded && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <InsightExpandedDetail insight={insight} />
+                            <InsightActions insight={insight} />
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
                 )
               })}
             </div>
@@ -782,21 +907,30 @@ export default function OrganizerAnalytics() {
       {tab === 'results' && (
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-muted)]">
-            Champions and runners-up from completed knockout events in this season ({getSportLabel(sport as any)}). Round-robin–only events may not
-            appear until a final bracket slot exists.
+            Champions and runners-up from completed knockout events in this season (
+            {getSportLabel(sport as any)}). Round-robin–only events may not appear until a final
+            bracket slot exists.
           </p>
           {loading ? (
             <Skeleton className="h-40" />
           ) : eventPodiums.length === 0 ? (
-            <Card className="text-center py-12 text-[var(--text-muted)] text-sm">No finished bracket results for this sport yet.</Card>
+            <Card className="text-center py-12 text-[var(--text-muted)] text-sm">
+              No finished bracket results for this sport yet.
+            </Card>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
               <table className="w-full text-sm">
                 <thead className="bg-[var(--surface-elevated)]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Event</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Champion</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Runner-up</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Event
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Champion
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Runner-up
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-muted)]" />
                   </tr>
                 </thead>
@@ -816,9 +950,11 @@ export default function OrganizerAnalytics() {
                             <span className="font-medium">{row.event.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">{champ ? podiumLabels[champ.participantId] ?? '—' : '—'}</td>
+                        <td className="px-4 py-3">
+                          {champ ? (podiumLabels[champ.participantId] ?? '—') : '—'}
+                        </td>
                         <td className="px-4 py-3 text-[var(--text-secondary)]">
-                          {runner ? podiumLabels[runner.participantId] ?? '—' : '—'}
+                          {runner ? (podiumLabels[runner.participantId] ?? '—') : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Badge size="sm" variant="info">
@@ -838,22 +974,35 @@ export default function OrganizerAnalytics() {
       {tab === 'scoresheets' && (
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-muted)]">
-            Finalized matches for this season ({getSportLabel(sport as any)}). Each one links to its match score sheet.
+            Finalized matches for this season ({getSportLabel(sport as any)}). Each one links to its
+            match score sheet.
           </p>
           {scoreSheetsLoading ? (
             <Skeleton className="h-40" />
           ) : finalizedMatches.length === 0 ? (
-            <Card className="text-center py-12 text-[var(--text-muted)] text-sm">No finalized matches for this sport yet.</Card>
+            <Card className="text-center py-12 text-[var(--text-muted)] text-sm">
+              No finalized matches for this sport yet.
+            </Card>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
               <table className="w-full text-sm">
                 <thead className="bg-[var(--surface-elevated)]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Event</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Teams</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Final Score</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Winner</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Finalized</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Event
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Teams
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Final Score
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Winner
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                      Finalized
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -866,13 +1015,22 @@ export default function OrganizerAnalytics() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-                          <span className="font-medium">{m.eventName}{m.round ? ` · Round ${m.round}` : ''}</span>
+                          <span className="font-medium">
+                            {m.eventName}
+                            {m.round ? ` · Round ${m.round}` : ''}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">{m.nameA} vs {m.nameB}</td>
+                      <td className="px-4 py-3">
+                        {m.nameA} vs {m.nameB}
+                      </td>
                       <td className="px-4 py-3">{m.finalScoreLabel}</td>
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">{m.winnerName ?? '—'}</td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{m.finalizedAt ? formatDate(m.finalizedAt) : '—'}</td>
+                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                        {m.winnerName ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">
+                        {m.finalizedAt ? formatDate(m.finalizedAt) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -887,10 +1045,18 @@ export default function OrganizerAnalytics() {
           <table className="w-full text-sm">
             <thead className="bg-[var(--surface-elevated)]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">Team</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">W</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">L</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">Win%</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                  Team
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                  W
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                  L
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                  Win%
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -902,12 +1068,20 @@ export default function OrganizerAnalytics() {
                 </tr>
               ) : (
                 teamStatsForSport.map((ts) => (
-                  <tr key={ts.id} className="border-t border-[var(--border-subtle)] bg-[var(--surface-card)]">
+                  <tr
+                    key={ts.id}
+                    className="border-t border-[var(--border-subtle)] bg-[var(--surface-card)]"
+                  >
                     <td className="px-4 py-3 font-medium">{ts.team?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-center font-bold text-[var(--success)]">{ts.wins}</td>
+                    <td className="px-4 py-3 text-center font-bold text-[var(--success)]">
+                      {ts.wins}
+                    </td>
                     <td className="px-4 py-3 text-center text-[var(--danger)]">{ts.losses}</td>
                     <td className="px-4 py-3 text-center">
-                      {ts.wins + ts.losses > 0 ? Math.round((ts.wins / (ts.wins + ts.losses)) * 100) : 0}%
+                      {ts.wins + ts.losses > 0
+                        ? Math.round((ts.wins / (ts.wins + ts.losses)) * 100)
+                        : 0}
+                      %
                     </td>
                   </tr>
                 ))

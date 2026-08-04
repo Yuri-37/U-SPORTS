@@ -29,17 +29,24 @@ export default function OrganizerSettings() {
             <h2 className="font-bold text-lg">{scopedProfile?.full_name}</h2>
             <p className="text-sm text-[var(--text-muted)]">{scopedProfile?.email}</p>
             <Badge variant="info" size="sm" className="mt-1">
-              {scopedProfile?.role === 'Admin' ? 'Super Admin' : scopedProfile?.role ?? 'Organizer'}
+              {scopedProfile?.role === 'Admin'
+                ? 'Super Admin'
+                : (scopedProfile?.role ?? 'Organizer')}
             </Badge>
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <p className="text-xs text-[var(--text-muted)] font-semibold uppercase mb-2">Assigned Sports</p>
+            <p className="text-xs text-[var(--text-muted)] font-semibold uppercase mb-2">
+              Assigned Sports
+            </p>
             <div className="flex gap-2 flex-wrap">
-              {(organizer?.assigned_sports ?? []).map(s => (
-                <div key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-elevated)] text-sm">
+              {(organizer?.assigned_sports ?? []).map((s) => (
+                <div
+                  key={s}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-elevated)] text-sm"
+                >
                   <span>{getSportIcon(s as any)}</span>
                   <span>{getSportLabel(s as any)}</span>
                 </div>
@@ -51,7 +58,9 @@ export default function OrganizerSettings() {
           </div>
 
           <div>
-            <p className="text-xs text-[var(--text-muted)] font-semibold uppercase mb-2">Account Status</p>
+            <p className="text-xs text-[var(--text-muted)] font-semibold uppercase mb-2">
+              Account Status
+            </p>
             <Badge variant={organizer?.is_active ? 'success' : 'danger'}>
               {organizer?.is_active ? 'Active' : 'Inactive'}
             </Badge>

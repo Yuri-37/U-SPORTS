@@ -3,12 +3,24 @@ import supabase from '../utils/supabase'
 /** Resolve a display name for a match participant — a team name, or an individual athlete's profile name. */
 export async function resolveParticipantDisplayName(participantId: string | null): Promise<string> {
   if (!participantId) return '—'
-  const { data: team } = await supabase.from('teams').select('name').eq('id', participantId).maybeSingle()
+  const { data: team } = await supabase
+    .from('teams')
+    .select('name')
+    .eq('id', participantId)
+    .maybeSingle()
   if (team?.name) return team.name
 
-  const { data: ath } = await supabase.from('athletes').select('profile_id').eq('id', participantId).maybeSingle()
+  const { data: ath } = await supabase
+    .from('athletes')
+    .select('profile_id')
+    .eq('id', participantId)
+    .maybeSingle()
   if (ath?.profile_id) {
-    const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', ath.profile_id).maybeSingle()
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', ath.profile_id)
+      .maybeSingle()
     if (prof?.full_name) return prof.full_name
   }
   return `Participant ${participantId.slice(0, 8)}…`
@@ -16,7 +28,7 @@ export async function resolveParticipantDisplayName(participantId: string | null
 
 /** Normalize embedded `athletes.profile` from Supabase (PostgREST typing can vary). */
 function normalizeRosterAthlete(
-  row: unknown
+  row: unknown,
 ): { id: string; profile: { full_name: string } | null } | null {
   if (!row || typeof row !== 'object') return null
   const r = row as { id?: string; profile?: unknown }
@@ -31,8 +43,13 @@ function normalizeRosterAthlete(
 }
 
 /** All roster athletes for a match participant (team via team_members, else a single athlete id for individual entries). */
-async function rosterAthletesForMatchParticipant(participantId: string | null): Promise<
-  Array<{ athlete_id: string; athlete: { id: string; profile: { full_name: string } | null } | null }>
+async function rosterAthletesForMatchParticipant(
+  participantId: string | null,
+): Promise<
+  Array<{
+    athlete_id: string
+    athlete: { id: string; profile: { full_name: string } | null } | null
+  }>
 > {
   if (!participantId) return []
 
@@ -87,11 +104,17 @@ function ttSlotsPerSide(ttFormat: string | null | undefined): number {
  * not full squads. Prefer persisted `matches.active_lineup`; fallback to first roster slots by `lineup_slot`.
  */
 function filterTableTennisRosterSide(
-  roster: Array<{ athlete_id: string; athlete: { id: string; profile: { full_name: string } | null } | null }>,
+  roster: Array<{
+    athlete_id: string
+    athlete: { id: string; profile: { full_name: string } | null } | null
+  }>,
   side: 'a' | 'b',
   activeLineup: Record<string, unknown> | null | undefined,
   ttFormat: string | null | undefined,
-): Array<{ athlete_id: string; athlete: { id: string; profile: { full_name: string } | null } | null }> {
+): Array<{
+  athlete_id: string
+  athlete: { id: string; profile: { full_name: string } | null } | null
+}> {
   const max = ttSlotsPerSide(ttFormat)
   const key = side === 'a' ? 'a' : 'b'
   const raw = activeLineup?.[key]
@@ -103,7 +126,9 @@ function filterTableTennisRosterSide(
   const byId = new Map(roster.map((r) => [r.athlete_id, r]))
 
   if (lineupIds.length > 0) {
-    const picked = lineupIds.map((id) => byId.get(id)).filter((row): row is NonNullable<typeof row> => Boolean(row))
+    const picked = lineupIds
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
     if (picked.length === lineupIds.length && picked.length > 0) return picked
     if (picked.length > 0) return picked.slice(0, max)
   }
@@ -174,19 +199,45 @@ async function reviewTeamMetaByAthleteId(
 /** One action can feed several stat keys. Each entry is [statKey, amount]. */
 type StatContribution = readonly [string, number]
 
-export function actionTypeToStatKeys(sport: string, actionType: string): readonly StatContribution[] {
+export function actionTypeToStatKeys(
+  sport: string,
+  actionType: string,
+): readonly StatContribution[] {
   const map: Record<string, Record<string, readonly StatContribution[]>> = {
     basketball: {
       // A made free throw is worth a point. It previously incremented only
       // `ft_made`, so every player's `total_points` excluded their free throws.
-      point_1: [['total_points', 1], ['ft_made', 1], ['ft_attempted', 1]],
-      point_2: [['total_points', 2], ['fg_made', 1], ['fg_attempted', 1]],
-      point_3: [['total_points', 3], ['three_made', 1], ['three_attempted', 1], ['fg_made', 1], ['fg_attempted', 1]],
+      point_1: [
+        ['total_points', 1],
+        ['ft_made', 1],
+        ['ft_attempted', 1],
+      ],
+      point_2: [
+        ['total_points', 2],
+        ['fg_made', 1],
+        ['fg_attempted', 1],
+      ],
+      point_3: [
+        ['total_points', 3],
+        ['three_made', 1],
+        ['three_attempted', 1],
+        ['fg_made', 1],
+        ['fg_attempted', 1],
+      ],
       miss_1: [['ft_attempted', 1]],
       miss_2: [['fg_attempted', 1]],
-      miss_3: [['three_attempted', 1], ['fg_attempted', 1]],
-      rebound: [['total_rebounds', 1], ['def_rebounds', 1]],
-      off_rebound: [['total_rebounds', 1], ['off_rebounds', 1]],
+      miss_3: [
+        ['three_attempted', 1],
+        ['fg_attempted', 1],
+      ],
+      rebound: [
+        ['total_rebounds', 1],
+        ['def_rebounds', 1],
+      ],
+      off_rebound: [
+        ['total_rebounds', 1],
+        ['off_rebounds', 1],
+      ],
       assist: [['total_assists', 1]],
       steal: [['total_steals', 1]],
       block: [['total_blocks', 1]],
@@ -195,19 +246,44 @@ export function actionTypeToStatKeys(sport: string, actionType: string): readonl
     },
     volleyball: {
       point_1: [['pts_scored', 1]],
-      kill: [['kills', 1], ['pts_scored', 1], ['attacks', 1]],
-      ace: [['aces', 1], ['pts_scored', 1]],
+      kill: [
+        ['kills', 1],
+        ['pts_scored', 1],
+        ['attacks', 1],
+      ],
+      ace: [
+        ['aces', 1],
+        ['pts_scored', 1],
+      ],
       dig: [['digs', 1]],
-      block: [['blocks', 1], ['pts_scored', 1]],
+      block: [
+        ['blocks', 1],
+        ['pts_scored', 1],
+      ],
       assist: [['assists', 1]],
-      error: [['errors', 1], ['attacks', 1]],
-      serve_error: [['serve_errors', 1], ['errors', 1]],
-      reception_error: [['reception_errors', 1], ['errors', 1]],
+      error: [
+        ['errors', 1],
+        ['attacks', 1],
+      ],
+      serve_error: [
+        ['serve_errors', 1],
+        ['errors', 1],
+      ],
+      reception_error: [
+        ['reception_errors', 1],
+        ['errors', 1],
+      ],
     },
     'table-tennis': {
       point_1: [['pts_scored', 1]],
-      tt_winner: [['pts_scored', 1], ['winners', 1]],
-      tt_ace: [['pts_scored', 1], ['aces', 1]],
+      tt_winner: [
+        ['pts_scored', 1],
+        ['winners', 1],
+      ],
+      tt_ace: [
+        ['pts_scored', 1],
+        ['aces', 1],
+      ],
       tt_error: [['errors', 1]],
     },
   }
@@ -275,16 +351,22 @@ export async function getMatchReviewData(matchId: string): Promise<{
     resolveParticipantDisplayName(match.participant_a_id),
     resolveParticipantDisplayName(match.participant_b_id),
     (match as { scored_by?: string | null }).scored_by
-      ? supabase.from('profiles').select('full_name').eq('id', (match as { scored_by: string }).scored_by).maybeSingle()
+      ? supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', (match as { scored_by: string }).scored_by)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
   const sport = (match as { event?: { sport?: string } }).event?.sport ?? 'basketball'
   const ttFormatRaw =
     sport === 'table-tennis'
-      ? ((match as { event?: { table_tennis_format?: string | null } }).event?.table_tennis_format ?? 'singles')
+      ? ((match as { event?: { table_tennis_format?: string | null } }).event
+          ?.table_tennis_format ?? 'singles')
       : null
-  const activeLineupRaw = (match as { active_lineup?: Record<string, unknown> | null }).active_lineup
+  const activeLineupRaw = (match as { active_lineup?: Record<string, unknown> | null })
+    .active_lineup
 
   let rosterForA = rosterA
   let rosterForB = rosterB

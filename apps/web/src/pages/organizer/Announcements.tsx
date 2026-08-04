@@ -1,19 +1,32 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil } from 'lucide-react'
-import { Button, Card, Modal, Input, Textarea, Select, Badge, Alert, EmptyState } from '../../components/ui'
+import {
+  Button,
+  Card,
+  Modal,
+  Input,
+  Textarea,
+  Select,
+  Badge,
+  Alert,
+  EmptyState,
+} from '../../components/ui'
 import api from '../../lib/api'
 import type { Announcement } from '../../types'
 import { formatDateTime, getSportLabel } from '../../lib/utils'
 
 const TYPE_ICONS: Record<string, any> = {
-  emergency: AlertTriangle, reschedule: Calendar, reminder: Bell, system: Info,
+  emergency: AlertTriangle,
+  reschedule: Calendar,
+  reminder: Bell,
+  system: Info,
 }
 
 const TYPE_COLORS: Record<string, { bg: string; icon: string }> = {
   emergency: { bg: 'bg-[var(--danger)]/15', icon: 'text-[var(--danger)]' },
   reschedule: { bg: 'bg-[var(--warning)]/15', icon: 'text-[var(--warning)]' },
-  reminder:   { bg: 'bg-[var(--surface-elevated)]', icon: 'text-[var(--text-muted)]' },
-  system:     { bg: 'bg-[var(--surface-elevated)]', icon: 'text-[var(--text-muted)]' },
+  reminder: { bg: 'bg-[var(--surface-elevated)]', icon: 'text-[var(--text-muted)]' },
+  system: { bg: 'bg-[var(--surface-elevated)]', icon: 'text-[var(--text-muted)]' },
 }
 
 const TYPE_BADGE_VARIANTS: Record<string, string> = {
@@ -24,9 +37,9 @@ const TYPE_BADGE_VARIANTS: Record<string, string> = {
 }
 
 const SPORT_OPTIONS = [
-  { value: 'basketball',    label: '🏀 Basketball' },
-  { value: 'volleyball',    label: '🏐 Volleyball' },
-  { value: 'table-tennis',  label: '🏓 Table Tennis' },
+  { value: 'basketball', label: '🏀 Basketball' },
+  { value: 'volleyball', label: '🏐 Volleyball' },
+  { value: 'table-tennis', label: '🏓 Table Tennis' },
 ]
 
 const MS_DAY = 86_400_000
@@ -62,8 +75,16 @@ const EMPTY_FORM = {
   expires_at: '',
 }
 
-interface EventOption { id: string; name: string; sport: string }
-interface TeamOption  { id: string; name: string; sport: string }
+interface EventOption {
+  id: string
+  name: string
+  sport: string
+}
+interface TeamOption {
+  id: string
+  name: string
+  sport: string
+}
 
 export default function OrganizerAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -79,7 +100,7 @@ export default function OrganizerAnnouncements() {
 
   // Audience target option lists
   const [events, setEvents] = useState<EventOption[]>([])
-  const [teams, setTeams]   = useState<TeamOption[]>([])
+  const [teams, setTeams] = useState<TeamOption[]>([])
 
   const [form, setForm] = useState(EMPTY_FORM)
 
@@ -96,8 +117,14 @@ export default function OrganizerAnnouncements() {
   // Load event / team options lazily when the modal opens
   useEffect(() => {
     if (!showCreate) return
-    api.get('/events').then((r) => setEvents(Array.isArray(r.data) ? r.data : [])).catch(() => {})
-    api.get('/teams').then((r) => setTeams(Array.isArray(r.data) ? r.data : [])).catch(() => {})
+    api
+      .get('/events')
+      .then((r) => setEvents(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
+    api
+      .get('/teams')
+      .then((r) => setTeams(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
   }, [showCreate])
 
   const openCreate = () => {
@@ -157,9 +184,12 @@ export default function OrganizerAnnouncements() {
       fetchAnnouncements()
     } catch (e: unknown) {
       const msg =
-        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+        typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error ===
+        'string'
           ? (e as { response: { data: { error: string } } }).response.data.error
-          : editingId ? 'Update failed' : 'Create failed'
+          : editingId
+            ? 'Update failed'
+            : 'Create failed'
       setError(msg)
     } finally {
       setCreating(false)
@@ -185,7 +215,8 @@ export default function OrganizerAnnouncements() {
   // Audience label helper for the list view
   const audienceLabel = (a: Announcement): string => {
     if (a.audience_type === 'all') return 'All Athletes'
-    if (a.audience_type === 'sport') return `${getSportLabel(a.audience_sport as any ?? 'basketball')} athletes`
+    if (a.audience_type === 'sport')
+      return `${getSportLabel((a.audience_sport as any) ?? 'basketball')} athletes`
     if (a.audience_type === 'event') return 'Event participants'
     if (a.audience_type === 'team') return 'Team members'
     return a.audience_type
@@ -196,7 +227,9 @@ export default function OrganizerAnnouncements() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Announcements</h1>
-          <p className="text-[var(--text-muted)] text-sm">Broadcast messages to athletes and the public</p>
+          <p className="text-[var(--text-muted)] text-sm">
+            Broadcast messages to athletes and the public
+          </p>
         </div>
         <Button icon={<Plus className="w-4 h-4" />} onClick={openCreate}>
           New Announcement
@@ -208,9 +241,7 @@ export default function OrganizerAnnouncements() {
           icon="📢"
           title="No announcements yet"
           description="Create your first announcement"
-          action={
-            <Button onClick={openCreate}>Create Announcement</Button>
-          }
+          action={<Button onClick={openCreate}>Create Announcement</Button>}
         />
       ) : (
         <div className="space-y-3">
@@ -225,10 +256,24 @@ export default function OrganizerAnnouncements() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold text-sm">{a.title}</span>
-                    <Badge variant={TYPE_BADGE_VARIANTS[a.type] as any} size="sm">{a.type}</Badge>
-                    {a.display_mode === 'banner' && <Badge variant="warning" size="sm">scrolling banner</Badge>}
-                    {a.display_mode === 'hero_slider' && <Badge variant="info" size="sm">hero slider</Badge>}
-                    {a.is_public && <Badge variant="info" size="sm">public</Badge>}
+                    <Badge variant={TYPE_BADGE_VARIANTS[a.type] as any} size="sm">
+                      {a.type}
+                    </Badge>
+                    {a.display_mode === 'banner' && (
+                      <Badge variant="warning" size="sm">
+                        scrolling banner
+                      </Badge>
+                    )}
+                    {a.display_mode === 'hero_slider' && (
+                      <Badge variant="info" size="sm">
+                        hero slider
+                      </Badge>
+                    )}
+                    {a.is_public && (
+                      <Badge variant="info" size="sm">
+                        public
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-[var(--text-muted)] line-clamp-2">{a.body}</p>
                   {a.new_scheduled_at && (
@@ -252,7 +297,10 @@ export default function OrganizerAnnouncements() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setDeleteTitle(a.title); setDeleteConfirmId(a.id) }}
+                    onClick={() => {
+                      setDeleteTitle(a.title)
+                      setDeleteConfirmId(a.id)
+                    }}
                     className="text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
                     aria-label="Delete announcement"
                   >
@@ -267,19 +315,30 @@ export default function OrganizerAnnouncements() {
 
       <Modal
         open={deleteConfirmId !== null}
-        onClose={() => { if (!deleting) setDeleteConfirmId(null) }}
+        onClose={() => {
+          if (!deleting) setDeleteConfirmId(null)
+        }}
         title="Delete announcement?"
         size="md"
       >
         <div className="space-y-4">
           <Alert type="warning">
-            This removes "{deleteTitle}" for everyone (notifications, banners, and hero slider). You cannot undo this.
+            This removes "{deleteTitle}" for everyone (notifications, banners, and hero slider). You
+            cannot undo this.
           </Alert>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDeleteConfirmId(null)} disabled={deleting}>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteConfirmId(null)}
+              disabled={deleting}
+            >
               Cancel
             </Button>
-            <Button variant="danger" loading={deleting} onClick={() => void handleDeleteConfirmed()}>
+            <Button
+              variant="danger"
+              loading={deleting}
+              onClick={() => void handleDeleteConfirmed()}
+            >
               Delete permanently
             </Button>
           </div>
@@ -288,11 +347,19 @@ export default function OrganizerAnnouncements() {
 
       <Modal
         open={showCreate}
-        onClose={() => { setShowCreate(false); setEditingId(null); setError('') }}
+        onClose={() => {
+          setShowCreate(false)
+          setEditingId(null)
+          setError('')
+        }}
         title={editingId ? 'Edit Announcement' : 'Create Announcement'}
         size="lg"
       >
-        {error && <Alert type="danger" className="mb-4">{error}</Alert>}
+        {error && (
+          <Alert type="danger" className="mb-4">
+            {error}
+          </Alert>
+        )}
         <div className="space-y-4">
           {/* Type — now the single classification field (urgency is auto-derived) */}
           <Select
@@ -432,8 +499,8 @@ export default function OrganizerAnnouncements() {
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 { value: 'notification_only', label: '🔔 Notification only' },
-                { value: 'banner',            label: '📢 Scrolling banner' },
-                { value: 'hero_slider',       label: '✨ Hero slider' },
+                { value: 'banner', label: '📢 Scrolling banner' },
+                { value: 'hero_slider', label: '✨ Hero slider' },
               ].map(({ value, label }) => (
                 <button
                   key={value}

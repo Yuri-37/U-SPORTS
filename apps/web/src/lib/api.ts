@@ -37,14 +37,15 @@ api.interceptors.response.use(
         // of whether the request came from a /super-admin or /organizer page.
         const isStaffArea =
           typeof window !== 'undefined' &&
-          (window.location.pathname.startsWith('/super-admin') || window.location.pathname.startsWith('/organizer'))
+          (window.location.pathname.startsWith('/super-admin') ||
+            window.location.pathname.startsWith('/organizer'))
         let dest = isStaffArea ? '/super-admin/login' : '/auth/login'
         if (deactivated) dest += '?reason=deactivated'
         window.location.href = dest
       })
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export default api

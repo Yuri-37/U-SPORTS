@@ -21,7 +21,9 @@ const POOL_TYPES = new Set(['rr_pool_a', 'rr_pool_b', 'round_robin'])
  * Champion + runner-up from the highest knockout round (single/double elim, crossover finals).
  * Returns null for bracket pools-only or undecided finals.
  */
-export function deriveEliminationPodium(brackets: BracketPlacementInput[]): EventPlacement[] | null {
+export function deriveEliminationPodium(
+  brackets: BracketPlacementInput[],
+): EventPlacement[] | null {
   const structural = brackets.filter((b) => {
     const t = b.bracket_type ?? 'winners'
     if (t === 'losers') return false
@@ -33,11 +35,7 @@ export function deriveEliminationPodium(brackets: BracketPlacementInput[]): Even
   const maxRound = Math.max(...structural.map((b) => b.round))
   const finals = structural.filter(
     (b) =>
-      b.round === maxRound &&
-      !b.is_bye &&
-      b.winner_id &&
-      b.participant_a_id &&
-      b.participant_b_id
+      b.round === maxRound && !b.is_bye && b.winner_id && b.participant_a_id && b.participant_b_id,
   )
   if (finals.length === 0) return null
 

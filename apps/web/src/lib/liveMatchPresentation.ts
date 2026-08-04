@@ -24,7 +24,7 @@ export function liveScorePresentation(
   sport: string,
   sa: Partial<MatchScore> | undefined,
   sb: Partial<MatchScore> | undefined,
-  period: number
+  period: number,
 ) {
   const p = clampPeriod(period, sport)
   if (sport === 'basketball') {
@@ -68,7 +68,7 @@ function getSportPhrase(sport: string) {
 export function pickScoresForMatch(
   participantA: string | null | undefined,
   participantB: string | null | undefined,
-  scores: Partial<MatchScore>[] | undefined
+  scores: Partial<MatchScore>[] | undefined,
 ) {
   const rows = scores ?? []
   const sa = rows.find((r) => r.participant_id === participantA)
@@ -96,7 +96,7 @@ export function basketballParticipantTotal(sc: Partial<MatchScore> | undefined):
 export function periodScoreBreakdown(
   sport: string,
   sa: Partial<MatchScore> | undefined,
-  sb: Partial<MatchScore> | undefined
+  sb: Partial<MatchScore> | undefined,
 ): PeriodScoreBreakdown | null {
   if (!sa && !sb) return null
 
@@ -117,8 +117,20 @@ export function periodScoreBreakdown(
     })
 
     const quarterSum =
-      nz(sa?.q1) + nz(sa?.q2) + nz(sa?.q3) + nz(sa?.q4) + nz(sa?.ot) + nz(sa?.ot2) + nz(sa?.ot3) +
-      nz(sb?.q1) + nz(sb?.q2) + nz(sb?.q3) + nz(sb?.q4) + nz(sb?.ot) + nz(sb?.ot2) + nz(sb?.ot3)
+      nz(sa?.q1) +
+      nz(sa?.q2) +
+      nz(sa?.q3) +
+      nz(sa?.q4) +
+      nz(sa?.ot) +
+      nz(sa?.ot2) +
+      nz(sa?.ot3) +
+      nz(sb?.q1) +
+      nz(sb?.q2) +
+      nz(sb?.q3) +
+      nz(sb?.q4) +
+      nz(sb?.ot) +
+      nz(sb?.ot2) +
+      nz(sb?.ot3)
 
     // Only quarter keys populated → still show grid; if everything zero but `total` exists, fold into one row
     if (quarterSum === 0 && (nz(sa?.total) > 0 || nz(sb?.total) > 0)) {
@@ -150,8 +162,7 @@ export function periodScoreBreakdown(
     })
     const swA = nz(sa?.sets_won)
     const swB = nz(sb?.sets_won)
-    const summaryLine =
-      swA > 0 || swB > 0 ? `Sets won · ${swA} – ${swB}` : undefined
+    const summaryLine = swA > 0 || swB > 0 ? `Sets won · ${swA} – ${swB}` : undefined
     const totals = {
       left: rows.reduce((acc, x) => acc + x.left, 0),
       right: rows.reduce((acc, x) => acc + x.right, 0),
@@ -175,8 +186,7 @@ export function periodScoreBreakdown(
     })
     const gwA = nz(sa?.games_won)
     const gwB = nz(sb?.games_won)
-    const summaryLine =
-      gwA > 0 || gwB > 0 ? `Games won · ${gwA} – ${gwB}` : undefined
+    const summaryLine = gwA > 0 || gwB > 0 ? `Games won · ${gwA} – ${gwB}` : undefined
     const totals = {
       left: rows.reduce((acc, x) => acc + x.left, 0),
       right: rows.reduce((acc, x) => acc + x.right, 0),

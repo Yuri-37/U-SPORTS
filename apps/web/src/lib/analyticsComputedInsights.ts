@@ -1,8 +1,7 @@
 /** Narratives derived from `player_season_stats` / `team_season_stats` aggregates (no raw match recomputation). */
 
 export type AggregateInsightPart =
-  | { type: 'text'; value: string }
-  | { type: 'link'; value: string; href: string }
+  { type: 'text'; value: string } | { type: 'link'; value: string; href: string }
 
 export type AggregateInsight = {
   id: string
@@ -115,7 +114,9 @@ export function buildSeasonAggregateInsights(
   if (sport === 'volleyball' && leaderboard.length > 0) {
     const qualifying = leaderboard.filter((p) => p.games_played >= MIN_GP_PLAYER)
     if (qualifying.length > 0) {
-      const byKills = [...qualifying].sort((a, b) => (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0))[0]
+      const byKills = [...qualifying].sort(
+        (a, b) => (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0),
+      )[0]
       const nm = byKills.athlete?.profile?.full_name ?? 'An attacker'
       out.push({
         id: 'vb-kills',
@@ -131,7 +132,9 @@ export function buildSeasonAggregateInsights(
     }
     const byEff = [...leaderboard]
       .filter((p) => p.games_played >= MIN_GP_PLAYER && (p.stats?.kill_pct ?? p.kill_pct ?? 0) > 0)
-      .sort((a, b) => (b.stats?.kill_pct ?? b.kill_pct ?? 0) - (a.stats?.kill_pct ?? a.kill_pct ?? 0))[0]
+      .sort(
+        (a, b) => (b.stats?.kill_pct ?? b.kill_pct ?? 0) - (a.stats?.kill_pct ?? a.kill_pct ?? 0),
+      )[0]
     if (byEff) {
       const pct = byEff.stats?.kill_pct ?? byEff.kill_pct ?? 0
       const nm = byEff.athlete?.profile?.full_name ?? 'One hitter'

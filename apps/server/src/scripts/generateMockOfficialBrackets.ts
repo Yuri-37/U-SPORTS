@@ -30,7 +30,11 @@ async function main(): Promise<void> {
   const { generateBracket } = await import('../services/bracketGenerator')
 
   for (const name of EVENT_NAMES) {
-    const { data: ev, error: evErr } = await supabase.from('events').select('id, format').eq('name', name).maybeSingle()
+    const { data: ev, error: evErr } = await supabase
+      .from('events')
+      .select('id, format')
+      .eq('name', name)
+      .maybeSingle()
     if (evErr) {
       console.error(`Query error (${name}):`, evErr.message)
       continue

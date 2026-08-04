@@ -8,7 +8,9 @@ function storageKey(userId: string, kind: HubStudentBannerKind): string {
 
 export function isHubStudentBannerDismissed(userId: string, kind: HubStudentBannerKind): boolean {
   try {
-    return typeof window !== 'undefined' && window.localStorage.getItem(storageKey(userId, kind)) === '1'
+    return (
+      typeof window !== 'undefined' && window.localStorage.getItem(storageKey(userId, kind)) === '1'
+    )
   } catch {
     return false
   }

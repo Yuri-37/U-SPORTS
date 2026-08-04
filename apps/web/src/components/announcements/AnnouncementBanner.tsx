@@ -20,7 +20,7 @@ function modesFilterKey(modes: readonly AnnouncementBannerMode[]): string {
 
 function isFetchedBannerMode(
   mode: string,
-  modes: readonly AnnouncementBannerMode[]
+  modes: readonly AnnouncementBannerMode[],
 ): mode is AnnouncementBannerMode {
   return modes.includes(mode as AnnouncementBannerMode)
 }
@@ -51,7 +51,7 @@ function HeroTickerCopy({ a }: { a: Announcement }) {
       <span
         className={cn(
           'text-sm font-bold tracking-widest uppercase',
-          isCritical ? 'text-[var(--danger)]' : 'text-[var(--warning)]'
+          isCritical ? 'text-[var(--danger)]' : 'text-[var(--warning)]',
         )}
       >
         {announcementHeading(a)}
@@ -105,7 +105,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
           if (!publicOnly || a.is_public) {
             setAnnouncements((prev) => [a, ...prev])
           }
-        }
+        },
       )
       .subscribe()
 
@@ -120,9 +120,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
   const heroes = modes.includes('hero_slider')
     ? visible.filter((a) => a.display_mode === 'hero_slider')
     : []
-  const banners = modes.includes('banner')
-    ? visible.filter((a) => a.display_mode === 'banner')
-    : []
+  const banners = modes.includes('banner') ? visible.filter((a) => a.display_mode === 'banner') : []
 
   const urgencyBarClass = (urgency: Announcement['urgency']) =>
     urgency === 'critical'
@@ -165,7 +163,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
           key={a.id}
           className={cn(
             'flex items-start gap-3 px-6 py-3 text-sm animate-slide-down',
-            urgencyBarClass(a.urgency)
+            urgencyBarClass(a.urgency),
           )}
         >
           {a.urgency === 'critical' ? (
@@ -177,7 +175,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
             <span
               className={cn(
                 'font-semibold mr-2',
-                a.urgency === 'critical' ? 'text-[var(--danger)]' : 'text-[var(--warning)]'
+                a.urgency === 'critical' ? 'text-[var(--danger)]' : 'text-[var(--warning)]',
               )}
             >
               {announcementHeading(a)}

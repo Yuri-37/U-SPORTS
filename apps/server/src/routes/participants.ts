@@ -9,9 +9,15 @@ router.get('/labels', async (req, res) => {
   const raw = req.query.ids
   let ids: string[] = []
   if (typeof raw === 'string') {
-    ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
+    ids = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
   } else if (Array.isArray(raw)) {
-    ids = raw.flatMap((v) => (typeof v === 'string' ? v.split(',') : [])).map((s) => s.trim()).filter(Boolean)
+    ids = raw
+      .flatMap((v) => (typeof v === 'string' ? v.split(',') : []))
+      .map((s) => s.trim())
+      .filter(Boolean)
   }
 
   try {

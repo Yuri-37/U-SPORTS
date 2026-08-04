@@ -177,7 +177,12 @@ export default function GuestLeaderboards() {
             options={
               seasonSelectOptions.length > 0
                 ? seasonSelectOptions
-                : [{ value: '', label: seasonsLoading ? 'Loading seasons…' : 'No seasons available' }]
+                : [
+                    {
+                      value: '',
+                      label: seasonsLoading ? 'Loading seasons…' : 'No seasons available',
+                    },
+                  ]
             }
             disabled={seasonsLoading || !effectiveSeasonId || seasons.length === 0}
             className="min-w-[220px] flex-1 sm:flex-none sm:w-64"
@@ -186,7 +191,10 @@ export default function GuestLeaderboards() {
       </div>
 
       <TabBar
-        tabs={[{ id: 'players', label: 'Player Stats' }, { id: 'teams', label: 'Team Standings' }]}
+        tabs={[
+          { id: 'players', label: 'Player Stats' },
+          { id: 'teams', label: 'Team Standings' },
+        ]}
         active={tab}
         onChange={setTab}
       />
@@ -278,8 +286,12 @@ export default function GuestLeaderboards() {
                       className="border-t border-[var(--border-subtle)] bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)] cursor-pointer"
                       onClick={() => navigate(`/guest/athletes/${p.athlete_id}`)}
                     >
-                      <td className="px-4 py-3 text-[var(--text-muted)] font-mono text-xs">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium">{p.athlete?.profile?.full_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] font-mono text-xs">
+                        {i + 1}
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {p.athlete?.profile?.full_name ?? '—'}
+                      </td>
                       <td className="px-4 py-3 text-center">{p.games_played}</td>
                       {sport === 'basketball' && (
                         <>
@@ -308,7 +320,9 @@ export default function GuestLeaderboards() {
                       )}
                       {sport === 'table-tennis' && (
                         <>
-                          <td className="px-4 py-3 text-center font-bold">{p.stats?.win_pct ?? '0'}%</td>
+                          <td className="px-4 py-3 text-center font-bold">
+                            {p.stats?.win_pct ?? '0'}%
+                          </td>
                         </>
                       )}
                     </tr>
@@ -337,7 +351,9 @@ export default function GuestLeaderboards() {
                   className="flex items-center gap-4 cursor-pointer hover:border-white/20 transition-colors"
                   onClick={() => ts.team?.id && navigate(`/guest/teams/${ts.team.id}`)}
                 >
-                  <span className="text-lg font-bold text-[var(--text-muted)] w-6 text-center">{i + 1}</span>
+                  <span className="text-lg font-bold text-[var(--text-muted)] w-6 text-center">
+                    {i + 1}
+                  </span>
                   <div className="flex-1">
                     <p className="font-bold">{ts.team?.name}</p>
                     <p className="text-xs text-[var(--text-muted)]">
@@ -348,7 +364,10 @@ export default function GuestLeaderboards() {
                     <span className="text-[var(--success)] font-bold">{ts.wins}W</span>
                     <span className="text-[#FF3355]">{ts.losses}L</span>
                     <span className="text-[var(--text-muted)]">
-                      {ts.wins + ts.losses > 0 ? Math.round((ts.wins / (ts.wins + ts.losses)) * 100) : 0}%
+                      {ts.wins + ts.losses > 0
+                        ? Math.round((ts.wins / (ts.wins + ts.losses)) * 100)
+                        : 0}
+                      %
                     </span>
                   </div>
                 </Card>

@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 /** Collect team/athlete ids shown on bracket slots */
 export function collectBracketParticipantIds(
-  brackets: { participant_a_id?: string | null; participant_b_id?: string | null }[]
+  brackets: { participant_a_id?: string | null; participant_b_id?: string | null }[],
 ): string[] {
   const s = new Set<string>()
   for (const b of brackets) {

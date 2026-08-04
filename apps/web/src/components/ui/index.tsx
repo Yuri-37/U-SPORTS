@@ -22,13 +22,17 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed select-none'
+  const base =
+    'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed select-none'
   const variants = {
     primary: 'bg-[#0066FF] hover:bg-[#0052CC] text-white shadow-lg shadow-blue-900/30',
-    secondary: 'bg-[var(--surface-elevated)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]',
+    secondary:
+      'bg-[var(--surface-elevated)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]',
     danger: 'bg-[#FF3355] hover:bg-[#CC2244] text-white shadow-lg shadow-red-900/30',
-    ghost: 'bg-transparent hover:bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-    outline: 'bg-transparent border border-[var(--border-subtle)] hover:border-[var(--text-muted)] text-[var(--text-primary)]',
+    ghost:
+      'bg-transparent hover:bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+    outline:
+      'bg-transparent border border-[var(--border-subtle)] hover:border-[var(--text-muted)] text-[var(--text-primary)]',
     success: 'bg-[var(--success)] hover:opacity-90 text-white shadow-lg shadow-green-900/30',
   }
   const sizes = {
@@ -64,7 +68,7 @@ export function Card({ children, className, elevated, onClick }: CardProps) {
         'rounded-xl border border-[var(--border-subtle)] p-4',
         elevated ? 'bg-[var(--surface-elevated)]' : 'bg-[var(--surface-card)]',
         onClick && 'cursor-pointer hover:border-[var(--accent-default)]/35 transition-colors',
-        className
+        className,
       )}
       onClick={onClick}
     >
@@ -105,7 +109,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
               error && 'border-[#FF3355] focus:border-[#FF3355] focus:ring-[#FF3355]/30',
               icon && 'pl-9',
-              className
+              className,
             )}
             {...props}
           />
@@ -114,7 +118,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {hint && !error && <p className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     )
-  }
+  },
 )
 Input.displayName = 'Input'
 
@@ -128,15 +132,13 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export function Select({ label, error, options, className, ...props }: SelectProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && (
-        <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>
-      )}
+      {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
       <select
         className={cn(
           'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors',
           'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
           error && 'border-[#FF3355]',
-          className
+          className,
         )}
         {...props}
       >
@@ -160,15 +162,13 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 export function Textarea({ label, error, className, ...props }: TextareaProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && (
-        <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>
-      )}
+      {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
       <textarea
         className={cn(
           'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors resize-none',
           'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
           error && 'border-[#FF3355]',
-          className
+          className,
         )}
         rows={4}
         {...props}
@@ -188,7 +188,8 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', size = 'md', className }: BadgeProps) {
   const variants = {
-    default: 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]',
+    default:
+      'bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]',
     success: 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20',
     warning: 'bg-[#FFB800]/10 text-[#FFB800] border border-[#FFB800]/20',
     danger: 'bg-[#FF3355]/10 text-[#FF3355] border border-[#FF3355]/20',
@@ -197,7 +198,14 @@ export function Badge({ children, variant = 'default', size = 'md', className }:
   }
   const sizes = { sm: 'px-1.5 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' }
   return (
-    <span className={cn('inline-flex items-center font-medium rounded-md', variants[variant], sizes[size], className)}>
+    <span
+      className={cn(
+        'inline-flex items-center font-medium rounded-md',
+        variants[variant],
+        sizes[size],
+        className,
+      )}
+    >
       {children}
     </span>
   )
@@ -227,7 +235,7 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
     <div
       className={cn(
         'fixed inset-0 flex items-center justify-center p-4',
-        layer === 'nested' ? 'z-[60]' : 'z-50'
+        layer === 'nested' ? 'z-[60]' : 'z-50',
       )}
       onClick={onClose}
     >
@@ -235,7 +243,7 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
       <div
         className={cn(
           'relative w-full max-h-[min(90vh,100dvh)] flex flex-col overflow-hidden bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl',
-          sizes[size]
+          sizes[size],
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -250,7 +258,10 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
             </button>
           </div>
         )}
-        <div className={cn('p-5 overflow-y-auto min-h-0 flex-1')} style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div
+          className={cn('p-5 overflow-y-auto min-h-0 flex-1')}
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {children}
         </div>
       </div>
@@ -259,21 +270,20 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
 }
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
-export function Spinner({ size = 'md', className }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
+export function Spinner({
+  size = 'md',
+  className,
+}: {
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+}) {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' }
   return <Loader2 className={cn(sizes[size], 'animate-spin text-[#0066FF]', className)} />
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        'animate-pulse rounded-lg bg-[var(--surface-elevated)]',
-        className
-      )}
-    />
-  )
+  return <div className={cn('animate-pulse rounded-lg bg-[var(--surface-elevated)]', className)} />
 }
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
@@ -291,14 +301,14 @@ export function Toggle({ checked, onChange, label, disabled }: ToggleProps) {
         className={cn(
           'relative w-10 h-5 rounded-full transition-colors duration-200',
           checked ? 'bg-[#0066FF]' : 'bg-[var(--surface-elevated)]',
-          disabled && 'opacity-50 cursor-not-allowed'
+          disabled && 'opacity-50 cursor-not-allowed',
         )}
         onClick={() => !disabled && onChange(!checked)}
       >
         <div
           className={cn(
             'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
-            checked && 'translate-x-5'
+            checked && 'translate-x-5',
           )}
         />
       </div>
@@ -318,7 +328,14 @@ interface AlertProps {
   className?: string
 }
 
-export function Alert({ type = 'info', title, children, onDismiss, dismissAriaLabel, className }: AlertProps) {
+export function Alert({
+  type = 'info',
+  title,
+  children,
+  onDismiss,
+  dismissAriaLabel,
+  className,
+}: AlertProps) {
   const styles = {
     info: 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#4D94FF]',
     success: 'bg-[var(--success)]/10 border-[var(--success)]/30 text-[var(--success)]',
@@ -398,7 +415,9 @@ export function StatCard({
   }
   const body = (
     <>
-      <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
+      <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">
+        {label}
+      </p>
       <p className="text-2xl font-bold font-[Barlow_Condensed]">{value}</p>
       {(subValue || trendValue) && (
         <div className="flex items-center gap-2">
@@ -423,10 +442,12 @@ export function StatCard({
         onClick={onClick}
         className={cn(
           'w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]',
-          className
+          className,
         )}
       >
-        <Card className="flex flex-col gap-1 h-full hover:border-[var(--accent-default)]/35 transition-colors cursor-pointer">{body}</Card>
+        <Card className="flex flex-col gap-1 h-full hover:border-[var(--accent-default)]/35 transition-colors cursor-pointer">
+          {body}
+        </Card>
       </button>
     )
   }
@@ -453,7 +474,7 @@ export function TabBar({ tabs, active, onChange, className }: TabBarProps) {
             'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
             active === tab.id
               ? 'bg-[var(--surface-card)] text-[var(--text-primary)] shadow border border-[var(--border-subtle)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
           )}
         >
           {tab.icon}
@@ -473,7 +494,13 @@ interface TableProps {
   emptyMessage?: string
 }
 
-export function Table({ columns, data, onRowClick, loading, emptyMessage = 'No data found' }: TableProps) {
+export function Table({
+  columns,
+  data,
+  onRowClick,
+  loading,
+  emptyMessage = 'No data found',
+}: TableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
       <table className="w-full text-sm">
@@ -513,7 +540,7 @@ export function Table({ columns, data, onRowClick, loading, emptyMessage = 'No d
                 key={i}
                 className={cn(
                   'border-b border-[var(--border-subtle)] bg-[var(--surface-card)] transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-[var(--surface-elevated)]'
+                  onRowClick && 'cursor-pointer hover:bg-[var(--surface-elevated)]',
                 )}
                 onClick={() => onRowClick?.(row, i)}
               >

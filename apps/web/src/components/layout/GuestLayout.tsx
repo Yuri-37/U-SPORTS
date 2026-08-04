@@ -17,7 +17,7 @@ export default function GuestLayout() {
   const guestAnnouncementModes = useMemo(
     (): ('banner' | 'hero_slider')[] =>
       location.pathname === '/guest' ? ['banner', 'hero_slider'] : ['banner'],
-    [location.pathname]
+    [location.pathname],
   )
 
   const scopedProfile = sessionScopedProfile(session, profile)
@@ -40,7 +40,10 @@ export default function GuestLayout() {
             ) : (
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={{ backgroundColor: 'var(--school-primary)', color: 'var(--school-secondary)' }}
+                style={{
+                  backgroundColor: 'var(--school-primary)',
+                  color: 'var(--school-secondary)',
+                }}
               >
                 {institution?.abbreviation?.slice(0, 2) ?? 'US'}
               </div>
@@ -49,8 +52,12 @@ export default function GuestLayout() {
               <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[var(--accent-default)] leading-none mb-0.5">
                 U-Sports
               </p>
-              <p className="font-bold text-sm leading-tight truncate">{institution?.abbreviation ?? 'U-Sports'}</p>
-              <p className="text-[10px] text-[var(--text-muted)] truncate">{institution?.tagline}</p>
+              <p className="font-bold text-sm leading-tight truncate">
+                {institution?.abbreviation ?? 'U-Sports'}
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)] truncate">
+                {institution?.tagline}
+              </p>
             </div>
           </div>
         </div>
@@ -61,7 +68,9 @@ export default function GuestLayout() {
             end
             className={({ isActive }) =>
               `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                isActive
+                  ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`
             }
           >
@@ -72,7 +81,9 @@ export default function GuestLayout() {
             to="/guest/leaderboards"
             className={({ isActive }) =>
               `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                isActive
+                  ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`
             }
           >
@@ -83,7 +94,9 @@ export default function GuestLayout() {
             to="/guest/events"
             className={({ isActive }) =>
               `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                isActive
+                  ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`
             }
           >
@@ -145,7 +158,12 @@ export default function GuestLayout() {
           {isAuthed ? (
             <HeaderAccountCluster navVariant="guest" />
           ) : (
-            <Button size="sm" className="shrink-0" onClick={() => navigate('/auth/login')} icon={<LogIn className="w-3.5 h-3.5" />}>
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={() => navigate('/auth/login')}
+              icon={<LogIn className="w-3.5 h-3.5" />}
+            >
               Sign In
             </Button>
           )}

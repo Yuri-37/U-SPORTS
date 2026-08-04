@@ -45,7 +45,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 
 /** Docs/examples only — not real accounts. */
 const DOC_PLACEHOLDER_EMAILS = new Set(
-  ['your@email.com', 'you@example.com', 'user@example.com', 'test@example.com'].map((e) => e.toLowerCase()),
+  ['your@email.com', 'you@example.com', 'user@example.com', 'test@example.com'].map((e) =>
+    e.toLowerCase(),
+  ),
 )
 
 /** Validates `--athlete-id` — rejects tutorial placeholders like `<uuid>`. */
@@ -88,12 +90,21 @@ async function ensureDemoPrerequisites(supabase: SupabaseClient): Promise<{
   participantA: string
   participantB: string
 }> {
-  let { data: season } = await supabase.from('seasons').select('id, name').eq('status', 'active').limit(1).maybeSingle()
+  let { data: season } = await supabase
+    .from('seasons')
+    .select('id, name')
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle()
 
   if (!season?.id) {
     const { data: created, error } = await supabase
       .from('seasons')
-      .insert({ name: 'Demo Season', status: 'active', start_date: new Date().toISOString().slice(0, 10) })
+      .insert({
+        name: 'Demo Season',
+        status: 'active',
+        start_date: new Date().toISOString().slice(0, 10),
+      })
       .select('id, name')
       .single()
     if (error || !created?.id) {
@@ -160,7 +171,11 @@ async function ensureDemoPrerequisites(supabase: SupabaseClient): Promise<{
     console.log('Registered two teams as participants.')
   } else {
     console.log(`Using existing basketball event: ${event.id}`)
-    const { data: parts } = await supabase.from('event_participants').select('participant_id').eq('event_id', event.id).limit(2)
+    const { data: parts } = await supabase
+      .from('event_participants')
+      .select('participant_id')
+      .eq('event_id', event.id)
+      .limit(2)
     if (!parts || parts.length < 2) {
       console.error('Existing event has fewer than 2 participants. Add two teams to it first.')
       process.exit(1)
@@ -169,16 +184,24 @@ async function ensureDemoPrerequisites(supabase: SupabaseClient): Promise<{
     teamB = parts[1].participant_id as string
   }
 
-  return { seasonId: season.id, seasonName: season.name, eventId: event!.id, participantA: teamA, participantB: teamB }
+  return {
+    seasonId: season.id,
+    seasonName: season.name,
+    eventId: event!.id,
+    participantA: teamA,
+    participantB: teamB,
+  }
 }
 
 /** Stable demo identity for insights seed — satisfies athletes FK via auth.users → profiles. */
 async function ensureInsightsDemoAthlete(
   supabase: SupabaseClient,
 ): Promise<{ id: string; sport: string; profile_id: string }> {
-  const demoEmail = process.env.SEED_INSIGHTS_DEMO_EMAIL?.trim() || 'insights-demo-athlete@u-sports.local'
+  const demoEmail =
+    process.env.SEED_INSIGHTS_DEMO_EMAIL?.trim() || 'insights-demo-athlete@u-sports.local'
   const demoName = process.env.SEED_INSIGHTS_DEMO_FULL_NAME?.trim() || 'Insights Demo Athlete'
-  const demoStudentId = process.env.SEED_INSIGHTS_DEMO_STUDENT_ID?.trim() || 'insights-demo-athlete-001'
+  const demoStudentId =
+    process.env.SEED_INSIGHTS_DEMO_STUDENT_ID?.trim() || 'insights-demo-athlete-001'
 
   const { data: byStudent } = await supabase
     .from('athletes')
@@ -193,7 +216,11 @@ async function ensureInsightsDemoAthlete(
 
   let profileId: string | undefined
 
-  const { data: profByEmail } = await supabase.from('profiles').select('id').eq('email', demoEmail).maybeSingle()
+  const { data: profByEmail } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', demoEmail)
+    .maybeSingle()
   profileId = profByEmail?.id
 
   if (!profileId) {
@@ -211,9 +238,14 @@ async function ensureInsightsDemoAthlete(
     } else if (cuErr) {
       const msg = cuErr.message ?? ''
       const maybeExists =
-        /already|registered|exists|duplicate/i.test(msg) || (cuErr as { code?: string }).code === 'email_exists'
+        /already|registered|exists|duplicate/i.test(msg) ||
+        (cuErr as { code?: string }).code === 'email_exists'
       if (maybeExists) {
-        const { data: refetch } = await supabase.from('profiles').select('id').eq('email', demoEmail).maybeSingle()
+        const { data: refetch } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', demoEmail)
+          .maybeSingle()
         profileId = refetch?.id
       }
       if (!profileId) {
@@ -229,7 +261,11 @@ async function ensureInsightsDemoAthlete(
     process.exit(1)
   }
 
-  const { data: profOk } = await supabase.from('profiles').select('id').eq('id', profileId).maybeSingle()
+  const { data: profOk } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', profileId)
+    .maybeSingle()
   if (!profOk?.id) {
     console.error(
       'Profile row missing after Auth user creation. Check DB trigger public.handle_new_user on auth.users.',
@@ -237,7 +273,11 @@ async function ensureInsightsDemoAthlete(
     process.exit(1)
   }
 
-  const { data: athExisting } = await supabase.from('athletes').select('id, sport, profile_id').eq('profile_id', profileId).maybeSingle()
+  const { data: athExisting } = await supabase
+    .from('athletes')
+    .select('id, sport, profile_id')
+    .eq('profile_id', profileId)
+    .maybeSingle()
 
   if (athExisting?.id) {
     console.log(`Using existing athlete linked to demo profile: ${athExisting.id}`)
@@ -316,7 +356,9 @@ async function main() {
       .maybeSingle()
 
     if (seasonErr || !season?.id) {
-      console.error('No active season found. Create or activate a season first, or use --demo-player.')
+      console.error(
+        'No active season found. Create or activate a season first, or use --demo-player.',
+      )
       process.exit(1)
     }
     seasonId = season.id
@@ -331,7 +373,9 @@ async function main() {
       .maybeSingle()
 
     if (evErr || !event?.id) {
-      console.error('No official basketball event found. Create one with two teams, or use --demo-player.')
+      console.error(
+        'No official basketball event found. Create one with two teams, or use --demo-player.',
+      )
       process.exit(1)
     }
     eventId = event.id
@@ -371,7 +415,11 @@ async function main() {
       )
       process.exit(1)
     }
-    const { data: prof } = await supabase.from('profiles').select('id').eq('email', trimmed).maybeSingle()
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', trimmed)
+      .maybeSingle()
     if (!prof?.id) {
       console.error(
         [
@@ -383,7 +431,11 @@ async function main() {
       )
       process.exit(1)
     }
-    const { data: ath } = await supabase.from('athletes').select('id').eq('profile_id', prof.id).maybeSingle()
+    const { data: ath } = await supabase
+      .from('athletes')
+      .select('id')
+      .eq('profile_id', prof.id)
+      .maybeSingle()
     if (!ath?.id) {
       console.error('Profile exists but is not linked to an athlete row.')
       process.exit(1)

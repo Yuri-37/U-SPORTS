@@ -23,7 +23,10 @@ export default function SuperAdminDashboard() {
       api.get('/admin/stats').then((r) => r.data),
       api.get('/admin/audit?limit=5').then((r) => r.data.data),
     ])
-      .then(([s, logs]) => { setStats(s); setRecentLogs(logs) })
+      .then(([s, logs]) => {
+        setStats(s)
+        setRecentLogs(logs)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -88,20 +91,27 @@ export default function SuperAdminDashboard() {
           <h2 className="font-bold text-lg mb-4">Recent Activity</h2>
           {loading ? (
             <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
             </div>
           ) : recentLogs.length === 0 ? (
             <p className="text-[var(--text-muted)] text-sm">No recent activity</p>
           ) : (
             <div className="space-y-2">
               {recentLogs.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 py-2 border-b border-[var(--border-subtle)] last:border-0">
+                <div
+                  key={log.id}
+                  className="flex items-start gap-3 py-2 border-b border-[var(--border-subtle)] last:border-0"
+                >
                   <div className="w-8 h-8 rounded-full bg-[var(--surface-elevated)] flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {(log.actor as any)?.full_name?.charAt(0) ?? '?'}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{log.action.replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{formatDateTime(log.created_at)}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {formatDateTime(log.created_at)}
+                    </p>
                   </div>
                   <Badge size="sm">{log.entity_type}</Badge>
                 </div>

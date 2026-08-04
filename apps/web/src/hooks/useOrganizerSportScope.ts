@@ -8,9 +8,11 @@ const FALLBACK: Sport[] = ['basketball', 'volleyball', 'table-tennis']
 export async function fetchActiveSportsFromConfig(): Promise<Sport[]> {
   const { data, error } = await supabase.from('sports_config').select('slug').eq('is_active', true)
   if (error || !data?.length) return [...FALLBACK]
-  const slugs = data.map((r) => r.slug as Sport).filter((s): s is Sport => {
-    return s === 'basketball' || s === 'volleyball' || s === 'table-tennis'
-  })
+  const slugs = data
+    .map((r) => r.slug as Sport)
+    .filter((s): s is Sport => {
+      return s === 'basketball' || s === 'volleyball' || s === 'table-tennis'
+    })
   return slugs.length > 0 ? slugs : [...FALLBACK]
 }
 

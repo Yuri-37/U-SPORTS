@@ -52,7 +52,7 @@ export const useInstitutionStore = create<InstitutionState>()((set) => ({
         : null
       set({
         institution: inst,
-        sports: sportsError ? [] : sports ?? [],
+        sports: sportsError ? [] : (sports ?? []),
       })
     } catch (err) {
       console.error('Failed to fetch institution:', err)

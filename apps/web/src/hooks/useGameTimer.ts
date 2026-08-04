@@ -39,7 +39,10 @@ const SHOT_CLOCK_SHORT = 14
  *  so a late joiner sees the real current time instead of a blank placeholder,
  *  even if no `timer_sync` broadcast has arrived yet. Returns null when the
  *  clock was never started (nothing to project). */
-export function projectClockForward(persisted: PersistedClockState, mode: TimerMode): TimerState | null {
+export function projectClockForward(
+  persisted: PersistedClockState,
+  mode: TimerMode,
+): TimerState | null {
   if (persisted.seconds == null) return null
 
   const elapsedSec = persisted.updatedAt
@@ -95,12 +98,14 @@ export function useGameTimer({
   const persist = useCallback(
     (state: TimerState) => {
       if (!enabled || !matchId) return
-      void api.patch(`/scoring/${matchId}/clock`, {
-        seconds: state.seconds,
-        running: state.running,
-        shotClockSeconds: state.shotClockSeconds,
-        shotClockRunning: state.shotClockRunning,
-      }).catch(() => {})
+      void api
+        .patch(`/scoring/${matchId}/clock`, {
+          seconds: state.seconds,
+          running: state.running,
+          shotClockSeconds: state.shotClockSeconds,
+          shotClockRunning: state.shotClockRunning,
+        })
+        .catch(() => {})
     },
     [enabled, matchId],
   )
@@ -208,13 +213,23 @@ export function useGameTimer({
 
   const start = useCallback(() => {
     setRunning(true)
-    emit({ seconds: secondsRef.current, running: true, shotClockSeconds: shotSecondsRef.current, shotClockRunning: false })
+    emit({
+      seconds: secondsRef.current,
+      running: true,
+      shotClockSeconds: shotSecondsRef.current,
+      shotClockRunning: false,
+    })
   }, [emit])
 
   const pause = useCallback(() => {
     setRunning(false)
     setShotClockRunning(false)
-    emit({ seconds: secondsRef.current, running: false, shotClockSeconds: shotSecondsRef.current, shotClockRunning: false })
+    emit({
+      seconds: secondsRef.current,
+      running: false,
+      shotClockSeconds: shotSecondsRef.current,
+      shotClockRunning: false,
+    })
   }, [emit])
 
   const resetMainClock = useCallback(
@@ -223,7 +238,12 @@ export function useGameTimer({
       setSeconds(val)
       setRunning(false)
       setShotClockRunning(false)
-      emit({ seconds: val, running: false, shotClockSeconds: shotSecondsRef.current, shotClockRunning: false })
+      emit({
+        seconds: val,
+        running: false,
+        shotClockSeconds: shotSecondsRef.current,
+        shotClockRunning: false,
+      })
     },
     [mode, initialSeconds, emit],
   )
@@ -232,7 +252,10 @@ export function useGameTimer({
   const adjustMainClock = useCallback(
     (delta: number) => {
       setSeconds((prev) => {
-        const next = Math.max(0, Math.min(mode === 'countdown' ? initialSeconds : 99 * 60, prev + delta))
+        const next = Math.max(
+          0,
+          Math.min(mode === 'countdown' ? initialSeconds : 99 * 60, prev + delta),
+        )
         emit({ seconds: next, running, shotClockSeconds: shotSecondsRef.current, shotClockRunning })
         return next
       })
@@ -245,19 +268,34 @@ export function useGameTimer({
     (val: number) => {
       const clamped = Math.max(0, Math.min(mode === 'countdown' ? initialSeconds : 99 * 60, val))
       setSeconds(clamped)
-      emit({ seconds: clamped, running, shotClockSeconds: shotSecondsRef.current, shotClockRunning })
+      emit({
+        seconds: clamped,
+        running,
+        shotClockSeconds: shotSecondsRef.current,
+        shotClockRunning,
+      })
     },
     [mode, initialSeconds, emit, running, shotClockRunning],
   )
 
   const startShotClock = useCallback(() => {
     setShotClockRunning(true)
-    emit({ seconds: secondsRef.current, running, shotClockSeconds: shotSecondsRef.current, shotClockRunning: true })
+    emit({
+      seconds: secondsRef.current,
+      running,
+      shotClockSeconds: shotSecondsRef.current,
+      shotClockRunning: true,
+    })
   }, [emit, running])
 
   const pauseShotClock = useCallback(() => {
     setShotClockRunning(false)
-    emit({ seconds: secondsRef.current, running, shotClockSeconds: shotSecondsRef.current, shotClockRunning: false })
+    emit({
+      seconds: secondsRef.current,
+      running,
+      shotClockSeconds: shotSecondsRef.current,
+      shotClockRunning: false,
+    })
   }, [emit, running])
 
   const resetShotClock = useCallback(

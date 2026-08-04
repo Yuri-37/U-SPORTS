@@ -12,7 +12,9 @@ export default function TopNav() {
   return (
     <header className="h-14 bg-[var(--surface-card)] border-b border-[var(--border-subtle)] flex items-center justify-end px-6 gap-3 z-30 sticky top-0">
       <div className="flex items-center gap-3">
-        {(scopedProfile?.role === 'Organizer' || scopedProfile?.role === 'Coach' || scopedProfile?.role === 'Admin') && <OnlineOrganizers />}
+        {(scopedProfile?.role === 'Organizer' ||
+          scopedProfile?.role === 'Coach' ||
+          scopedProfile?.role === 'Admin') && <OnlineOrganizers />}
         <HeaderAccountCluster />
       </div>
     </header>

@@ -62,19 +62,35 @@ export default function LoginPage() {
         className="hidden lg:flex w-1/2 flex-col items-center justify-center p-12 relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, var(--school-primary) 0%, #001A3D 100%)` }}
       >
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #FFD700 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 20% 50%, #FFD700 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
         <div className="relative z-10 text-center">
           {institution?.logo_url ? (
-            <img src={institution.logo_url} alt="Logo" className="w-32 h-32 mx-auto mb-6 rounded-full" />
+            <img
+              src={institution.logo_url}
+              alt="Logo"
+              className="w-32 h-32 mx-auto mb-6 rounded-full"
+            />
           ) : (
-            <div className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-5xl"
-              style={{ backgroundColor: 'var(--school-secondary)', color: 'var(--school-primary)' }}>
+            <div
+              className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-5xl"
+              style={{ backgroundColor: 'var(--school-secondary)', color: 'var(--school-primary)' }}
+            >
               🏆
             </div>
           )}
-          <p className="text-white/50 font-bold text-xs uppercase tracking-[0.25em] mb-2">U-Sports</p>
-          <h1 className="text-4xl font-black font-[Barlow_Condensed] tracking-widest"
-            style={{ color: 'var(--school-secondary)' }}>
+          <p className="text-white/50 font-bold text-xs uppercase tracking-[0.25em] mb-2">
+            U-Sports
+          </p>
+          <h1
+            className="text-4xl font-black font-[Barlow_Condensed] tracking-widest"
+            style={{ color: 'var(--school-secondary)' }}
+          >
             {institution?.abbreviation ?? 'U-Sports'}
           </h1>
           <p className="text-white/70 mt-2 text-lg">{institution?.name}</p>
@@ -87,18 +103,24 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden text-center">
             {institution?.logo_url ? (
-              <img src={institution.logo_url} alt="" className="w-16 h-16 mx-auto mb-3 rounded-full object-cover border border-[var(--border-subtle)]" />
+              <img
+                src={institution.logo_url}
+                alt=""
+                className="w-16 h-16 mx-auto mb-3 rounded-full object-cover border border-[var(--border-subtle)]"
+              />
             ) : null}
             <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
             <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Sign In</h2>
-          <p className="text-[var(--text-muted)] text-sm mb-6">
-            Access your U-Sports dashboard
-          </p>
+          <p className="text-[var(--text-muted)] text-sm mb-6">Access your U-Sports dashboard</p>
 
-          {error && <Alert type="danger" className="mb-4">{error}</Alert>}
+          {error && (
+            <Alert type="danger" className="mb-4">
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
@@ -129,7 +151,13 @@ export default function LoginPage() {
                 {showPass ? 'Hide' : 'Show'} password
               </button>
             </div>
-            <Button type="submit" className="w-full" size="lg" loading={loading} icon={<LogIn className="w-4 h-4" />}>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              loading={loading}
+              icon={<LogIn className="w-4 h-4" />}
+            >
               Sign In
             </Button>
           </form>
@@ -137,7 +165,10 @@ export default function LoginPage() {
           <div className="mt-6 text-center text-sm space-y-1">
             <p className="text-[var(--text-muted)]">
               Just browsing?{' '}
-              <a href="/guest" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+              <a
+                href="/guest"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
                 View as Guest →
               </a>
             </p>

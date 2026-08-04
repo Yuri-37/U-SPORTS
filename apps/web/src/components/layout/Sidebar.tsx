@@ -1,10 +1,21 @@
 import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import {
-  LayoutDashboard, Users, Calendar, BarChart3, Settings,
-  Megaphone, Trophy, ChevronLeft, ChevronRight,
-  ClipboardList, User, Globe,
-  Dumbbell, UserCheck, Building2,
+  LayoutDashboard,
+  Users,
+  Calendar,
+  BarChart3,
+  Settings,
+  Megaphone,
+  Trophy,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  User,
+  Globe,
+  Dumbbell,
+  UserCheck,
+  Building2,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useInstitutionStore } from '../../stores/institutionStore'
@@ -64,16 +75,16 @@ export default function Sidebar() {
     scopedProfile?.role === 'Admin'
       ? superAdminNav
       : scopedProfile?.role === 'Organizer'
-      ? organizerNav
-      : scopedProfile?.role === 'Coach'
-      ? coachNav
-      : athleteNav
+        ? organizerNav
+        : scopedProfile?.role === 'Coach'
+          ? coachNav
+          : athleteNav
 
   return (
     <aside
       className={cn(
         'h-screen sticky top-0 flex flex-col bg-[var(--surface-card)] border-r border-[var(--border-subtle)] transition-all duration-200 z-20',
-        collapsed ? 'w-16' : 'w-56'
+        collapsed ? 'w-16' : 'w-56',
       )}
     >
       {/* Brand header */}
@@ -102,7 +113,9 @@ export default function Sidebar() {
             <p className="text-[var(--school-secondary)] font-bold text-sm truncate font-[Barlow_Condensed] leading-tight">
               {institution?.abbreviation ?? 'U-Sports'}
             </p>
-            <p className="text-[var(--school-secondary)]/60 text-[10px] truncate">{institution?.tagline}</p>
+            <p className="text-[var(--school-secondary)]/60 text-[10px] truncate">
+              {institution?.tagline}
+            </p>
           </div>
         )}
       </div>
@@ -123,7 +136,7 @@ export default function Sidebar() {
                 'flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-0.5',
                 isActive
                   ? 'bg-[#0066FF]/15 text-[var(--accent-default)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]',
               )}
               title={collapsed ? item.label : undefined}
             >

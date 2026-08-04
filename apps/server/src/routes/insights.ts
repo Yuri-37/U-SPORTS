@@ -13,7 +13,7 @@ const listQuerySchema = z.object({
   entity_id: z.string().uuid().optional(),
   season_id: z.preprocess(
     (val) => (val === '' || val === undefined ? undefined : val),
-    z.string().uuid().optional()
+    z.string().uuid().optional(),
   ),
 })
 
@@ -23,7 +23,12 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
 
   let seasonId = parsed.data.season_id
   if (!seasonId) {
-    const { data: active } = await supabase.from('seasons').select('id').eq('status', 'active').limit(1).maybeSingle()
+    const { data: active } = await supabase
+      .from('seasons')
+      .select('id')
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
     seasonId = active?.id
   }
 
@@ -54,57 +59,62 @@ const backfillSeasonSchema = z.object({
 })
 
 /** Re-run insight rules for recent completed matches (fills gaps when matches ended before server-side compute existed). */
-router.post('/backfill-season', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
-  const parsed = backfillSeasonSchema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+router.post(
+  '/backfill-season',
+  requireAuth,
+  requireRole('Organizer', 'Admin', 'Coach'),
+  async (req: AuthRequest, res) => {
+    const parsed = backfillSeasonSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
 
-  const { seasonId, sport } = parsed.data
+    const { seasonId, sport } = parsed.data
 
-  const { data: events, error: evErr } = await supabase
-    .from('events')
-    .select('id')
-    .eq('season_id', seasonId)
-    .eq('sport', sport)
+    const { data: events, error: evErr } = await supabase
+      .from('events')
+      .select('id')
+      .eq('season_id', seasonId)
+      .eq('sport', sport)
 
-  if (evErr) return res.status(500).json({ error: evErr.message })
+    if (evErr) return res.status(500).json({ error: evErr.message })
 
-  const eventIds = (events ?? []).map((e) => e.id)
-  if (eventIds.length === 0) {
+    const eventIds = (events ?? []).map((e) => e.id)
+    if (eventIds.length === 0) {
+      await writeAuditLog({
+        actorId: req.user!.id,
+        action: 'insights_season_backfill',
+        entityType: 'season',
+        entityId: seasonId,
+        details: { sport, matches_processed: 0 },
+      })
+      return res.json({ ok: true, matchesProcessed: 0 })
+    }
+
+    const { data: matches, error: mErr } = await supabase
+      .from('matches')
+      .select('id')
+      .in('event_id', eventIds)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(40)
+
+    if (mErr) return res.status(500).json({ error: mErr.message })
+
+    let processed = 0
+    for (const row of matches ?? []) {
+      await computeInsightsForMatch(row.id as string, seasonId)
+      processed++
+    }
+
     await writeAuditLog({
       actorId: req.user!.id,
       action: 'insights_season_backfill',
       entityType: 'season',
       entityId: seasonId,
-      details: { sport, matches_processed: 0 },
+      details: { sport, matches_processed: processed },
     })
-    return res.json({ ok: true, matchesProcessed: 0 })
-  }
 
-  const { data: matches, error: mErr } = await supabase
-    .from('matches')
-    .select('id')
-    .in('event_id', eventIds)
-    .eq('status', 'completed')
-    .order('created_at', { ascending: false })
-    .limit(40)
-
-  if (mErr) return res.status(500).json({ error: mErr.message })
-
-  let processed = 0
-  for (const row of matches ?? []) {
-    await computeInsightsForMatch(row.id as string, seasonId)
-    processed++
-  }
-
-  await writeAuditLog({
-    actorId: req.user!.id,
-    action: 'insights_season_backfill',
-    entityType: 'season',
-    entityId: seasonId,
-    details: { sport, matches_processed: processed },
-  })
-
-  res.json({ ok: true, matchesProcessed: processed })
-})
+    res.json({ ok: true, matchesProcessed: processed })
+  },
+)
 
 export default router

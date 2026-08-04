@@ -23,25 +23,30 @@ const PORT = process.env.PORT || 3001
 
 // Security middleware
 app.use(helmet())
-app.use(cors({
-  origin: (origin, cb) => {
-    // Allow non-browser clients (curl/postman) without Origin header
-    if (!origin) return cb(null, true)
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow non-browser clients (curl/postman) without Origin header
+      if (!origin) return cb(null, true)
 
-    const configured = process.env.WEB_URL?.trim()
-    if (configured && origin === configured) return cb(null, true)
+      const configured = process.env.WEB_URL?.trim()
+      if (configured && origin === configured) return cb(null, true)
 
-    // Dev convenience: allow any localhost port (Vite may choose a new port).
-    if (process.env.NODE_ENV !== 'production') {
-      if (/^https?:\/\/localhost:\d+$/.test(origin) || /^https?:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
-        return cb(null, true)
+      // Dev convenience: allow any localhost port (Vite may choose a new port).
+      if (process.env.NODE_ENV !== 'production') {
+        if (
+          /^https?:\/\/localhost:\d+$/.test(origin) ||
+          /^https?:\/\/127\.0\.0\.1:\d+$/.test(origin)
+        ) {
+          return cb(null, true)
+        }
       }
-    }
 
-    return cb(new Error('Not allowed by CORS'))
-  },
-  credentials: true,
-}))
+      return cb(new Error('Not allowed by CORS'))
+    },
+    credentials: true,
+  }),
+)
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
@@ -110,7 +115,7 @@ app
   .on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
       console.error(
-        `Port ${PORT} is already in use. Another API instance is probably running (e.g. from \`pnpm dev\`). Stop it or set PORT in apps/server/.env.`
+        `Port ${PORT} is already in use. Another API instance is probably running (e.g. from \`pnpm dev\`). Stop it or set PORT in apps/server/.env.`,
       )
     } else {
       console.error(err)

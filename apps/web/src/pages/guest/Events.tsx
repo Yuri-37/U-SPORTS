@@ -1,9 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ArrowLeft, Search } from 'lucide-react'
-import { Card, Badge, Skeleton, EmptyState, Button, TabBar, Input, Select } from '../../components/ui'
+import {
+  Card,
+  Badge,
+  Skeleton,
+  EmptyState,
+  Button,
+  TabBar,
+  Input,
+  Select,
+} from '../../components/ui'
 import { supabase } from '../../lib/supabase'
-import { getSportIcon, getSportLabel, formatEnumLabel, eventPublicLifecycleLabel } from '../../lib/utils'
+import {
+  getSportIcon,
+  getSportLabel,
+  formatEnumLabel,
+  eventPublicLifecycleLabel,
+} from '../../lib/utils'
 import type { Event, Sport } from '../../types'
 
 type EventsView = 'upcoming' | 'past'
@@ -40,13 +54,15 @@ export default function GuestEvents() {
         .select('*, season:seasons(id, name)')
         .in('status', ['completed', 'cancelled'])
         .order('created_at', { ascending: false }),
-    ]).then(([up, pa]) => {
-      if (cancelled) return
-      setUpcoming((up.data ?? []) as Event[])
-      setPast((pa.data ?? []) as Event[])
-    }).finally(() => {
-      if (!cancelled) setLoading(false)
-    })
+    ])
+      .then(([up, pa]) => {
+        if (cancelled) return
+        setUpcoming((up.data ?? []) as Event[])
+        setPast((pa.data ?? []) as Event[])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -109,7 +125,9 @@ export default function GuestEvents() {
         <p className="text-xs text-[var(--text-muted)] mt-1 capitalize">
           {getSportLabel(e.sport as Sport)} · {formatEnumLabel(e.format ?? '')}
         </p>
-        {e.description && <p className="text-xs text-[var(--text-secondary)] mt-2 line-clamp-2">{e.description}</p>}
+        {e.description && (
+          <p className="text-xs text-[var(--text-secondary)] mt-2 line-clamp-2">{e.description}</p>
+        )}
         {seasonName && <p className="text-xs text-[var(--text-muted)] mt-1">{seasonName}</p>}
       </Card>
     )
@@ -195,7 +213,9 @@ export default function GuestEvents() {
             }
           />
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{upcoming.map(renderEventCard)}</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcoming.map(renderEventCard)}
+          </div>
         )
       ) : pastFiltered.length === 0 ? (
         <EmptyState
@@ -222,7 +242,9 @@ export default function GuestEvents() {
           }
         />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{pastFiltered.map(renderEventCard)}</div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pastFiltered.map(renderEventCard)}
+        </div>
       )}
     </div>
   )

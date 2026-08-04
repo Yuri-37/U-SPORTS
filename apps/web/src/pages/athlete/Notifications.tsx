@@ -10,7 +10,8 @@ type Filter = 'all' | 'unread' | 'recent'
 
 export default function AthleteNotifications() {
   const { profile } = useAuthStore()
-  const { notifications, fetchNotifications, markRead, markAllRead, deleteNotification, clearAll } = useNotificationStore()
+  const { notifications, fetchNotifications, markRead, markAllRead, deleteNotification, clearAll } =
+    useNotificationStore()
   const [filter, setFilter] = useState<Filter>('all')
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [clearing, setClearing] = useState(false)
@@ -50,12 +51,22 @@ export default function AthleteNotifications() {
         </div>
         <div className="flex items-center gap-2">
           {unread.length > 0 && (
-            <Button size="sm" variant="secondary" icon={<Check className="w-3.5 h-3.5" />} onClick={() => profile && markAllRead(profile.id)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Check className="w-3.5 h-3.5" />}
+              onClick={() => profile && markAllRead(profile.id)}
+            >
               Mark all read
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button size="sm" variant="ghost" icon={<Trash2 className="w-3.5 h-3.5" />} onClick={() => setConfirmClearAll(true)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={() => setConfirmClearAll(true)}
+            >
               Clear all
             </Button>
           )}
@@ -63,11 +74,13 @@ export default function AthleteNotifications() {
       </div>
 
       <div className="flex gap-2">
-        {([
-          ['all', 'All'],
-          ['unread', 'Unread'],
-          ['recent', 'Recent'],
-        ] as const).map(([id, label]) => (
+        {(
+          [
+            ['all', 'All'],
+            ['unread', 'Unread'],
+            ['recent', 'Recent'],
+          ] as const
+        ).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setFilter(id)}
@@ -83,21 +96,34 @@ export default function AthleteNotifications() {
       </div>
 
       {notifications.length === 0 ? (
-        <EmptyState icon={<Bell className="w-10 h-10" />} title="No notifications" description="You're all caught up!" />
+        <EmptyState
+          icon={<Bell className="w-10 h-10" />}
+          title="No notifications"
+          description="You're all caught up!"
+        />
       ) : visible.length === 0 ? (
-        <p className="text-center text-[var(--text-muted)] py-10">No notifications match this filter.</p>
+        <p className="text-center text-[var(--text-muted)] py-10">
+          No notifications match this filter.
+        </p>
       ) : (
         <div className="space-y-2">
           {visible.map((n) => (
-            <Card key={n.id} className={`flex items-start gap-3 ${!n.read ? 'border-[#0066FF]/30 bg-[#0066FF]/5' : ''}`}>
-              {!n.read && <div className="w-2 h-2 rounded-full bg-[#0066FF] mt-1.5 flex-shrink-0" />}
+            <Card
+              key={n.id}
+              className={`flex items-start gap-3 ${!n.read ? 'border-[#0066FF]/30 bg-[#0066FF]/5' : ''}`}
+            >
+              {!n.read && (
+                <div className="w-2 h-2 rounded-full bg-[#0066FF] mt-1.5 flex-shrink-0" />
+              )}
               <div
                 className="flex-1 min-w-0 cursor-pointer"
                 onClick={() => !n.read && markRead(n.id)}
               >
                 <p className="font-semibold text-sm">{n.title}</p>
                 <p className="text-sm text-[var(--text-muted)] mt-0.5">{n.body}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">{formatDateTime(n.created_at)}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  {formatDateTime(n.created_at)}
+                </p>
               </div>
               <button
                 type="button"
@@ -112,11 +138,25 @@ export default function AthleteNotifications() {
         </div>
       )}
 
-      <Modal open={confirmClearAll} onClose={() => { if (!clearing) setConfirmClearAll(false) }} title="Clear all notifications?" size="md">
+      <Modal
+        open={confirmClearAll}
+        onClose={() => {
+          if (!clearing) setConfirmClearAll(false)
+        }}
+        title="Clear all notifications?"
+        size="md"
+      >
         <div className="space-y-4">
-          <Alert type="warning">This removes all {notifications.length} notifications from your inbox. You cannot undo this.</Alert>
+          <Alert type="warning">
+            This removes all {notifications.length} notifications from your inbox. You cannot undo
+            this.
+          </Alert>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setConfirmClearAll(false)} disabled={clearing}>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmClearAll(false)}
+              disabled={clearing}
+            >
               Cancel
             </Button>
             <Button variant="danger" loading={clearing} onClick={handleClearAll}>

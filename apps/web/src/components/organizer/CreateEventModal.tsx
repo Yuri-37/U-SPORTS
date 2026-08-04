@@ -67,7 +67,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
       setCreating(false)
       return
     }
-    fetchSeasonsForEventForms().then(setSeasons).catch(() => setSeasons([]))
+    fetchSeasonsForEventForms()
+      .then(setSeasons)
+      .catch(() => setSeasons([]))
   }, [open])
 
   useEffect(() => {
@@ -78,7 +80,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
   useEffect(() => {
     if (!open || sportOptionsForForms.length === 0) return
     setForm((f) =>
-      sportOptionsForForms.some((o) => o.value === f.sport) ? f : { ...f, sport: sportOptionsForForms[0]!.value },
+      sportOptionsForForms.some((o) => o.value === f.sport)
+        ? f
+        : { ...f, sport: sportOptionsForForms[0]!.value },
     )
   }, [open, sportOptionsForForms])
 
@@ -88,7 +92,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
       return
     }
     if (!form.season_id) {
-      setError('Select a season (draft or active). Create one under Super Admin → Seasons if missing.')
+      setError(
+        'Select a season (draft or active). Create one under Super Admin → Seasons if missing.',
+      )
       return
     }
     setCreating(true)
@@ -99,7 +105,8 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         table_tennis_format: form.sport === 'table-tennis' ? form.table_tennis_format : undefined,
-        best_of: form.sport === 'volleyball' || form.sport === 'table-tennis' ? form.best_of : undefined,
+        best_of:
+          form.sport === 'volleyball' || form.sport === 'table-tennis' ? form.best_of : undefined,
       })
       onCreated?.()
       onClose()
@@ -117,7 +124,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
 
   return (
     <Modal open={open} onClose={onClose} title="Create Event" size="md">
-      {error && <div className="text-[#FF3355] text-sm mb-4 bg-[#FF3355]/10 p-3 rounded-lg">{error}</div>}
+      {error && (
+        <div className="text-[#FF3355] text-sm mb-4 bg-[#FF3355]/10 p-3 rounded-lg">{error}</div>
+      )}
       <div className="space-y-4">
         <Input
           label="Event Name"
@@ -155,7 +164,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           <Select
             label={`Best of (${form.sport === 'volleyball' ? 'sets' : 'games'})`}
             value={String(form.best_of)}
-            onChange={(e) => setForm((f) => ({ ...f, best_of: Number(e.target.value) as 1 | 3 | 5 | 7 }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, best_of: Number(e.target.value) as 1 | 3 | 5 | 7 }))
+            }
             options={[1, 3, 5, 7].map((n) => ({ value: String(n), label: `Best of ${n}` }))}
           />
         )}
@@ -171,8 +182,9 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
         />
         {form.format === 'round_robin' && (
           <p className="text-xs text-[var(--text-muted)] -mt-2">
-            With <strong>more than 10 teams</strong>, the bracket generator creates two round-robin pools, then crossover
-            semifinals and a final. Assign semifinal teams on the event page after pool play.
+            With <strong>more than 10 teams</strong>, the bracket generator creates two round-robin
+            pools, then crossover semifinals and a final. Assign semifinal teams on the event page
+            after pool play.
           </p>
         )}
         <Select
@@ -180,7 +192,10 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           value={form.season_id}
           onChange={(e) => setForm((f) => ({ ...f, season_id: e.target.value }))}
           options={[
-            { value: '', label: seasons.length ? 'Select season...' : 'No seasons — Super Admin → Seasons' },
+            {
+              value: '',
+              label: seasons.length ? 'Select season...' : 'No seasons — Super Admin → Seasons',
+            },
             ...seasons.map((s) => ({
               value: s.id,
               label: `${s.name}${s.status === 'draft' ? ' — draft' : s.status === 'active' ? ' — active' : ''}`,
@@ -188,16 +203,15 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           ]}
         />
         {seasons.length === 0 && (
-          <p className="text-xs text-[var(--text-muted)] -mt-2">Create seasons as Super Admin. Draft seasons work for testing.</p>
+          <p className="text-xs text-[var(--text-muted)] -mt-2">
+            Create seasons as Super Admin. Draft seasons work for testing.
+          </p>
         )}
         <Select
           label="Category (optional)"
           value={form.category}
           onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-          options={[
-            { value: '', label: 'No category' },
-            ...(EVENT_CATEGORIES[form.sport] ?? []),
-          ]}
+          options={[{ value: '', label: 'No category' }, ...(EVENT_CATEGORIES[form.sport] ?? [])]}
         />
         <Textarea
           label="Description (optional)"
@@ -206,7 +220,12 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           value={form.description}
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         />
-        <Button className="w-full" loading={creating} disabled={!seasons.length || !canCreateEvents} onClick={handleCreate}>
+        <Button
+          className="w-full"
+          loading={creating}
+          disabled={!seasons.length || !canCreateEvents}
+          onClick={handleCreate}
+        >
           Create Event
         </Button>
       </div>

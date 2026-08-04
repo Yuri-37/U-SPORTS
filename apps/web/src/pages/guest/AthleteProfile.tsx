@@ -16,12 +16,31 @@ export default function GuestAthleteProfile() {
   useEffect(() => {
     if (!id) return
     Promise.all([
-      supabase.from('athletes').select('*, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url)').eq('id', id).maybeSingle(),
-      supabase.from('player_season_stats').select('*').eq('athlete_id', id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('insights').select('*').eq('entity_type', 'player').eq('entity_id', id).limit(3),
-    ]).then(([a, s, ins]) => {
-      setAthlete(a.data); setStats(s.data); setInsights(ins.data ?? [])
-    }).finally(() => setLoading(false))
+      supabase
+        .from('athletes')
+        .select('*, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url)')
+        .eq('id', id)
+        .maybeSingle(),
+      supabase
+        .from('player_season_stats')
+        .select('*')
+        .eq('athlete_id', id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('insights')
+        .select('*')
+        .eq('entity_type', 'player')
+        .eq('entity_id', id)
+        .limit(3),
+    ])
+      .then(([a, s, ins]) => {
+        setAthlete(a.data)
+        setStats(s.data)
+        setInsights(ins.data ?? [])
+      })
+      .finally(() => setLoading(false))
   }, [id])
 
   const goBack = () => {
@@ -82,7 +101,9 @@ export default function GuestAthleteProfile() {
         </div>
         <div>
           <h1 className="font-bold text-xl">{athlete.profile?.full_name}</h1>
-          <p className="text-sm text-[var(--text-muted)]">{getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)}
+          </p>
           <div className="flex gap-2 mt-2">
             <Badge size="sm">{athlete.position}</Badge>
             {athlete.jersey_number && <Badge size="sm">#{athlete.jersey_number}</Badge>}
@@ -99,18 +120,58 @@ export default function GuestAthleteProfile() {
               <p className="text-2xl font-black font-[Barlow_Condensed]">{stats.games_played}</p>
               <p className="text-xs text-[var(--text-muted)]">GP</p>
             </div>
-            {athlete.sport === 'basketball' && <>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.games_played > 0 ? ((stats.stats?.total_points ?? 0) / stats.games_played).toFixed(1) : '0.0'}</p><p className="text-xs text-[var(--text-muted)]">PPG</p></div>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.games_played > 0 ? ((stats.stats?.total_rebounds ?? 0) / stats.games_played).toFixed(1) : '0.0'}</p><p className="text-xs text-[var(--text-muted)]">RPG</p></div>
-            </>}
-            {athlete.sport === 'volleyball' && <>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.stats?.kills ?? 0}</p><p className="text-xs text-[var(--text-muted)]">Kills</p></div>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.stats?.aces ?? 0}</p><p className="text-xs text-[var(--text-muted)]">Aces</p></div>
-            </>}
-            {athlete.sport === 'table-tennis' && <>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.stats?.mw ?? 0}</p><p className="text-xs text-[var(--text-muted)]">Wins</p></div>
-              <div><p className="text-2xl font-black font-[Barlow_Condensed]">{stats.stats?.win_pct ?? '0'}%</p><p className="text-xs text-[var(--text-muted)]">Win%</p></div>
-            </>}
+            {athlete.sport === 'basketball' && (
+              <>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.games_played > 0
+                      ? ((stats.stats?.total_points ?? 0) / stats.games_played).toFixed(1)
+                      : '0.0'}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">PPG</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.games_played > 0
+                      ? ((stats.stats?.total_rebounds ?? 0) / stats.games_played).toFixed(1)
+                      : '0.0'}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">RPG</p>
+                </div>
+              </>
+            )}
+            {athlete.sport === 'volleyball' && (
+              <>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.stats?.kills ?? 0}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Kills</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.stats?.aces ?? 0}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Aces</p>
+                </div>
+              </>
+            )}
+            {athlete.sport === 'table-tennis' && (
+              <>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.stats?.mw ?? 0}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Wins</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black font-[Barlow_Condensed]">
+                    {stats.stats?.win_pct ?? '0'}%
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Win%</p>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       )}
@@ -118,8 +179,11 @@ export default function GuestAthleteProfile() {
       {insights.length > 0 && (
         <Card>
           <h3 className="font-bold mb-3">Performance Insights</h3>
-          {insights.map(i => (
-            <div key={i.id} className="text-sm py-2 border-b border-[var(--border-subtle)] last:border-0">
+          {insights.map((i) => (
+            <div
+              key={i.id}
+              className="text-sm py-2 border-b border-[var(--border-subtle)] last:border-0"
+            >
               {i.insight_text}
             </div>
           ))}

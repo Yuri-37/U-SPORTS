@@ -57,7 +57,9 @@ export default function SuperAdminLoginPage() {
           throw new Error('This portal is for staff only. Students use the main login.')
         }
 
-        navigate(p.role === 'Admin' ? '/super-admin' : defaultPostLoginPath(p.role), { replace: true })
+        navigate(p.role === 'Admin' ? '/super-admin' : defaultPostLoginPath(p.role), {
+          replace: true,
+        })
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid credentials')
@@ -83,7 +85,9 @@ export default function SuperAdminLoginPage() {
               <Shield className="w-8 h-8 text-[#0066FF]" />
             )}
           </div>
-          <p className="text-[var(--accent-default)] font-bold text-xs uppercase tracking-[0.2em] mb-1.5">U-Sports</p>
+          <p className="text-[var(--accent-default)] font-bold text-xs uppercase tracking-[0.2em] mb-1.5">
+            U-Sports
+          </p>
           <h1 className="text-2xl font-bold tracking-tight">Staff Portal</h1>
           <p className="text-[var(--text-muted)] text-sm mt-1">
             {institution?.name ?? 'U-Sports'} · Super admins, organizers &amp; coaches
@@ -97,7 +101,11 @@ export default function SuperAdminLoginPage() {
             </Alert>
           )}
 
-          {error && <Alert type="danger" className="mb-5">{error}</Alert>}
+          {error && (
+            <Alert type="danger" className="mb-5">
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
@@ -142,7 +150,10 @@ export default function SuperAdminLoginPage() {
 
         <p className="text-center text-xs text-[var(--text-muted)] mt-6">
           Not staff?{' '}
-          <a href="/auth/login" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline">
+          <a
+            href="/auth/login"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline"
+          >
             Student login →
           </a>
         </p>

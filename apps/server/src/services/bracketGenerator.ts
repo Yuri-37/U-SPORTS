@@ -49,7 +49,7 @@ function seedParticipants(participants: Participant[]): Participant[] {
 // Single Elimination bracket
 function buildSingleElim(
   eventId: string,
-  participants: Participant[]
+  participants: Participant[],
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   const seeded = seedParticipants(participants)
   const size = nextPowerOfTwo(seeded.length)
@@ -158,7 +158,7 @@ function buildRoundRobinPool(
   eventId: string,
   participants: Participant[],
   round: number,
-  bracketType: string
+  bracketType: string,
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   const brackets: BracketNode[] = []
   const matches: MatchStub[] = []
@@ -196,7 +196,7 @@ function buildRoundRobinPool(
 /** Single round-robin table (≤ ROUND_ROBIN_SPLIT_THRESHOLD teams). */
 function buildRoundRobin(
   eventId: string,
-  participants: Participant[]
+  participants: Participant[],
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   return buildRoundRobinPool(eventId, participants, 1, 'round_robin')
 }
@@ -207,7 +207,7 @@ function buildRoundRobin(
  */
 function buildSplitRoundRobinWithCrossover(
   eventId: string,
-  participants: Participant[]
+  participants: Participant[],
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   const seeded = seedParticipants(participants)
   const n = seeded.length
@@ -296,10 +296,13 @@ function buildSplitRoundRobinWithCrossover(
 // Double Elimination (simplified: winners + losers brackets)
 function buildDoubleElim(
   eventId: string,
-  participants: Participant[]
+  participants: Participant[],
 ): { brackets: BracketNode[]; matches: MatchStub[] } {
   // Build winners bracket first
-  const { brackets: winnersBrackets, matches: winnersMatches } = buildSingleElim(eventId, participants)
+  const { brackets: winnersBrackets, matches: winnersMatches } = buildSingleElim(
+    eventId,
+    participants,
+  )
 
   // Mark winners bracket type
   winnersBrackets.forEach((b) => (b.bracket_type = 'winners'))
@@ -371,7 +374,7 @@ export async function generateBracket(
   eventId: string,
   participantIds: string[],
   format: BracketFormat,
-  seeds?: Record<string, number>
+  seeds?: Record<string, number>,
 ): Promise<{ success: boolean; bracketCount: number; matchCount: number }> {
   const participants: Participant[] = participantIds.map((id) => ({
     id,
@@ -470,7 +473,9 @@ export async function advanceWinner(matchId: string, winnerId: string): Promise<
     .eq('bracket_id', bracket.next_bracket_id)
 
   const alreadyPlayed = (downstream ?? []).filter(
-    (m) => (m as { status?: string }).status === 'live' || (m as { status?: string }).status === 'completed',
+    (m) =>
+      (m as { status?: string }).status === 'live' ||
+      (m as { status?: string }).status === 'completed',
   )
   if (alreadyPlayed.length > 0) {
     const current = (nextBracket as Record<string, unknown>)[field]

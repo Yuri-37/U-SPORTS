@@ -1,11 +1,39 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { Play, Users, Trophy, Shuffle, Tv2, Calendar, Trash2, Ban, Pencil, FileText } from 'lucide-react'
-import { Button, Card, Badge, Modal, Select, Alert, TabBar, Table, Input, Textarea, Skeleton } from '../../components/ui'
+import {
+  Play,
+  Users,
+  Trophy,
+  Shuffle,
+  Tv2,
+  Calendar,
+  Trash2,
+  Ban,
+  Pencil,
+  FileText,
+} from 'lucide-react'
+import {
+  Button,
+  Card,
+  Badge,
+  Modal,
+  Select,
+  Alert,
+  TabBar,
+  Table,
+  Input,
+  Textarea,
+  Skeleton,
+} from '../../components/ui'
 import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import type { Event, Match, Bracket, Team } from '../../types'
-import { getSportLabel, formatDateTime, formatEnumLabel, organizerEventStatusLabel } from '../../lib/utils'
+import {
+  getSportLabel,
+  formatDateTime,
+  formatEnumLabel,
+  organizerEventStatusLabel,
+} from '../../lib/utils'
 import { collectBracketParticipantIds, fetchParticipantLabels } from '../../lib/participantLabels'
 import BracketView from '../../components/brackets/BracketView'
 import EventPodiumStrip from '../../components/events/EventPodiumStrip'
@@ -15,7 +43,11 @@ import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 
 const STATUS_VARIANTS: Record<string, any> = {
-  draft: 'default', registration: 'info', in_progress: 'danger', completed: 'success', cancelled: 'default'
+  draft: 'default',
+  registration: 'info',
+  in_progress: 'danger',
+  completed: 'success',
+  cancelled: 'default',
 }
 
 export default function OrganizerEventDetail() {
@@ -30,7 +62,7 @@ export default function OrganizerEventDetail() {
     if (m.status === 'completed') navigate(`/organizer/match-review/${m.id}`)
     else if (!isCoach && !lockedMatchIds.has(m.id)) navigate(`/organizer/scoring/${m.id}`)
   }
-  const [event, setEvent] = useState<Event & { participants: any[] } | null>(null)
+  const [event, setEvent] = useState<(Event & { participants: any[] }) | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [brackets, setBrackets] = useState<Bracket[]>([])
   const [teams, setTeams] = useState<any[]>([])
@@ -57,9 +89,10 @@ export default function OrganizerEventDetail() {
   const [schedTime, setSchedTime] = useState('')
   const [schedVenue, setSchedVenue] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
-  const [removeParticipantConfirm, setRemoveParticipantConfirm] = useState<{ participant_id: string; name: string } | null>(
-    null,
-  )
+  const [removeParticipantConfirm, setRemoveParticipantConfirm] = useState<{
+    participant_id: string
+    name: string
+  } | null>(null)
   const [removingParticipant, setRemovingParticipant] = useState(false)
   const [bracketGenConfirm, setBracketGenConfirm] = useState<null | 'generate' | 'regenerate'>(null)
   const confirmRemoveParticipant = async () => {
@@ -116,7 +149,10 @@ export default function OrganizerEventDetail() {
 
   useEffect(() => {
     fetchAll()
-    supabase.from('teams').select('*').then(r => setTeams(r.data ?? []))
+    supabase
+      .from('teams')
+      .select('*')
+      .then((r) => setTeams(r.data ?? []))
   }, [id])
 
   useEffect(() => {
@@ -128,13 +164,15 @@ export default function OrganizerEventDetail() {
   const crossoverSemis = useMemo(
     () =>
       [...matches]
-        .filter((m) => brackets.some((b) => b.id === m.bracket_id && b.bracket_type === 'crossover_semi'))
+        .filter((m) =>
+          brackets.some((b) => b.id === m.bracket_id && b.bracket_type === 'crossover_semi'),
+        )
         .sort((a, b) => {
           const ba = brackets.find((bk) => bk.id === a.bracket_id)
           const bb = brackets.find((bk) => bk.id === b.bracket_id)
           return (ba?.match_order ?? 0) - (bb?.match_order ?? 0)
         }),
-    [matches, brackets]
+    [matches, brackets],
   )
 
   const eliminationPodium = useMemo(() => deriveEliminationPodium(brackets), [brackets])
@@ -181,7 +219,9 @@ export default function OrganizerEventDetail() {
   useEffect(() => {
     // Collect IDs from both brackets and matches so the Matches tab also gets team names
     const bracketIds = collectBracketParticipantIds(brackets)
-    const matchIds = matches.flatMap(m => [m.participant_a_id, m.participant_b_id].filter((x): x is string => !!x))
+    const matchIds = matches.flatMap((m) =>
+      [m.participant_a_id, m.participant_b_id].filter((x): x is string => !!x),
+    )
     const ids = [...new Set([...bracketIds, ...matchIds])]
     if (ids.length === 0) {
       setParticipantLabels({})
@@ -198,7 +238,9 @@ export default function OrganizerEventDetail() {
     void fetchParticipantLabels(missing).then((extra) => {
       if (!cancelled) setParticipantLabels({ ...fromTeams, ...extra })
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [teams, brackets, matches])
 
   const handleSaveCrossover = async () => {
@@ -226,7 +268,8 @@ export default function OrganizerEventDetail() {
 
   const handleAddParticipants = async () => {
     if (selectedTeamIds.size === 0) return
-    setAddingParticipants(true); setError('')
+    setAddingParticipants(true)
+    setError('')
     try {
       await api.post(`/events/${id}/participants/bulk`, {
         participant_ids: [...selectedTeamIds],
@@ -234,8 +277,11 @@ export default function OrganizerEventDetail() {
       })
       setSelectedTeamIds(new Set())
       fetchAll()
-    } catch (e: any) { setError(e.response?.data?.error ?? 'Failed to add participants') }
-    finally { setAddingParticipants(false) }
+    } catch (e: any) {
+      setError(e.response?.data?.error ?? 'Failed to add participants')
+    } finally {
+      setAddingParticipants(false)
+    }
   }
 
   const toggleTeamSelect = (teamId: string) => {
@@ -348,9 +394,12 @@ export default function OrganizerEventDetail() {
     setSavingSchedule(true)
     setError('')
     try {
-      const scheduled_at = schedDate && schedTime
-        ? new Date(`${schedDate}T${schedTime}`).toISOString()
-        : schedDate ? new Date(`${schedDate}T00:00`).toISOString() : null
+      const scheduled_at =
+        schedDate && schedTime
+          ? new Date(`${schedDate}T${schedTime}`).toISOString()
+          : schedDate
+            ? new Date(`${schedDate}T00:00`).toISOString()
+            : null
       await api.patch(`/events/${id}/matches/${scheduleMatch.id}/schedule`, {
         scheduled_at,
         venue: schedVenue.trim() || null,
@@ -368,8 +417,16 @@ export default function OrganizerEventDetail() {
     }
   }
 
-  if (loading) return <div className="space-y-4">{Array.from({length:4}).map((_,i) => <Skeleton key={i} className="h-16" />)}</div>
-  if (!event) return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
+  if (loading)
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-16" />
+        ))}
+      </div>
+    )
+  if (!event)
+    return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
 
   const readOnlyEvent = isCoach || !canConfigureSport(event.sport)
 
@@ -388,7 +445,9 @@ export default function OrganizerEventDetail() {
         value: p.participant_id,
       })) ?? []
 
-  const hasSplitPools = brackets.some((b) => b.bracket_type === 'rr_pool_a' || b.bracket_type === 'rr_pool_b')
+  const hasSplitPools = brackets.some(
+    (b) => b.bracket_type === 'rr_pool_a' || b.bracket_type === 'rr_pool_b',
+  )
 
   return (
     <div className="space-y-6">
@@ -403,16 +462,28 @@ export default function OrganizerEventDetail() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <button onClick={() => navigate('/organizer/events')} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-2 flex items-center gap-1">← Back to Events</button>
+          <button
+            onClick={() => navigate('/organizer/events')}
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-2 flex items-center gap-1"
+          >
+            ← Back to Events
+          </button>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold">{event.name}</h1>
             {!readOnlyEvent ? (
-              <Button size="sm" variant="secondary" icon={<Pencil className="w-3 h-3" />} onClick={() => {
-                setEditName(event.name)
-                setEditDescription(event.description ?? '')
-                setEditTTFormat((event as any).table_tennis_format === 'doubles' ? 'doubles' : 'singles')
-                setEditDetailsOpen(true)
-              }}>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Pencil className="w-3 h-3" />}
+                onClick={() => {
+                  setEditName(event.name)
+                  setEditDescription(event.description ?? '')
+                  setEditTTFormat(
+                    (event as any).table_tennis_format === 'doubles' ? 'doubles' : 'singles',
+                  )
+                  setEditDetailsOpen(true)
+                }}
+              >
                 Edit details
               </Button>
             ) : (
@@ -423,7 +494,9 @@ export default function OrganizerEventDetail() {
           </div>
           <p className="text-[var(--text-muted)] text-sm">
             {getSportLabel(event.sport as any)} · {formatEnumLabel(event.format)}
-            {event.sport === 'table-tennis' && (event as any).table_tennis_format ? ` · ${(event as any).table_tennis_format}` : ''}
+            {event.sport === 'table-tennis' && (event as any).table_tennis_format
+              ? ` · ${(event as any).table_tennis_format}`
+              : ''}
           </p>
           {event.sport === 'table-tennis' && (event as any).table_tennis_format && (
             <Badge className="mt-1 ml-2" variant="default" size="sm">
@@ -431,56 +504,85 @@ export default function OrganizerEventDetail() {
             </Badge>
           )}
           {event.description ? (
-            <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">{event.description}</p>
+            <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">
+              {event.description}
+            </p>
           ) : null}
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
           {!readOnlyEvent ? (
             <>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Badge variant={STATUS_VARIANTS[event.status]}>{organizerEventStatusLabel(event.status)}</Badge>
-            {event.status === 'draft' && (
-              <Button
-                size="sm"
-                icon={<Calendar className="w-3 h-3" />}
-                onClick={() => void handleStatusChange('registration')}
-              >
-                Publish to hub
-              </Button>
-            )}
-            {event.status === 'registration' && (
-              <Button size="sm" icon={<Play className="w-3 h-3" />} onClick={() => void handleStatusChange('in_progress')}>
-                Start event
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
-            {event.status === 'in_progress' && (
-              <Button size="sm" variant="success" onClick={() => setFinishOpen(true)}>
-                Mark finished
-              </Button>
-            )}
-            {['draft', 'registration', 'in_progress'].includes(event.status) && (
-              <Button size="sm" variant="outline" icon={<Ban className="w-3 h-3" />} onClick={() => setCancelOpen(true)}>
-                Cancel event
-              </Button>
-            )}
-            <Button size="sm" variant="danger" icon={<Trash2 className="w-3 h-3" />} onClick={() => setDeleteOpen(true)}>
-              Delete
-            </Button>
-          </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <Badge variant={STATUS_VARIANTS[event.status]}>
+                  {organizerEventStatusLabel(event.status)}
+                </Badge>
+                {event.status === 'draft' && (
+                  <Button
+                    size="sm"
+                    icon={<Calendar className="w-3 h-3" />}
+                    onClick={() => void handleStatusChange('registration')}
+                  >
+                    Publish to hub
+                  </Button>
+                )}
+                {event.status === 'registration' && (
+                  <Button
+                    size="sm"
+                    icon={<Play className="w-3 h-3" />}
+                    onClick={() => void handleStatusChange('in_progress')}
+                  >
+                    Start event
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 sm:justify-end">
+                {event.status === 'in_progress' && (
+                  <Button size="sm" variant="success" onClick={() => setFinishOpen(true)}>
+                    Mark finished
+                  </Button>
+                )}
+                {['draft', 'registration', 'in_progress'].includes(event.status) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Ban className="w-3 h-3" />}
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    Cancel event
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="danger"
+                  icon={<Trash2 className="w-3 h-3" />}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Delete
+                </Button>
+              </div>
             </>
           ) : (
-            <Badge variant={STATUS_VARIANTS[event.status]}>{organizerEventStatusLabel(event.status)}</Badge>
+            <Badge variant={STATUS_VARIANTS[event.status]}>
+              {organizerEventStatusLabel(event.status)}
+            </Badge>
           )}
         </div>
       </div>
 
-      {error && <Alert type="danger" onDismiss={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert type="danger" onDismiss={() => setError('')}>
+          {error}
+        </Alert>
+      )}
 
       <Modal open={editDetailsOpen} onClose={() => setEditDetailsOpen(false)} title="Edit event">
         <div className="space-y-4">
-          <Input label="Event name" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Spring tournament" />
+          <Input
+            label="Event name"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Spring tournament"
+          />
           <Textarea
             label="Description (optional)"
             value={editDescription}
@@ -490,7 +592,9 @@ export default function OrganizerEventDetail() {
           />
           {event?.sport === 'table-tennis' && (
             <div className="space-y-1">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Table Tennis Format</p>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">
+                Table Tennis Format
+              </p>
               <div className="flex gap-2">
                 {(['singles', 'doubles'] as const).map((fmt) => (
                   <button
@@ -519,15 +623,27 @@ export default function OrganizerEventDetail() {
       <TabBar
         tabs={[
           { id: 'bracket', label: 'Bracket', icon: <Trophy className="w-3.5 h-3.5" /> },
-          { id: 'matches', label: `Matches (${matches.length})`, icon: <Calendar className="w-3.5 h-3.5" /> },
-          { id: 'participants', label: `Teams (${event.participants?.length ?? 0})`, icon: <Users className="w-3.5 h-3.5" /> },
+          {
+            id: 'matches',
+            label: `Matches (${matches.length})`,
+            icon: <Calendar className="w-3.5 h-3.5" />,
+          },
+          {
+            id: 'participants',
+            label: `Teams (${event.participants?.length ?? 0})`,
+            icon: <Users className="w-3.5 h-3.5" />,
+          },
         ]}
         active={tab}
         onChange={setTab}
       />
 
       {event.status === 'completed' && eliminationPodium && eliminationPodium.length > 0 ? (
-        <EventPodiumStrip placements={eliminationPodium} labelByParticipantId={participantLabels} title="Final standings" />
+        <EventPodiumStrip
+          placements={eliminationPodium}
+          labelByParticipantId={participantLabels}
+          title="Final standings"
+        />
       ) : null}
 
       {tab === 'bracket' && (
@@ -536,7 +652,9 @@ export default function OrganizerEventDetail() {
             <Card className="text-center py-12">
               <Trophy className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
               <p className="font-bold mb-2">No bracket generated yet</p>
-              <p className="text-[var(--text-muted)] text-sm mb-4">Add participants first, then generate the bracket.</p>
+              <p className="text-[var(--text-muted)] text-sm mb-4">
+                Add participants first, then generate the bracket.
+              </p>
               <Button
                 icon={<Shuffle className="w-4 h-4" />}
                 loading={generatingBracket}
@@ -550,20 +668,28 @@ export default function OrganizerEventDetail() {
             <div>
               {hasSplitPools && (
                 <Alert type="info" className="mb-4">
-                  This event uses <strong>two round-robin pools</strong> (more than 10 teams), then <strong>crossover semifinals</strong> and a final.
-                  Finish pool play, then assign semifinal teams below (commonly 1st Pool A vs 2nd Pool B, and 1st Pool B vs 2nd Pool A). Winners advance to the final automatically when you complete each semi.
+                  This event uses <strong>two round-robin pools</strong> (more than 10 teams), then{' '}
+                  <strong>crossover semifinals</strong> and a final. Finish pool play, then assign
+                  semifinal teams below (commonly 1st Pool A vs 2nd Pool B, and 1st Pool B vs 2nd
+                  Pool A). Winners advance to the final automatically when you complete each semi.
                 </Alert>
               )}
               {crossoverSemis.length > 0 && (
                 <Card className="p-4 mb-4">
                   <h3 className="font-semibold mb-1">Crossover semifinals — assign teams</h3>
                   <p className="text-xs text-[var(--text-muted)] mb-4">
-                    Teams must be participants in this event. The final fills when both semifinal winners are decided.
+                    Teams must be participants in this event. The final fills when both semifinal
+                    winners are decided.
                   </p>
                   <div className="space-y-4">
                     {crossoverSemis.map((m, idx) => (
-                      <div key={m.id} className="flex flex-col sm:flex-row gap-3 sm:items-end flex-wrap">
-                        <p className="text-sm text-[var(--text-secondary)] w-full sm:w-auto sm:min-w-[7rem] pt-1">Semi {idx + 1}</p>
+                      <div
+                        key={m.id}
+                        className="flex flex-col sm:flex-row gap-3 sm:items-end flex-wrap"
+                      >
+                        <p className="text-sm text-[var(--text-secondary)] w-full sm:w-auto sm:min-w-[7rem] pt-1">
+                          Semi {idx + 1}
+                        </p>
                         <Select
                           label="Side A"
                           className="flex-1 min-w-[10rem]"
@@ -575,7 +701,13 @@ export default function OrganizerEventDetail() {
                               [m.id]: { a: e.target.value, b: prev[m.id]?.b ?? '' },
                             }))
                           }
-                          options={[{ value: '', label: 'Select team…' }, ...eventTeamSelectOptions.map((o) => ({ value: o.value, label: o.label }))]}
+                          options={[
+                            { value: '', label: 'Select team…' },
+                            ...eventTeamSelectOptions.map((o) => ({
+                              value: o.value,
+                              label: o.label,
+                            })),
+                          ]}
                         />
                         <Select
                           label="Side B"
@@ -588,18 +720,31 @@ export default function OrganizerEventDetail() {
                               [m.id]: { a: prev[m.id]?.a ?? '', b: e.target.value },
                             }))
                           }
-                          options={[{ value: '', label: 'Select team…' }, ...eventTeamSelectOptions.map((o) => ({ value: o.value, label: o.label }))]}
+                          options={[
+                            { value: '', label: 'Select team…' },
+                            ...eventTeamSelectOptions.map((o) => ({
+                              value: o.value,
+                              label: o.label,
+                            })),
+                          ]}
                         />
                       </div>
                     ))}
                   </div>
-                  <Button className="mt-4" loading={savingCrossover} disabled={readOnlyEvent} onClick={() => void handleSaveCrossover()}>
+                  <Button
+                    className="mt-4"
+                    loading={savingCrossover}
+                    disabled={readOnlyEvent}
+                    onClick={() => void handleSaveCrossover()}
+                  >
                     Save crossover matchups
                   </Button>
                 </Card>
               )}
               <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-[var(--text-muted)]">{brackets.length} slots · {matches.length} matches</p>
+                <p className="text-sm text-[var(--text-muted)]">
+                  {brackets.length} slots · {matches.length} matches
+                </p>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -634,57 +779,107 @@ export default function OrganizerEventDetail() {
             const m = matches[rowIndex]
             if (m) openMatchWorkspace(m)
           }}
-          data={matches.map(m => {
-            const bracket = brackets.find(b => b.id === m.bracket_id)
+          data={matches.map((m) => {
+            const bracket = brackets.find((b) => b.id === m.bracket_id)
             const labelA = m.participant_a_id
-              ? (participantLabels[m.participant_a_id] ?? teams.find(t => t.id === m.participant_a_id)?.name ?? `Team ${m.participant_a_id.slice(0, 6)}`)
+              ? (participantLabels[m.participant_a_id] ??
+                teams.find((t) => t.id === m.participant_a_id)?.name ??
+                `Team ${m.participant_a_id.slice(0, 6)}`)
               : 'TBD'
             const labelB = m.participant_b_id
-              ? (participantLabels[m.participant_b_id] ?? teams.find(t => t.id === m.participant_b_id)?.name ?? `Team ${m.participant_b_id.slice(0, 6)}`)
+              ? (participantLabels[m.participant_b_id] ??
+                teams.find((t) => t.id === m.participant_b_id)?.name ??
+                `Team ${m.participant_b_id.slice(0, 6)}`)
               : 'TBD'
             const roundLabel = bracket ? `Round ${bracket.round}` : ''
             const canScore = event?.status === 'in_progress'
             return {
               teams: (
                 <div>
-                  <p className="text-sm font-medium">{labelA} <span className="text-[var(--text-muted)] font-normal">vs</span> {labelB}</p>
-                  {roundLabel && <p className="text-xs text-[var(--text-muted)] mt-0.5">{roundLabel}</p>}
+                  <p className="text-sm font-medium">
+                    {labelA} <span className="text-[var(--text-muted)] font-normal">vs</span>{' '}
+                    {labelB}
+                  </p>
+                  {roundLabel && (
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{roundLabel}</p>
+                  )}
                 </div>
               ),
-              status: <Badge variant={m.status === 'live' ? 'danger' : m.status === 'completed' ? 'success' : 'default'} size="sm">{m.status === 'live' ? '● LIVE' : formatEnumLabel(m.status)}</Badge>,
+              status: (
+                <Badge
+                  variant={
+                    m.status === 'live'
+                      ? 'danger'
+                      : m.status === 'completed'
+                        ? 'success'
+                        : 'default'
+                  }
+                  size="sm"
+                >
+                  {m.status === 'live' ? '● LIVE' : formatEnumLabel(m.status)}
+                </Badge>
+              ),
               scheduled: (
                 <div>
-                  <span className="text-xs text-[var(--text-muted)]">{m.scheduled_at ? formatDateTime(m.scheduled_at) : 'Not set'}</span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {m.scheduled_at ? formatDateTime(m.scheduled_at) : 'Not set'}
+                  </span>
                   {m.venue && <p className="text-xs text-[var(--text-muted)] mt-0.5">{m.venue}</p>}
                 </div>
               ),
               actions: (
                 <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                   {m.status !== 'completed' && (
-                    <Button size="sm" variant="outline" icon={<Calendar className="w-3 h-3" />} disabled={readOnlyEvent} onClick={() => openScheduleEditor(m)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      icon={<Calendar className="w-3 h-3" />}
+                      disabled={readOnlyEvent}
+                      onClick={() => openScheduleEditor(m)}
+                    >
                       Schedule
                     </Button>
                   )}
-                  {m.status !== 'completed' && canScore && !isCoach && (
-                    lockedMatchIds.has(m.id) ? (
-                      <span className="text-xs text-[var(--text-muted)] self-center" title="Complete earlier matches in this round first">
+                  {m.status !== 'completed' &&
+                    canScore &&
+                    !isCoach &&
+                    (lockedMatchIds.has(m.id) ? (
+                      <span
+                        className="text-xs text-[var(--text-muted)] self-center"
+                        title="Complete earlier matches in this round first"
+                      >
                         🔒 Earlier match first
                       </span>
                     ) : (
-                      <Button size="sm" icon={<Play className="w-3 h-3" />} onClick={() => navigate(`/organizer/scoring/${m.id}`)}>
+                      <Button
+                        size="sm"
+                        icon={<Play className="w-3 h-3" />}
+                        onClick={() => navigate(`/organizer/scoring/${m.id}`)}
+                      >
                         {m.status === 'live' ? 'Resume' : 'Score'}
                       </Button>
-                    )
-                  )}
+                    ))}
                   {m.status !== 'completed' && !canScore && (
-                    <span className="text-xs text-[var(--text-muted)] self-center">Start event to score</span>
+                    <span className="text-xs text-[var(--text-muted)] self-center">
+                      Start event to score
+                    </span>
                   )}
                   {m.status === 'completed' && m.finalized_at && (
-                    <Button size="sm" variant="secondary" icon={<FileText className="w-3 h-3" />} onClick={() => navigate(`/organizer/match-review/${m.id}/score-sheet`)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon={<FileText className="w-3 h-3" />}
+                      onClick={() => navigate(`/organizer/match-review/${m.id}/score-sheet`)}
+                    >
                       Score Sheet
                     </Button>
                   )}
-                  <Button size="sm" variant="secondary" icon={<Tv2 className="w-3 h-3" />} onClick={() => window.open(`/jumbotron/${m.id}`, '_blank')}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={<Tv2 className="w-3 h-3" />}
+                    onClick={() => window.open(`/jumbotron/${m.id}`, '_blank')}
+                  >
                     Jumbotron
                   </Button>
                 </div>
@@ -703,7 +898,8 @@ export default function OrganizerEventDetail() {
               <h3 className="font-semibold mb-3">Add Teams</h3>
               {availableTeams.length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">
-                  No more teams available — all eligible teams for this sport and season are already added, or none exist yet.
+                  No more teams available — all eligible teams for this sport and season are already
+                  added, or none exist yet.
                 </p>
               ) : (
                 <>
@@ -732,7 +928,11 @@ export default function OrganizerEventDetail() {
                       Add selected{selectedTeamIds.size > 0 ? ` (${selectedTeamIds.size})` : ''}
                     </Button>
                     {selectedTeamIds.size > 0 && (
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedTeamIds(new Set())}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedTeamIds(new Set())}
+                      >
                         Clear
                       </Button>
                     )}
@@ -747,14 +947,16 @@ export default function OrganizerEventDetail() {
           ) : (
             <div className="space-y-2">
               {event.participants.map((p: any, i: number) => {
-                const team = teams.find(t => t.id === p.participant_id)
+                const team = teams.find((t) => t.id === p.participant_id)
                 return (
                   <Card key={p.id} className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
                       <span className="w-7 h-7 rounded-full bg-[var(--surface-elevated)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)]">
                         {p.seed ?? i + 1}
                       </span>
-                      <span className="font-medium">{team?.name ?? p.participant_id.slice(0, 8)}</span>
+                      <span className="font-medium">
+                        {team?.name ?? p.participant_id.slice(0, 8)}
+                      </span>
                     </div>
                     <Button
                       size="sm"
@@ -777,17 +979,31 @@ export default function OrganizerEventDetail() {
         </div>
       )}
 
-      <Modal open={removeParticipantConfirm !== null} onClose={() => !removingParticipant && setRemoveParticipantConfirm(null)} title="Remove team from event?" size="md">
+      <Modal
+        open={removeParticipantConfirm !== null}
+        onClose={() => !removingParticipant && setRemoveParticipantConfirm(null)}
+        title="Remove team from event?"
+        size="md"
+      >
         {removeParticipantConfirm && (
           <div className="space-y-4">
             <Alert type="warning">
-              Remove <strong>{removeParticipantConfirm.name}</strong> from this event&apos;s participants? Bracket or seeding may need to be updated afterward.
+              Remove <strong>{removeParticipantConfirm.name}</strong> from this event&apos;s
+              participants? Bracket or seeding may need to be updated afterward.
             </Alert>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setRemoveParticipantConfirm(null)} disabled={removingParticipant}>
+              <Button
+                variant="secondary"
+                onClick={() => setRemoveParticipantConfirm(null)}
+                disabled={removingParticipant}
+              >
                 Cancel
               </Button>
-              <Button variant="danger" loading={removingParticipant} onClick={() => void confirmRemoveParticipant()}>
+              <Button
+                variant="danger"
+                loading={removingParticipant}
+                onClick={() => void confirmRemoveParticipant()}
+              >
                 Remove team
               </Button>
             </div>
@@ -795,7 +1011,12 @@ export default function OrganizerEventDetail() {
         )}
       </Modal>
 
-      <Modal open={bracketGenConfirm !== null} onClose={() => !generatingBracket && setBracketGenConfirm(null)} title={bracketGenConfirm === 'regenerate' ? 'Regenerate bracket?' : 'Generate bracket?'} size="md">
+      <Modal
+        open={bracketGenConfirm !== null}
+        onClose={() => !generatingBracket && setBracketGenConfirm(null)}
+        title={bracketGenConfirm === 'regenerate' ? 'Regenerate bracket?' : 'Generate bracket?'}
+        size="md"
+      >
         <div className="space-y-4">
           <Alert type="warning">
             {bracketGenConfirm === 'regenerate'
@@ -803,7 +1024,11 @@ export default function OrganizerEventDetail() {
               : 'Create the bracket and matches from the current participant list? You can regenerate later if participants change.'}
           </Alert>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setBracketGenConfirm(null)} disabled={generatingBracket}>
+            <Button
+              variant="secondary"
+              onClick={() => setBracketGenConfirm(null)}
+              disabled={generatingBracket}
+            >
               Cancel
             </Button>
             <Button loading={generatingBracket} onClick={() => void runGenerateBracketConfirmed()}>
@@ -813,9 +1038,15 @@ export default function OrganizerEventDetail() {
         </div>
       </Modal>
 
-      <Modal open={finishOpen} onClose={() => setFinishOpen(false)} title="Mark event finished?" size="md">
+      <Modal
+        open={finishOpen}
+        onClose={() => setFinishOpen(false)}
+        title="Mark event finished?"
+        size="md"
+      >
         <p className="text-sm text-[var(--text-secondary)] mb-4">
-          This marks the tournament as finished. It will disappear from the guest hub and the public events list; guests can still open a saved link to this page if they have it.
+          This marks the tournament as finished. It will disappear from the guest hub and the public
+          events list; guests can still open a saved link to this page if they have it.
         </p>
         <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="secondary" onClick={() => setFinishOpen(false)}>
@@ -827,58 +1058,87 @@ export default function OrganizerEventDetail() {
         </div>
       </Modal>
 
-      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel this event?" size="md">
+      <Modal
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        title="Cancel this event?"
+        size="md"
+      >
         <p className="text-sm text-[var(--text-secondary)] mb-4">
-          Cancelled events are hidden from the guest hub and public events list. You can still see them under Events → Cancelled.
+          Cancelled events are hidden from the guest hub and public events list. You can still see
+          them under Events → Cancelled.
         </p>
         <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="secondary" onClick={() => setCancelOpen(false)}>
             Back
           </Button>
-          <Button variant="danger" loading={destructiveLoading} onClick={() => void confirmCancel()}>
+          <Button
+            variant="danger"
+            loading={destructiveLoading}
+            onClick={() => void confirmCancel()}
+          >
             Cancel event
           </Button>
         </div>
       </Modal>
 
-      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete event permanently?" size="md">
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete event permanently?"
+        size="md"
+      >
         <p className="text-sm text-[var(--text-secondary)] mb-4">
-          This removes the event, bracket, matches, and scores from the database. This cannot be undone.
+          This removes the event, bracket, matches, and scores from the database. This cannot be
+          undone.
         </p>
         <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
             Back
           </Button>
-          <Button variant="danger" loading={destructiveLoading} onClick={() => void confirmDelete()}>
+          <Button
+            variant="danger"
+            loading={destructiveLoading}
+            onClick={() => void confirmDelete()}
+          >
             Delete permanently
           </Button>
         </div>
       </Modal>
 
-      <Modal open={!!scheduleMatch} onClose={() => setScheduleMatch(null)} title="Schedule Match" size="md">
+      <Modal
+        open={!!scheduleMatch}
+        onClose={() => setScheduleMatch(null)}
+        title="Schedule Match"
+        size="md"
+      >
         {scheduleMatch && (
           <div className="space-y-4">
             <Input
               label="Date"
               type="date"
               value={schedDate}
-              onChange={e => setSchedDate(e.target.value)}
+              onChange={(e) => setSchedDate(e.target.value)}
             />
             <Input
               label="Time"
               type="time"
               value={schedTime}
-              onChange={e => setSchedTime(e.target.value)}
+              onChange={(e) => setSchedTime(e.target.value)}
             />
             <Input
               label="Venue (optional)"
               value={schedVenue}
-              onChange={e => setSchedVenue(e.target.value)}
+              onChange={(e) => setSchedVenue(e.target.value)}
               placeholder="e.g. Main Gymnasium"
             />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setScheduleMatch(null)}>Cancel</Button>
-              <Button loading={savingSchedule} onClick={() => void handleSaveSchedule()}>Save Schedule</Button>
+              <Button variant="secondary" onClick={() => setScheduleMatch(null)}>
+                Cancel
+              </Button>
+              <Button loading={savingSchedule} onClick={() => void handleSaveSchedule()}>
+                Save Schedule
+              </Button>
             </div>
           </div>
         )}

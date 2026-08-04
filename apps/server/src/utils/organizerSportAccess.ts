@@ -16,7 +16,10 @@ export async function fetchActiveSportSlugs(): Promise<AppSport[]> {
   return slugs.length > 0 ? slugs : [...FALLBACK_SPORTS]
 }
 
-export function organizerCoversAllActiveSports(assigned: string[] | null | undefined, active: AppSport[]): boolean {
+export function organizerCoversAllActiveSports(
+  assigned: string[] | null | undefined,
+  active: AppSport[],
+): boolean {
   const set = new Set(assigned ?? [])
   return active.every((s) => set.has(s))
 }
@@ -25,7 +28,7 @@ export function organizerMayConfigureSport(
   role: string | undefined,
   assigned: string[] | null | undefined,
   active: AppSport[],
-  sport: string
+  sport: string,
 ): boolean {
   if (role === 'Admin') return true
   const safeAssigned = assigned ?? []
@@ -34,14 +37,22 @@ export function organizerMayConfigureSport(
 }
 
 /** Returns true if a JSON error response was already sent (caller should return). */
-export async function respondIfSportForbidden(req: AuthRequest, res: Response, sport: string | null | undefined): Promise<boolean> {
+export async function respondIfSportForbidden(
+  req: AuthRequest,
+  res: Response,
+  sport: string | null | undefined,
+): Promise<boolean> {
   if (!sport) {
     res.status(400).json({ error: 'Sport could not be determined for this action' })
     return true
   }
   if (req.user!.role === 'Admin') return false
   const [{ data: org }, active] = await Promise.all([
-    supabase.from('organizers').select('assigned_sports').eq('profile_id', req.user!.id).maybeSingle(),
+    supabase
+      .from('organizers')
+      .select('assigned_sports')
+      .eq('profile_id', req.user!.id)
+      .maybeSingle(),
     fetchActiveSportSlugs(),
   ])
   const assigned = (org?.assigned_sports as string[] | null) ?? []

@@ -117,11 +117,21 @@ function playedOrCurrentColumns(
   return keys.slice(0, last + 1).map((key, i) => ({ key, label: `${labelPrefix}${i + 1}` }))
 }
 
-function volleyballPeriodColumns(scoreA: ScoreState, scoreB: ScoreState, currentPeriod: number, isDone: boolean) {
+function volleyballPeriodColumns(
+  scoreA: ScoreState,
+  scoreB: ScoreState,
+  currentPeriod: number,
+  isDone: boolean,
+) {
   return playedOrCurrentColumns(VB_PERIOD_KEYS, 'S', scoreA, scoreB, currentPeriod, isDone)
 }
 
-function tableTennisPeriodColumns(scoreA: ScoreState, scoreB: ScoreState, currentPeriod: number, isDone: boolean) {
+function tableTennisPeriodColumns(
+  scoreA: ScoreState,
+  scoreB: ScoreState,
+  currentPeriod: number,
+  isDone: boolean,
+) {
   return playedOrCurrentColumns(TT_PERIOD_KEYS, 'G', scoreA, scoreB, currentPeriod, isDone)
 }
 
@@ -150,7 +160,12 @@ export default function JumbotronPage() {
         updatedAt: match.clock_updated_at ?? null,
       }
     : null
-  const { timerState, formatTime } = useTimerListener(matchId ?? '', sport === 'basketball', persistedClock, 'countdown')
+  const { timerState, formatTime } = useTimerListener(
+    matchId ?? '',
+    sport === 'basketball',
+    persistedClock,
+    'countdown',
+  )
 
   const participantARef = useRef<string | null>(null)
   const participantBRef = useRef<string | null>(null)
@@ -182,7 +197,11 @@ export default function JumbotronPage() {
 
   const loadMatch = useCallback(async () => {
     if (!matchId) return
-    const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).maybeSingle()
+    const { data: match } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('id', matchId)
+      .maybeSingle()
     if (!match) {
       setNotFound(true)
       return
@@ -195,7 +214,11 @@ export default function JumbotronPage() {
 
     let sportResolved = 'basketball'
     if (match.event_id) {
-      const { data: event } = await supabase.from('events').select('sport').eq('id', match.event_id).maybeSingle()
+      const { data: event } = await supabase
+        .from('events')
+        .select('sport')
+        .eq('id', match.event_id)
+        .maybeSingle()
       if (event?.sport) sportResolved = event.sport
     }
     setSport(sportResolved)
@@ -209,11 +232,19 @@ export default function JumbotronPage() {
     }
 
     if (match.participant_a_id) {
-      const { data: team } = await supabase.from('teams').select('name').eq('id', match.participant_a_id).maybeSingle()
+      const { data: team } = await supabase
+        .from('teams')
+        .select('name')
+        .eq('id', match.participant_a_id)
+        .maybeSingle()
       if (team) setTeamAName(team.name)
     }
     if (match.participant_b_id) {
-      const { data: team } = await supabase.from('teams').select('name').eq('id', match.participant_b_id).maybeSingle()
+      const { data: team } = await supabase
+        .from('teams')
+        .select('name')
+        .eq('id', match.participant_b_id)
+        .maybeSingle()
       if (team) setTeamBName(team.name)
     }
 
@@ -227,30 +258,41 @@ export default function JumbotronPage() {
       .channel(`jumbotron-${matchId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'match_scores', filter: `match_id=eq.${matchId}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'match_scores',
+          filter: `match_id=eq.${matchId}`,
+        },
         (payload) => {
           const ns = mergeScoreRow(payload.new as Record<string, unknown>)
           const spNow = sportRef.current
           if (ns.participant_id === participantARef.current) {
             setScoreA((prev) => {
-              if (aggregatePeriodPoints(ns, spNow) > aggregatePeriodPoints(prev, spNow)) triggerFlash('A')
+              if (aggregatePeriodPoints(ns, spNow) > aggregatePeriodPoints(prev, spNow))
+                triggerFlash('A')
               return ns
             })
           } else {
             setScoreB((prev) => {
-              if (aggregatePeriodPoints(ns, spNow) > aggregatePeriodPoints(prev, spNow)) triggerFlash('B')
+              if (aggregatePeriodPoints(ns, spNow) > aggregatePeriodPoints(prev, spNow))
+                triggerFlash('B')
               return ns
             })
           }
           void fetchCurrentPeriod()
-        }
+        },
       )
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` }, () => {
-        void loadMatch()
-        // current_period lives on matches, so a period change now reaches the
-        // board immediately instead of waiting for the next point.
-        void fetchCurrentPeriod()
-      })
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        () => {
+          void loadMatch()
+          // current_period lives on matches, so a period change now reaches the
+          // board immediately instead of waiting for the next point.
+          void fetchCurrentPeriod()
+        },
+      )
       .subscribe()
 
     return () => {
@@ -263,8 +305,10 @@ export default function JumbotronPage() {
   const isDone = match?.status === 'completed'
 
   const bbColumns = sport === 'basketball' ? basketballPeriodColumns(scoreA, scoreB) : []
-  const vbColumns = sport === 'volleyball' ? volleyballPeriodColumns(scoreA, scoreB, currentPeriod, isDone) : []
-  const ttColumns = sport === 'table-tennis' ? tableTennisPeriodColumns(scoreA, scoreB, currentPeriod, isDone) : []
+  const vbColumns =
+    sport === 'volleyball' ? volleyballPeriodColumns(scoreA, scoreB, currentPeriod, isDone) : []
+  const ttColumns =
+    sport === 'table-tennis' ? tableTennisPeriodColumns(scoreA, scoreB, currentPeriod, isDone) : []
 
   const sportLabel = sport.replace(/-/g, ' ').toUpperCase()
 
@@ -272,10 +316,15 @@ export default function JumbotronPage() {
     return (
       <div
         className="min-h-screen w-full flex flex-col items-center justify-center gap-3 select-none"
-        style={{ background: 'linear-gradient(180deg, #000510 0%, #00103A 100%)', fontFamily: '"Barlow Condensed", sans-serif' }}
+        style={{
+          background: 'linear-gradient(180deg, #000510 0%, #00103A 100%)',
+          fontFamily: '"Barlow Condensed", sans-serif',
+        }}
       >
         <p className="text-white/40 text-2xl tracking-widest">MATCH NOT FOUND</p>
-        <p className="text-white/25 text-sm">This match link is invalid or the match no longer exists.</p>
+        <p className="text-white/25 text-sm">
+          This match link is invalid or the match no longer exists.
+        </p>
       </div>
     )
   }
@@ -283,11 +332,17 @@ export default function JumbotronPage() {
   return (
     <div
       className="min-h-screen w-full flex flex-col select-none overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #000510 0%, #00103A 100%)', fontFamily: '"Barlow Condensed", sans-serif' }}
+      style={{
+        background: 'linear-gradient(180deg, #000510 0%, #00103A 100%)',
+        fontFamily: '"Barlow Condensed", sans-serif',
+      }}
     >
       <div
         className="flex items-center justify-between px-10 py-4 border-b-2"
-        style={{ borderColor: 'var(--school-secondary, #FFD700)', backgroundColor: 'rgba(0,0,0,0.5)' }}
+        style={{
+          borderColor: 'var(--school-secondary, #FFD700)',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+        }}
       >
         <div className="flex items-center gap-4">
           {institution?.logo_url ? (
@@ -295,13 +350,18 @@ export default function JumbotronPage() {
           ) : (
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold"
-              style={{ backgroundColor: 'var(--school-secondary, #FFD700)', color: 'var(--school-primary, #002D62)' }}
+              style={{
+                backgroundColor: 'var(--school-secondary, #FFD700)',
+                color: 'var(--school-primary, #002D62)',
+              }}
             >
               🏆
             </div>
           )}
           <div>
-            <p className="text-white font-black text-xl tracking-widest">{institution?.abbreviation ?? 'U-Sports'}</p>
+            <p className="text-white font-black text-xl tracking-widest">
+              {institution?.abbreviation ?? 'U-Sports'}
+            </p>
             <p className="text-white/50 text-sm">{institution?.tagline}</p>
           </div>
         </div>
@@ -316,13 +376,17 @@ export default function JumbotronPage() {
           )}
           {isDone && (
             <div className="flex items-center gap-2 bg-green-800 px-4 py-1.5 rounded-full">
-              <span className="font-black tracking-widest text-[var(--success)] text-sm">FINAL</span>
+              <span className="font-black tracking-widest text-[var(--success)] text-sm">
+                FINAL
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      <p className="text-center text-white/50 text-sm uppercase tracking-widest pt-4">{pres.phase}</p>
+      <p className="text-center text-white/50 text-sm uppercase tracking-widest pt-4">
+        {pres.phase}
+      </p>
       {(sport === 'volleyball' || sport === 'table-tennis') && (
         <p className="text-center text-white/40 text-sm font-medium pb-2">{pres.subtitle}</p>
       )}
@@ -332,12 +396,18 @@ export default function JumbotronPage() {
           <div className="grid grid-cols-[1fr_auto_1fr] gap-8 items-center">
             <div
               className={`text-center transition-all duration-300 ${flash === 'A' ? 'scale-105' : ''}`}
-              style={{ filter: flash === 'A' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '' }}
+              style={{
+                filter:
+                  flash === 'A' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '',
+              }}
             >
               <p className="text-white/50 text-lg uppercase tracking-widest mb-2">HOME</p>
               <p
                 className="font-black uppercase tracking-wide leading-none mb-2"
-                style={{ fontSize: 'clamp(2rem, 5vw, 4.5rem)', color: 'var(--school-secondary, #FFD700)' }}
+                style={{
+                  fontSize: 'clamp(2rem, 5vw, 4.5rem)',
+                  color: 'var(--school-secondary, #FFD700)',
+                }}
               >
                 {teamAName}
               </p>
@@ -358,7 +428,9 @@ export default function JumbotronPage() {
                   {bbColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreA[key as keyof ScoreState]}</p>
+                      <p className="text-white font-bold text-lg">
+                        {scoreA[key as keyof ScoreState]}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -369,7 +441,9 @@ export default function JumbotronPage() {
                   {vbColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreA[key as keyof ScoreState]}</p>
+                      <p className="text-white font-bold text-lg">
+                        {scoreA[key as keyof ScoreState]}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -380,7 +454,9 @@ export default function JumbotronPage() {
                   {ttColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreA[key as keyof ScoreState]}</p>
+                      <p className="text-white font-bold text-lg">
+                        {scoreA[key as keyof ScoreState]}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -410,12 +486,18 @@ export default function JumbotronPage() {
 
             <div
               className={`text-center transition-all duration-300 ${flash === 'B' ? 'scale-105' : ''}`}
-              style={{ filter: flash === 'B' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '' }}
+              style={{
+                filter:
+                  flash === 'B' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '',
+              }}
             >
               <p className="text-white/50 text-lg uppercase tracking-widest mb-2">AWAY</p>
               <p
                 className="font-black uppercase tracking-wide leading-none mb-2"
-                style={{ fontSize: 'clamp(2rem, 5vw, 4.5rem)', color: 'var(--school-secondary, #FFD700)' }}
+                style={{
+                  fontSize: 'clamp(2rem, 5vw, 4.5rem)',
+                  color: 'var(--school-secondary, #FFD700)',
+                }}
               >
                 {teamBName}
               </p>
@@ -447,7 +529,9 @@ export default function JumbotronPage() {
                   {vbColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreB[key as keyof ScoreState]}</p>
+                      <p className="text-white font-bold text-lg">
+                        {scoreB[key as keyof ScoreState]}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -458,7 +542,9 @@ export default function JumbotronPage() {
                   {ttColumns.map(({ key, label }) => (
                     <div key={key} className="text-center">
                       <p className="text-white/30 text-xs mb-0.5">{label}</p>
-                      <p className="text-white font-bold text-lg">{scoreB[key as keyof ScoreState]}</p>
+                      <p className="text-white font-bold text-lg">
+                        {scoreB[key as keyof ScoreState]}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -472,7 +558,9 @@ export default function JumbotronPage() {
 
           {isDone && (
             <div className="text-center mt-8">
-              <p className="text-[var(--success)] text-3xl font-black tracking-widest animate-pulse-live">GAME OVER</p>
+              <p className="text-[var(--success)] text-3xl font-black tracking-widest animate-pulse-live">
+                GAME OVER
+              </p>
             </div>
           )}
         </div>

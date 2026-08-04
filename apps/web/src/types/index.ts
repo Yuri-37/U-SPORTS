@@ -28,7 +28,8 @@ export type AnnouncementUrgency = 'critical' | 'high' | 'normal' | 'low'
 
 export type AudienceType = 'all' | 'sport' | 'event' | 'team'
 
-export type InsightType = 'trending_up' | 'trending_down' | 'streak' | 'milestone' | 'debut_standout' | 'first_win'
+export type InsightType =
+  'trending_up' | 'trending_down' | 'streak' | 'milestone' | 'debut_standout' | 'first_win'
 
 export type ParticipantType = 'team' | 'athlete' | 'doubles_pair'
 
@@ -135,7 +136,6 @@ export interface Event {
   created_at: string
   season?: Season
 }
-
 
 export interface Bracket {
   id: string

@@ -7,7 +7,7 @@ export function useRealtimeTable(
   table: string,
   event: 'INSERT' | 'UPDATE' | 'DELETE' | '*',
   callback: RealtimeCallback,
-  filter?: string
+  filter?: string,
 ) {
   const callbackRef = useRef(callback)
   callbackRef.current = callback
@@ -24,19 +24,17 @@ export function useRealtimeTable(
           table,
           ...(filter ? { filter } : {}),
         },
-        (payload) => callbackRef.current(payload as Record<string, unknown>)
+        (payload) => callbackRef.current(payload as Record<string, unknown>),
       )
       .subscribe()
 
-    return () => { channel.unsubscribe() }
+    return () => {
+      channel.unsubscribe()
+    }
   }, [table, event, filter])
 }
 
-export function useRealtimeChannel(
-  channelName: string,
-  event: string,
-  callback: RealtimeCallback
-) {
+export function useRealtimeChannel(channelName: string, event: string, callback: RealtimeCallback) {
   const callbackRef = useRef(callback)
   callbackRef.current = callback
 
@@ -46,6 +44,8 @@ export function useRealtimeChannel(
       .on('broadcast', { event }, (payload) => callbackRef.current(payload))
       .subscribe()
 
-    return () => { channel.unsubscribe() }
+    return () => {
+      channel.unsubscribe()
+    }
   }, [channelName, event])
 }

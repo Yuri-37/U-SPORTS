@@ -29,7 +29,8 @@ export async function profileIdsForTeamRoster(teamId: string): Promise<string[]>
   if (error) throw new Error(error.message)
   const ids = new Set<string>()
   for (const row of data ?? []) {
-    const profileId = (row as { athlete?: { profile_id?: string | null } | null }).athlete?.profile_id
+    const profileId = (row as { athlete?: { profile_id?: string | null } | null }).athlete
+      ?.profile_id
     if (profileId) ids.add(profileId)
   }
   return [...ids]

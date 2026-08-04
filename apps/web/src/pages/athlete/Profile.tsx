@@ -18,7 +18,9 @@ type ProfileTeamEmbed = {
   id?: string
   name?: string
   sport?: string
-  coaches?: Array<{ organizer?: { profile?: { full_name?: string | null; email?: string | null } | null } | null }>
+  coaches?: Array<{
+    organizer?: { profile?: { full_name?: string | null; email?: string | null } | null } | null
+  }>
 } | null
 
 export default function AthleteProfile() {
@@ -41,7 +43,10 @@ export default function AthleteProfile() {
     setFinishesLoading(true)
     ;(async () => {
       try {
-        const { data: tm } = await supabase.from('team_members').select('team_id').eq('athlete_id', athlete.id)
+        const { data: tm } = await supabase
+          .from('team_members')
+          .select('team_id')
+          .eq('athlete_id', athlete.id)
         const teamIds = [...new Set((tm ?? []).map((t: { team_id: string }) => t.team_id))]
         if (teamIds.length === 0) {
           if (!cancelled) setEventFinishes([])
@@ -65,11 +70,15 @@ export default function AthleteProfile() {
         const out: EventFinish[] = []
         for (const ev of evs ?? []) {
           const myParticipants = new Set(
-            (eps ?? []).filter((e: { event_id: string }) => e.event_id === ev.id).map((e: { participant_id: string }) => e.participant_id)
+            (eps ?? [])
+              .filter((e: { event_id: string }) => e.event_id === ev.id)
+              .map((e: { participant_id: string }) => e.participant_id),
           )
           const { data: br } = await supabase
             .from('brackets')
-            .select('round,match_order,participant_a_id,participant_b_id,winner_id,is_bye,bracket_type')
+            .select(
+              'round,match_order,participant_a_id,participant_b_id,winner_id,is_bye,bracket_type',
+            )
             .eq('event_id', ev.id)
           const podium = deriveEliminationPodium(br ?? [])
           if (!podium) continue
@@ -91,7 +100,9 @@ export default function AthleteProfile() {
         if (!cancelled) setFinishesLoading(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [athlete?.id])
 
   useEffect(() => {
@@ -147,10 +158,13 @@ export default function AthleteProfile() {
       }
       setMyTeamsSummary(list)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [athlete?.id, athlete?.sport])
 
-  if (!profile || !athlete) return <div className="text-center py-12 text-[var(--text-muted)]">Loading...</div>
+  if (!profile || !athlete)
+    return <div className="text-center py-12 text-[var(--text-muted)]">Loading...</div>
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -167,7 +181,9 @@ export default function AthleteProfile() {
             <Badge variant="info">
               {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)}
             </Badge>
-            <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>{athlete.season_status}</Badge>
+            <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>
+              {athlete.season_status}
+            </Badge>
           </div>
         </div>
       </Card>
@@ -210,7 +226,10 @@ export default function AthleteProfile() {
         ) : (
           <ul className="space-y-3">
             {myTeamsSummary.map((t) => (
-              <li key={t.teamId} className="border-b border-[var(--border-subtle)] pb-3 last:border-0">
+              <li
+                key={t.teamId}
+                className="border-b border-[var(--border-subtle)] pb-3 last:border-0"
+              >
                 <p className="font-medium">{t.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">{getSportLabel(t.sport as any)}</p>
                 {t.coaches.length > 0 ? (
@@ -220,7 +239,10 @@ export default function AthleteProfile() {
                       <React.Fragment key={`${t.teamId}-${c.email}-${i}`}>
                         {i > 0 ? ', ' : null}
                         {c.email ? (
-                          <a href={`mailto:${encodeURIComponent(c.email)}`} className="text-[#0066FF] hover:underline">
+                          <a
+                            href={`mailto:${encodeURIComponent(c.email)}`}
+                            className="text-[#0066FF] hover:underline"
+                          >
                             {c.full_name}
                           </a>
                         ) : (
@@ -260,13 +282,20 @@ export default function AthleteProfile() {
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{f.eventName}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{getSportLabel(f.sport as any)}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {getSportLabel(f.sport as any)}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant={f.rank === 1 ? 'success' : 'info'} size="sm">
                       {placementRankLabel(f.rank)}
                     </Badge>
-                    <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => navigate(`/athlete/events/${f.eventId}`)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-8"
+                      onClick={() => navigate(`/athlete/events/${f.eventId}`)}
+                    >
                       Event
                     </Button>
                   </div>

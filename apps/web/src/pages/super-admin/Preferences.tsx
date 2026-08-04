@@ -10,7 +10,9 @@ export default function SuperAdminPreferences() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-[var(--text-muted)] text-sm">Personal preferences and how U-Sports looks on your device.</p>
+        <p className="text-[var(--text-muted)] text-sm">
+          Personal preferences and how U-Sports looks on your device.
+        </p>
       </div>
 
       <AppearanceSection />
@@ -23,7 +25,8 @@ export default function SuperAdminPreferences() {
           Account security
         </h2>
         <p className="text-sm text-[var(--text-muted)]">
-          MFA is managed in Supabase Auth (Dashboard → Authentication). Contact your platform owner if you lose access.
+          MFA is managed in Supabase Auth (Dashboard → Authentication). Contact your platform owner
+          if you lose access.
         </p>
       </Card>
 

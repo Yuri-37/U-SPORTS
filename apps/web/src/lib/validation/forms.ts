@@ -33,4 +33,3 @@ export const createOrganizerFormSchema = z
     message: 'Coaches can be assigned up to 3 sports',
     path: ['assigned_sports'],
   })
-

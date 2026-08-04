@@ -21,7 +21,7 @@ const optionalTimestamptzFromPicker = z.preprocess(
     .string()
     .datetime({ local: true })
     .optional()
-    .transform((s) => (s === undefined ? undefined : localDatetimeStringToIso(s)))
+    .transform((s) => (s === undefined ? undefined : localDatetimeStringToIso(s))),
 )
 
 function formatAnnouncementValidationIssues(issues: ZodIssue[]): string {
@@ -35,7 +35,8 @@ function formatAnnouncementValidationIssues(issues: ZodIssue[]): string {
     } else if (pathKey === 'title' && issue.code === 'too_small') {
       msg = 'Title cannot be empty.'
     } else if (pathKey === 'expires_at') {
-      msg = 'Expiration date is invalid. Leave it empty for no expiry, or pick a valid date and time.'
+      msg =
+        'Expiration date is invalid. Leave it empty for no expiry, or pick a valid date and time.'
     } else if (pathKey === 'new_scheduled_at') {
       msg =
         issue.code === z.ZodIssueCode.custom
@@ -100,7 +101,9 @@ const announcementSchema = z
     new_scheduled_at: optionalTimestamptzFromPicker,
     new_venue: z.string().optional(),
     expires_at: optionalTimestamptzFromPicker,
-    display_mode: z.enum(['banner', 'notification_only', 'hero_slider']).default('notification_only'),
+    display_mode: z
+      .enum(['banner', 'notification_only', 'hero_slider'])
+      .default('notification_only'),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'reschedule' && !data.new_scheduled_at) {
@@ -131,7 +134,9 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
   try {
     const parsed = announcementSchema.safeParse(req.body)
     if (!parsed.success) {
-      return res.status(400).json({ error: formatAnnouncementValidationIssues(parsed.error.issues) })
+      return res
+        .status(400)
+        .json({ error: formatAnnouncementValidationIssues(parsed.error.issues) })
     }
     const body = parsed.data
 
@@ -209,101 +214,113 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
 // already got their inbox copy, and re-notifying on every typo fix would spam
 // them. Live-rendered surfaces (banner/ticker/hero slider, guest hub) read the
 // announcement row directly, so they reflect the edit immediately.
-router.patch('/:id', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
-  const announcementId = req.params.id
-  try {
-    const parsed = announcementSchema.safeParse(req.body)
-    if (!parsed.success) {
-      return res.status(400).json({ error: formatAnnouncementValidationIssues(parsed.error.issues) })
-    }
-    const body = parsed.data
-
-    const updateBase = {
-      type: body.type,
-      title: body.title,
-      body: body.body,
-      audience_type: body.audience_type,
-      audience_id: body.audience_id ?? null,
-      ...(body.audience_sport ? { audience_sport: body.audience_sport } : {}),
-      is_public: body.is_public,
-      linked_match_id: body.linked_match_id ?? null,
-      new_scheduled_at: body.new_scheduled_at ?? null,
-      new_venue: body.new_venue ?? null,
-      expires_at: body.expires_at ?? null,
-    }
-
-    let announcement: { id: string } | null = null
-    let lastUpdateError: { message: string } | null = null
-
-    for (const display_mode of displayModeInsertAttempts(body.display_mode)) {
-      const { data, error } = await supabase
-        .from('announcements')
-        .update({ ...updateBase, display_mode })
-        .eq('id', announcementId)
-        .select()
-        .single()
-
-      if (!error && data) {
-        announcement = data
-        break
+router.patch(
+  '/:id',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const announcementId = req.params.id
+    try {
+      const parsed = announcementSchema.safeParse(req.body)
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({ error: formatAnnouncementValidationIssues(parsed.error.issues) })
       }
-      lastUpdateError = error ?? { message: 'Update failed' }
-      const msg = lastUpdateError.message ?? ''
-      if (!msg.includes('announcements_display_mode_check')) {
-        throw new Error(msg)
+      const body = parsed.data
+
+      const updateBase = {
+        type: body.type,
+        title: body.title,
+        body: body.body,
+        audience_type: body.audience_type,
+        audience_id: body.audience_id ?? null,
+        ...(body.audience_sport ? { audience_sport: body.audience_sport } : {}),
+        is_public: body.is_public,
+        linked_match_id: body.linked_match_id ?? null,
+        new_scheduled_at: body.new_scheduled_at ?? null,
+        new_venue: body.new_venue ?? null,
+        expires_at: body.expires_at ?? null,
       }
-    }
 
-    if (!announcement) {
-      throw new Error(lastUpdateError?.message ?? 'Update failed')
-    }
+      let announcement: { id: string } | null = null
+      let lastUpdateError: { message: string } | null = null
 
-    // Keep the linked match in sync if this is (still) a reschedule.
-    if (body.type === 'reschedule' && body.linked_match_id && body.new_scheduled_at) {
-      await supabase
-        .from('matches')
-        .update({
-          scheduled_at: body.new_scheduled_at,
-          ...(body.new_venue ? { venue: body.new_venue } : {}),
-        })
-        .eq('id', body.linked_match_id)
+      for (const display_mode of displayModeInsertAttempts(body.display_mode)) {
+        const { data, error } = await supabase
+          .from('announcements')
+          .update({ ...updateBase, display_mode })
+          .eq('id', announcementId)
+          .select()
+          .single()
+
+        if (!error && data) {
+          announcement = data
+          break
+        }
+        lastUpdateError = error ?? { message: 'Update failed' }
+        const msg = lastUpdateError.message ?? ''
+        if (!msg.includes('announcements_display_mode_check')) {
+          throw new Error(msg)
+        }
+      }
+
+      if (!announcement) {
+        throw new Error(lastUpdateError?.message ?? 'Update failed')
+      }
+
+      // Keep the linked match in sync if this is (still) a reschedule.
+      if (body.type === 'reschedule' && body.linked_match_id && body.new_scheduled_at) {
+        await supabase
+          .from('matches')
+          .update({
+            scheduled_at: body.new_scheduled_at,
+            ...(body.new_venue ? { venue: body.new_venue } : {}),
+          })
+          .eq('id', body.linked_match_id)
+      }
+
+      await writeAuditLog({
+        actorId: req.user!.id,
+        action: 'announcement_updated',
+        entityType: 'announcement',
+        entityId: announcement.id,
+        details: { type: body.type, audience_type: body.audience_type },
+      })
+
+      res.json(announcement)
+    } catch (err: unknown) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
     }
+  },
+)
+
+// Delete announcement
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const announcementId = req.params.id
+    const { data: ann } = await supabase
+      .from('announcements')
+      .select('title, type')
+      .eq('id', announcementId)
+      .maybeSingle()
+
+    await supabase.from('announcements').delete().eq('id', announcementId)
 
     await writeAuditLog({
       actorId: req.user!.id,
-      action: 'announcement_updated',
+      action: 'announcement_deleted',
       entityType: 'announcement',
-      entityId: announcement.id,
-      details: { type: body.type, audience_type: body.audience_type },
+      entityId: announcementId,
+      details: ann ? { title: ann.title, type: ann.type } : {},
     })
 
-    res.json(announcement)
-  } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
-  }
-})
-
-// Delete announcement
-router.delete('/:id', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
-  const announcementId = req.params.id
-  const { data: ann } = await supabase
-    .from('announcements')
-    .select('title, type')
-    .eq('id', announcementId)
-    .maybeSingle()
-
-  await supabase.from('announcements').delete().eq('id', announcementId)
-
-  await writeAuditLog({
-    actorId: req.user!.id,
-    action: 'announcement_deleted',
-    entityType: 'announcement',
-    entityId: announcementId,
-    details: ann ? { title: ann.title, type: ann.type } : {},
-  })
-
-  res.json({ success: true })
-})
+    res.json({ success: true })
+  },
+)
 
 async function broadcastNotification(
   announcement: {
@@ -324,7 +341,6 @@ async function broadcastNotification(
       .select('profile_id')
       .eq('season_status', 'active')
     recipientIds = (athletes ?? []).map((a: { profile_id: string }) => a.profile_id)
-
   } else if (announcement.audience_type === 'sport' && announcement.audience_sport) {
     const { data: athletes } = await supabase
       .from('athletes')
@@ -332,7 +348,6 @@ async function broadcastNotification(
       .eq('sport', announcement.audience_sport)
       .eq('season_status', 'active')
     recipientIds = (athletes ?? []).map((a: { profile_id: string }) => a.profile_id)
-
   } else if (announcement.audience_type === 'event' && announcement.audience_id) {
     // Collect all team participants for this event, then all their roster members
     const { data: participants } = await supabase
@@ -372,7 +387,6 @@ async function broadcastNotification(
         .filter(Boolean) as string[]
       recipientIds.push(...soloProfiles)
     }
-
   } else if (announcement.audience_type === 'team' && announcement.audience_id) {
     const { data: members } = await supabase
       .from('team_members')

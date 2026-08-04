@@ -11,10 +11,26 @@ import { cn } from '../../lib/utils'
 import type { Match } from '../../types'
 
 interface ScoreState {
-  q1: number; q2: number; q3: number; q4: number; ot: number; ot2: number; ot3: number
-  set1: number; set2: number; set3: number; set4: number; set5: number
+  q1: number
+  q2: number
+  q3: number
+  q4: number
+  ot: number
+  ot2: number
+  ot3: number
+  set1: number
+  set2: number
+  set3: number
+  set4: number
+  set5: number
   sets_won: number
-  game1: number; game2: number; game3: number; game4: number; game5: number; game6: number; game7: number
+  game1: number
+  game2: number
+  game3: number
+  game4: number
+  game5: number
+  game6: number
+  game7: number
   games_won: number
   total: number
 }
@@ -83,7 +99,8 @@ const TABLE_TENNIS_STATS = [
  *  supports three overtimes and table tennis is best-of-7 capable. */
 function periodConfigFor(sport: string): { label: string; periods: string[] } {
   if (sport === 'volleyball') return { label: 'Set', periods: ['S1', 'S2', 'S3', 'S4', 'S5'] }
-  if (sport === 'table-tennis') return { label: 'Game', periods: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7'] }
+  if (sport === 'table-tennis')
+    return { label: 'Game', periods: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7'] }
   return { label: 'Period', periods: ['Q1', 'Q2', 'Q3', 'Q4', 'OT', 'OT2', 'OT3'] }
 }
 
@@ -95,12 +112,22 @@ function periodValuesFor(score: ScoreState, sport: string): { label: string; val
     sport === 'volleyball'
       ? [score.set1, score.set2, score.set3, score.set4, score.set5]
       : sport === 'table-tennis'
-        ? [score.game1, score.game2, score.game3, score.game4, score.game5, score.game6, score.game7]
+        ? [
+            score.game1,
+            score.game2,
+            score.game3,
+            score.game4,
+            score.game5,
+            score.game6,
+            score.game7,
+          ]
         : [score.q1, score.q2, score.q3, score.q4, score.ot, score.ot2, score.ot3]
   const alwaysShown = sport === 'basketball' ? 4 : 5
   let last = raw.length - 1
   while (last >= alwaysShown && !raw[last]) last--
-  return raw.slice(0, Math.max(alwaysShown, last + 1)).map((value, i) => ({ label: periods[i] ?? '', value }))
+  return raw
+    .slice(0, Math.max(alwaysShown, last + 1))
+    .map((value, i) => ({ label: periods[i] ?? '', value }))
 }
 
 interface TeamMember {
@@ -111,10 +138,26 @@ interface TeamMember {
 }
 
 const emptyScore = (): ScoreState => ({
-  q1: 0, q2: 0, q3: 0, q4: 0, ot: 0, ot2: 0, ot3: 0,
-  set1: 0, set2: 0, set3: 0, set4: 0, set5: 0,
+  q1: 0,
+  q2: 0,
+  q3: 0,
+  q4: 0,
+  ot: 0,
+  ot2: 0,
+  ot3: 0,
+  set1: 0,
+  set2: 0,
+  set3: 0,
+  set4: 0,
+  set5: 0,
   sets_won: 0,
-  game1: 0, game2: 0, game3: 0, game4: 0, game5: 0, game6: 0, game7: 0,
+  game1: 0,
+  game2: 0,
+  game3: 0,
+  game4: 0,
+  game5: 0,
+  game6: 0,
+  game7: 0,
   games_won: 0,
   total: 0,
 })
@@ -141,7 +184,12 @@ export default function OrganizerScoring() {
   const [periodBusy, setPeriodBusy] = useState(false)
   // Explicit confirmation for the validate action — the score display resetting
   // to 0 for the next period looked like a bug with nothing explaining it.
-  const [validateSuccess, setValidateSuccess] = useState<{ label: string; scoreA: number; scoreB: number; nextLabel: string | null } | null>(null)
+  const [validateSuccess, setValidateSuccess] = useState<{
+    label: string
+    scoreA: number
+    scoreB: number
+    nextLabel: string | null
+  } | null>(null)
   const validateSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLive, setIsLive] = useState(false)
   const [lockWarning, setLockWarning] = useState<{ name: string } | null>(null)
@@ -178,13 +226,22 @@ export default function OrganizerScoring() {
   // Game-flow rule enforcement (warn, never block) — all derived server-side,
   // refreshed by loadState().
   const [matchDecision, setMatchDecision] = useState<MatchDecision | null>(null)
-  const [serveInfo, setServeInfo] = useState<{ servingParticipantId: string | null; source: string } | null>(null)
+  const [serveInfo, setServeInfo] = useState<{
+    servingParticipantId: string | null
+    source: string
+  } | null>(null)
   const [basketballInfo, setBasketballInfo] = useState<BasketballInfo | null>(null)
   const [volleyballInfo, setVolleyballInfo] = useState<SubTimeoutInfo | null>(null)
-  const [tableTennisInfo, setTableTennisInfo] = useState<{ timeouts: Record<string, number> } | null>(null)
+  const [tableTennisInfo, setTableTennisInfo] = useState<{
+    timeouts: Record<string, number>
+  } | null>(null)
   const [gameLimits, setGameLimits] = useState<GameLimits | null>(null)
   const [firstServerBusy, setFirstServerBusy] = useState(false)
-  const [foulOutConfirm, setFoulOutConfirm] = useState<{ athleteId: string; name: string; onConfirm: () => void } | null>(null)
+  const [foulOutConfirm, setFoulOutConfirm] = useState<{
+    athleteId: string
+    name: string
+    onConfirm: () => void
+  } | null>(null)
 
   const participantAId = match?.participant_a_id ?? ''
   const participantBId = match?.participant_b_id ?? ''
@@ -208,7 +265,11 @@ export default function OrganizerScoring() {
     if (!participantId) return []
     try {
       const { data } = await api.get(`/teams/${participantId}`)
-      if (data?.members && Array.isArray(data.members) && (data.members as TeamMember[]).length > 0) {
+      if (
+        data?.members &&
+        Array.isArray(data.members) &&
+        (data.members as TeamMember[]).length > 0
+      ) {
         return data.members as TeamMember[]
       }
     } catch {
@@ -250,8 +311,8 @@ export default function OrganizerScoring() {
     if (pn?.b) setNameB(pn.b)
 
     const scores = (data.scores ?? []) as Array<{ participant_id?: string }>
-    const sA = scores.find(s => s.participant_id === data.match?.participant_a_id)
-    const sB = scores.find(s => s.participant_id === data.match?.participant_b_id)
+    const sA = scores.find((s) => s.participant_id === data.match?.participant_a_id)
+    const sB = scores.find((s) => s.participant_id === data.match?.participant_b_id)
     setScoreA(mergeScore(emptyScore(), sA as any))
     setScoreB(mergeScore(emptyScore(), sB as any))
 
@@ -267,7 +328,11 @@ export default function OrganizerScoring() {
     setGameLimits((data.limits as GameLimits) ?? null)
 
     if (data.match?.event_id) {
-      const { data: event } = await supabase.from('events').select('sport, status').eq('id', data.match.event_id).maybeSingle()
+      const { data: event } = await supabase
+        .from('events')
+        .select('sport, status')
+        .eq('id', data.match.event_id)
+        .maybeSingle()
       if (event) {
         setSport(event.sport)
         setEventStatus(event.status ?? '')
@@ -292,7 +357,12 @@ export default function OrganizerScoring() {
       .channel(`scoring-${matchId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'match_scores', filter: `match_id=eq.${matchId}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'match_scores',
+          filter: `match_id=eq.${matchId}`,
+        },
         () => scheduleRealtimeStateReload(),
       )
       .on(
@@ -349,14 +419,19 @@ export default function OrganizerScoring() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <p className="text-lg font-semibold">Live scoring is not available for coaches.</p>
-        <p className="text-sm text-[var(--text-muted)]">Coaches manage rosters and lineups — scoring is handled by organizers.</p>
-        <Button variant="secondary" onClick={() => navigate('/organizer/teams')}>Go to Teams</Button>
+        <p className="text-sm text-[var(--text-muted)]">
+          Coaches manage rosters and lineups — scoring is handled by organizers.
+        </p>
+        <Button variant="secondary" onClick={() => navigate('/organizer/teams')}>
+          Go to Teams
+        </Button>
       </div>
     )
   }
 
   const handleStart = async () => {
-    setStarting(true); setError('')
+    setStarting(true)
+    setError('')
     try {
       await api.post(`/scoring/${matchId}/start`)
       await loadState()
@@ -367,7 +442,9 @@ export default function OrganizerScoring() {
       } else {
         setError(ax.response?.data?.error ?? 'Failed to start match')
       }
-    } finally { setStarting(false) }
+    } finally {
+      setStarting(false)
+    }
   }
 
   const handleSub = async () => {
@@ -394,7 +471,7 @@ export default function OrganizerScoring() {
     participantId: string,
     actionType: string,
     value: number = 1,
-    athleteId?: string
+    athleteId?: string,
   ) => {
     try {
       setError('')
@@ -447,7 +524,8 @@ export default function OrganizerScoring() {
 
       const { periods } = periodConfigFor(sport)
       const label = periods[validatedPeriod - 1] ?? `Period ${validatedPeriod}`
-      const nextLabel = res.data.advanced_to != null ? periods[res.data.advanced_to - 1] ?? null : null
+      const nextLabel =
+        res.data.advanced_to != null ? (periods[res.data.advanced_to - 1] ?? null) : null
 
       setValidateSuccess({ label, scoreA: res.data.score_a, scoreB: res.data.score_b, nextLabel })
       validateSuccessTimerRef.current = setTimeout(() => setValidateSuccess(null), 8000)
@@ -509,7 +587,9 @@ export default function OrganizerScoring() {
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } }).response?.data?.error
       setError(msg ?? 'Failed to end match')
-    } finally { setEnding(false) }
+    } finally {
+      setEnding(false)
+    }
   }
 
   const getMainDisplay = (score: ScoreState) => {
@@ -521,7 +601,15 @@ export default function OrganizerScoring() {
       return sets[currentPeriod - 1] ?? 0
     }
     if (sport === 'table-tennis') {
-      const games = [score.game1, score.game2, score.game3, score.game4, score.game5, score.game6, score.game7]
+      const games = [
+        score.game1,
+        score.game2,
+        score.game3,
+        score.game4,
+        score.game5,
+        score.game6,
+        score.game7,
+      ]
       return games[currentPeriod - 1] ?? 0
     }
     return 0
@@ -541,29 +629,41 @@ export default function OrganizerScoring() {
     selectedPlayer: string,
     setSelectedPlayer: (v: string) => void,
     members: TeamMember[],
-    activeIds: string[]
+    activeIds: string[],
   ) => {
     const sortedMembers = [...members].sort((a, b) => {
       const sa = typeof a.lineup_slot === 'number' ? a.lineup_slot : 999
       const sb = typeof b.lineup_slot === 'number' ? b.lineup_slot : 999
       if (sa !== sb) return sa - sb
-      return (a.athlete?.profile?.full_name ?? '').localeCompare(b.athlete?.profile?.full_name ?? '')
+      return (a.athlete?.profile?.full_name ?? '').localeCompare(
+        b.athlete?.profile?.full_name ?? '',
+      )
     })
 
-    const activeMembersFiltered = activeIds.length > 0
-      ? sortedMembers.filter((m) => m.athlete?.id && activeIds.includes(m.athlete.id))
-      : sortedMembers.filter((m) => m.athlete?.id)
+    const activeMembersFiltered =
+      activeIds.length > 0
+        ? sortedMembers.filter((m) => m.athlete?.id && activeIds.includes(m.athlete.id))
+        : sortedMembers.filter((m) => m.athlete?.id)
 
     const lineupForSubs = side === 'a' ? activeLineupA : activeLineupB
 
     const doStat = (actionType: string, value = 1) => {
       // Foul-out is a warning, not a block — confirm rather than silently record.
-      if (sport === 'basketball' && selectedPlayer && basketballInfo?.fouledOut.includes(selectedPlayer)) {
-        const name = sortedMembers.find((m) => m.athlete?.id === selectedPlayer)?.athlete?.profile?.full_name ?? 'This player'
+      if (
+        sport === 'basketball' &&
+        selectedPlayer &&
+        basketballInfo?.fouledOut.includes(selectedPlayer)
+      ) {
+        const name =
+          sortedMembers.find((m) => m.athlete?.id === selectedPlayer)?.athlete?.profile
+            ?.full_name ?? 'This player'
         setFoulOutConfirm({
           athleteId: selectedPlayer,
           name,
-          onConfirm: () => { setFoulOutConfirm(null); handleAction(participantId, actionType, value, selectedPlayer) },
+          onConfirm: () => {
+            setFoulOutConfirm(null)
+            handleAction(participantId, actionType, value, selectedPlayer)
+          },
         })
         return
       }
@@ -582,19 +682,26 @@ export default function OrganizerScoring() {
                 const shortLabel = fullName.split(/\s+/)[0] ?? fullName
                 const isSelected = selectedPlayer === aid
                 const showSub = lineupForSubs.length > 0 && lineupForSubs.includes(aid)
-                const isFouledOut = sport === 'basketball' && !!basketballInfo?.fouledOut.includes(aid)
+                const isFouledOut =
+                  sport === 'basketball' && !!basketballInfo?.fouledOut.includes(aid)
 
                 return (
                   <span
                     key={aid}
                     className={cn(
                       'inline-flex rounded-full overflow-hidden border text-xs',
-                      isSelected ? 'border-[#0066FF] ring-1 ring-[#0066FF]/40' : isFouledOut ? 'border-[var(--danger)]/50' : 'border-[var(--border-subtle)]'
+                      isSelected
+                        ? 'border-[#0066FF] ring-1 ring-[#0066FF]/40'
+                        : isFouledOut
+                          ? 'border-[var(--danger)]/50'
+                          : 'border-[var(--border-subtle)]',
                     )}
                   >
                     <button
                       type="button"
-                      title={isFouledOut ? `${fullName} has fouled out (5 personal fouls)` : undefined}
+                      title={
+                        isFouledOut ? `${fullName} has fouled out (5 personal fouls)` : undefined
+                      }
                       onClick={() => setSelectedPlayer(isSelected ? '' : aid)}
                       className={cn(
                         'px-2.5 py-1 max-w-[9rem] truncate font-medium transition-colors',
@@ -602,7 +709,7 @@ export default function OrganizerScoring() {
                           ? 'bg-[var(--accent-default)]/20 text-[var(--text-primary)]'
                           : isFouledOut
                             ? 'bg-[var(--danger)]/10 text-[var(--danger)]'
-                            : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                            : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
                       )}
                     >
                       {isFouledOut ? `⚠ ${shortLabel}` : shortLabel}
@@ -631,16 +738,32 @@ export default function OrganizerScoring() {
           <div className="space-y-1.5">
             <div className="flex justify-center gap-1.5 flex-wrap">
               {BASKETBALL_STATS.map((s) => (
-                <Button key={s.key} size="sm" variant="secondary" title={s.title} disabled={!selectedPlayer} onClick={() => doStat(s.key)}>
+                <Button
+                  key={s.key}
+                  size="sm"
+                  variant="secondary"
+                  title={s.title}
+                  disabled={!selectedPlayer}
+                  onClick={() => doStat(s.key)}
+                >
                   {s.label} ({statFor(participantId, s.key)})
                 </Button>
               ))}
             </div>
             {/* Missed attempts — without these FG%, 3P% and FT% cannot be computed. */}
             <div className="flex justify-center gap-1.5 flex-wrap">
-              <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] self-center mr-1">Missed</span>
+              <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] self-center mr-1">
+                Missed
+              </span>
               {BASKETBALL_MISSES.map((s) => (
-                <Button key={s.key} size="sm" variant="secondary" title={s.title} disabled={!selectedPlayer} onClick={() => doStat(s.key)}>
+                <Button
+                  key={s.key}
+                  size="sm"
+                  variant="secondary"
+                  title={s.title}
+                  disabled={!selectedPlayer}
+                  onClick={() => doStat(s.key)}
+                >
                   {s.label} ({statFor(participantId, s.key)})
                 </Button>
               ))}
@@ -651,7 +774,14 @@ export default function OrganizerScoring() {
         {sport === 'volleyball' && (
           <div className="flex justify-center gap-1.5 flex-wrap">
             {VOLLEYBALL_STATS.map((s) => (
-              <Button key={s.key} size="sm" variant="secondary" title={s.title} disabled={!selectedPlayer} onClick={() => doStat(s.key)}>
+              <Button
+                key={s.key}
+                size="sm"
+                variant="secondary"
+                title={s.title}
+                disabled={!selectedPlayer}
+                onClick={() => doStat(s.key)}
+              >
                 {s.label} ({statFor(participantId, s.key)})
               </Button>
             ))}
@@ -661,7 +791,14 @@ export default function OrganizerScoring() {
         {sport === 'table-tennis' && (
           <div className="flex justify-center gap-1.5 flex-wrap">
             {TABLE_TENNIS_STATS.map((s) => (
-              <Button key={s.key} size="sm" variant="secondary" title={s.title} disabled={!selectedPlayer} onClick={() => doStat(s.key)}>
+              <Button
+                key={s.key}
+                size="sm"
+                variant="secondary"
+                title={s.title}
+                disabled={!selectedPlayer}
+                onClick={() => doStat(s.key)}
+              >
                 {s.label} ({statFor(participantId, s.key)})
               </Button>
             ))}
@@ -674,12 +811,19 @@ export default function OrganizerScoring() {
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(-1)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded" aria-label="Back">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
+          aria-label="Back"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="min-w-0">
           <h1 className="text-xl font-bold">Live Scoring</h1>
-          <p className="text-[var(--text-muted)] text-xs truncate">{nameA} vs {nameB}</p>
+          <p className="text-[var(--text-muted)] text-xs truncate">
+            {nameA} vs {nameB}
+          </p>
         </div>
         <div className="flex-1" />
         {isLive && (
@@ -688,12 +832,21 @@ export default function OrganizerScoring() {
             <Badge variant="danger">LIVE</Badge>
           </div>
         )}
-        <Button size="sm" variant="secondary" icon={<Tv2 className="w-3.5 h-3.5" />} onClick={() => window.open(`/jumbotron/${matchId}`, '_blank')}>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Tv2 className="w-3.5 h-3.5" />}
+          onClick={() => window.open(`/jumbotron/${matchId}`, '_blank')}
+        >
           Jumbotron
         </Button>
       </div>
 
-      {error && <Alert type="danger" onDismiss={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert type="danger" onDismiss={() => setError('')}>
+          {error}
+        </Alert>
+      )}
 
       {lockWarning && (
         <Alert type="warning">
@@ -702,29 +855,47 @@ export default function OrganizerScoring() {
             <span>{lockWarning.name} is currently scoring this match. Forcefully taking over?</span>
           </div>
           <div className="flex gap-2 mt-2">
-            <Button size="sm" onClick={async () => { await api.post(`/scoring/${matchId}/transfer-lock`); setLockWarning(null); loadState() }}>Take Over</Button>
-            <Button size="sm" variant="secondary" onClick={() => setLockWarning(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await api.post(`/scoring/${matchId}/transfer-lock`)
+                setLockWarning(null)
+                loadState()
+              }}
+            >
+              Take Over
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setLockWarning(null)}>
+              Cancel
+            </Button>
           </div>
         </Alert>
       )}
 
       {isLive && !isLockHolder && (
         <Alert type="info">
-          <span className="font-medium">Stat Tracker Mode</span> — another organizer holds the scoring lock. You can record team and player stats but cannot award points.
+          <span className="font-medium">Stat Tracker Mode</span> — another organizer holds the
+          scoring lock. You can record team and player stats but cannot award points.
         </Alert>
       )}
 
       {isLive && matchDecision?.decided && (
         <Alert type="success">
           <span className="font-semibold">
-            {matchDecision.winnerParticipantId === participantAId ? nameA : nameB} wins {Math.max(matchDecision.winsA, matchDecision.winsB)}–{Math.min(matchDecision.winsA, matchDecision.winsB)}
+            {matchDecision.winnerParticipantId === participantAId ? nameA : nameB} wins{' '}
+            {Math.max(matchDecision.winsA, matchDecision.winsB)}–
+            {Math.min(matchDecision.winsA, matchDecision.winsB)}
           </span>
-          {' — '}{matchDecision.reason}.
+          {' — '}
+          {matchDecision.reason}.
           {isLockHolder && (
             <Button
               size="sm"
               className="ml-3"
-              onClick={() => { setWinnerId(matchDecision.winnerParticipantId ?? ''); setEndConfirm(true) }}
+              onClick={() => {
+                setWinnerId(matchDecision.winnerParticipantId ?? '')
+                setEndConfirm(true)
+              }}
             >
               End Match
             </Button>
@@ -746,15 +917,22 @@ export default function OrganizerScoring() {
           <div className="min-h-[20px] mb-1">
             {sport === 'basketball' && basketballInfo?.bonus.a && (
               <span title={`${basketballInfo.teamFouls.a ?? 0} team fouls this quarter`}>
-                <Badge variant="danger" size="sm">BONUS</Badge>
+                <Badge variant="danger" size="sm">
+                  BONUS
+                </Badge>
               </span>
             )}
           </div>
-          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">{getMainDisplay(scoreA)}</p>
+          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
+            {getMainDisplay(scoreA)}
+          </p>
 
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] mb-4">
             {periodValuesFor(scoreA, sport).map((p, i) => (
-              <div key={p.label} className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}>
+              <div
+                key={p.label}
+                className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
+              >
                 <p className="font-bold flex items-center justify-center gap-0.5">
                   {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
                   {p.label}
@@ -768,24 +946,73 @@ export default function OrganizerScoring() {
             <div className="space-y-2">
               {sport === 'basketball' && (
                 <div className="flex justify-center gap-2 flex-wrap">
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerA} onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA)}>+1</Button>
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerA} onClick={() => handleAction(participantAId, 'point_2', 2, selectedPlayerA)}>+2</Button>
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerA} onClick={() => handleAction(participantAId, 'point_3', 3, selectedPlayerA)}>+3</Button>
-                  <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => handleUndo(participantAId)}>−1</Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerA}
+                    onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA)}
+                  >
+                    +1
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerA}
+                    onClick={() => handleAction(participantAId, 'point_2', 2, selectedPlayerA)}
+                  >
+                    +2
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerA}
+                    onClick={() => handleAction(participantAId, 'point_3', 3, selectedPlayerA)}
+                  >
+                    +3
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!isLockHolder}
+                    onClick={() => handleUndo(participantAId)}
+                  >
+                    −1
+                  </Button>
                 </div>
               )}
               {sport !== 'basketball' && (
                 <div className="flex justify-center gap-2 flex-wrap">
                   {/* Generic point, for a rally won without a specific stat
                       (opponent error, net violation, referee award). */}
-                  <Button size="sm" disabled={!isLockHolder} onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA || undefined)}>+1</Button>
-                  <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => handleUndo(participantAId)}>−1</Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder}
+                    onClick={() =>
+                      handleAction(participantAId, 'point_1', 1, selectedPlayerA || undefined)
+                    }
+                  >
+                    +1
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!isLockHolder}
+                    onClick={() => handleUndo(participantAId)}
+                  >
+                    −1
+                  </Button>
                 </div>
               )}
               {sport === 'basketball' && !selectedPlayerA && (
-                <p className="text-xs text-[var(--text-muted)] text-center">Select a player first.</p>
+                <p className="text-xs text-[var(--text-muted)] text-center">
+                  Select a player first.
+                </p>
               )}
-              {renderStatButtons(participantAId, 'a', selectedPlayerA, setSelectedPlayerA, membersA, activeLineupA)}
+              {renderStatButtons(
+                participantAId,
+                'a',
+                selectedPlayerA,
+                setSelectedPlayerA,
+                membersA,
+                activeLineupA,
+              )}
             </div>
           )}
         </Card>
@@ -797,15 +1024,22 @@ export default function OrganizerScoring() {
           <div className="min-h-[20px] mb-1">
             {sport === 'basketball' && basketballInfo?.bonus.b && (
               <span title={`${basketballInfo.teamFouls.b ?? 0} team fouls this quarter`}>
-                <Badge variant="danger" size="sm">BONUS</Badge>
+                <Badge variant="danger" size="sm">
+                  BONUS
+                </Badge>
               </span>
             )}
           </div>
-          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">{getMainDisplay(scoreB)}</p>
+          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
+            {getMainDisplay(scoreB)}
+          </p>
 
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] mb-4">
             {periodValuesFor(scoreB, sport).map((p, i) => (
-              <div key={p.label} className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}>
+              <div
+                key={p.label}
+                className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
+              >
                 <p className="font-bold flex items-center justify-center gap-0.5">
                   {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
                   {p.label}
@@ -819,22 +1053,71 @@ export default function OrganizerScoring() {
             <div className="space-y-2">
               {sport === 'basketball' && (
                 <div className="flex justify-center gap-2 flex-wrap">
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerB} onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB)}>+1</Button>
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerB} onClick={() => handleAction(participantBId, 'point_2', 2, selectedPlayerB)}>+2</Button>
-                  <Button size="sm" disabled={!isLockHolder || !selectedPlayerB} onClick={() => handleAction(participantBId, 'point_3', 3, selectedPlayerB)}>+3</Button>
-                  <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => handleUndo(participantBId)}>−1</Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerB}
+                    onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB)}
+                  >
+                    +1
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerB}
+                    onClick={() => handleAction(participantBId, 'point_2', 2, selectedPlayerB)}
+                  >
+                    +2
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder || !selectedPlayerB}
+                    onClick={() => handleAction(participantBId, 'point_3', 3, selectedPlayerB)}
+                  >
+                    +3
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!isLockHolder}
+                    onClick={() => handleUndo(participantBId)}
+                  >
+                    −1
+                  </Button>
                 </div>
               )}
               {sport !== 'basketball' && (
                 <div className="flex justify-center gap-2 flex-wrap">
-                  <Button size="sm" disabled={!isLockHolder} onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB || undefined)}>+1</Button>
-                  <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => handleUndo(participantBId)}>−1</Button>
+                  <Button
+                    size="sm"
+                    disabled={!isLockHolder}
+                    onClick={() =>
+                      handleAction(participantBId, 'point_1', 1, selectedPlayerB || undefined)
+                    }
+                  >
+                    +1
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!isLockHolder}
+                    onClick={() => handleUndo(participantBId)}
+                  >
+                    −1
+                  </Button>
                 </div>
               )}
               {sport === 'basketball' && !selectedPlayerB && (
-                <p className="text-xs text-[var(--text-muted)] text-center">Select a player first.</p>
+                <p className="text-xs text-[var(--text-muted)] text-center">
+                  Select a player first.
+                </p>
               )}
-              {renderStatButtons(participantBId, 'b', selectedPlayerB, setSelectedPlayerB, membersB, activeLineupB)}
+              {renderStatButtons(
+                participantBId,
+                'b',
+                selectedPlayerB,
+                setSelectedPlayerB,
+                membersB,
+                activeLineupB,
+              )}
             </div>
           )}
         </Card>
@@ -865,13 +1148,24 @@ export default function OrganizerScoring() {
               ) : (
                 <span
                   title="Click to edit"
-                  onClick={() => { setClockEditValue(timer.formatTime(timer.seconds)); setClockEditing(true) }}
+                  onClick={() => {
+                    setClockEditValue(timer.formatTime(timer.seconds))
+                    setClockEditing(true)
+                  }}
                   className="text-3xl font-mono font-bold tabular-nums tracking-wider cursor-pointer hover:text-[var(--accent-default)] select-none"
                 >
                   {timer.formatTime(timer.seconds)}
                 </span>
               )}
-              {timer.running ? <Badge variant="danger" size="sm">Running</Badge> : <Badge variant="default" size="sm">Paused</Badge>}
+              {timer.running ? (
+                <Badge variant="danger" size="sm">
+                  Running
+                </Badge>
+              ) : (
+                <Badge variant="default" size="sm">
+                  Paused
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
               {!timer.running ? (
@@ -879,7 +1173,12 @@ export default function OrganizerScoring() {
                   {timer.seconds === quarterMinutes * 60 ? 'Start' : 'Resume'}
                 </Button>
               ) : (
-                <Button size="sm" variant="secondary" icon={<Square className="w-3 h-3" />} onClick={timer.pause}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<Square className="w-3 h-3" />}
+                  onClick={timer.pause}
+                >
                   Pause
                 </Button>
               )}
@@ -892,7 +1191,9 @@ export default function OrganizerScoring() {
           {/* 24-second shot clock */}
           <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-[var(--border-subtle)]">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Shot Clock</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                Shot Clock
+              </span>
               {shotClockEditing ? (
                 <input
                   type="text"
@@ -913,86 +1214,133 @@ export default function OrganizerScoring() {
               ) : (
                 <span
                   title="Click to edit"
-                  onClick={() => { setShotClockEditValue(String(timer.shotClockSeconds)); setShotClockEditing(true) }}
+                  onClick={() => {
+                    setShotClockEditValue(String(timer.shotClockSeconds))
+                    setShotClockEditing(true)
+                  }}
                   className={`text-2xl font-mono font-bold tabular-nums cursor-pointer hover:text-[var(--accent-default)] select-none ${timer.shotClockSeconds <= 5 ? 'text-[#FF3355]' : 'text-white'}`}
                 >
                   {String(timer.shotClockSeconds).padStart(2, '0')}
                 </span>
               )}
-              {timer.shotClockRunning ? <Badge variant="danger" size="sm">On</Badge> : <Badge variant="default" size="sm">Off</Badge>}
+              {timer.shotClockRunning ? (
+                <Badge variant="danger" size="sm">
+                  On
+                </Badge>
+              ) : (
+                <Badge variant="default" size="sm">
+                  Off
+                </Badge>
+              )}
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {!timer.shotClockRunning ? (
-                <Button size="sm" variant="secondary" icon={<Play className="w-3 h-3" />} onClick={timer.startShotClock}>Start</Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<Play className="w-3 h-3" />}
+                  onClick={timer.startShotClock}
+                >
+                  Start
+                </Button>
               ) : (
-                <Button size="sm" variant="secondary" icon={<Square className="w-3 h-3" />} onClick={timer.pauseShotClock}>Stop</Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<Square className="w-3 h-3" />}
+                  onClick={timer.pauseShotClock}
+                >
+                  Stop
+                </Button>
               )}
-              <button type="button" onClick={() => timer.resetShotClock(true)} className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium">24</button>
-              <button type="button" onClick={() => timer.resetShotClock(false)} className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium">14</button>
+              <button
+                type="button"
+                onClick={() => timer.resetShotClock(true)}
+                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium"
+              >
+                24
+              </button>
+              <button
+                type="button"
+                onClick={() => timer.resetShotClock(false)}
+                className="px-2.5 py-1 text-xs rounded border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] font-medium"
+              >
+                14
+              </button>
             </div>
           </div>
         </Card>
       )}
 
-      {isLive && (() => {
-        const { label, periods } = periodConfigFor(sport)
-        const isLocked = (p: number) => lockedPeriods.includes(p)
-        const currentIsLocked = isLocked(currentPeriod)
-        return (
-          <Card className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium">{label}:</span>
-              <div className="flex gap-2 flex-wrap">
-                {periods.map((p, i) => {
-                  const n = i + 1
-                  const locked = isLocked(n)
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      disabled={!isLockHolder || periodBusy || locked}
-                      title={locked ? `${p} is validated and locked` : `Switch to ${p}`}
-                      onClick={() => void handleChangePeriod(n)}
-                      className={`px-3 py-1 rounded text-sm font-medium transition-colors inline-flex items-center gap-1 disabled:cursor-not-allowed ${
-                        currentPeriod === n
-                          ? 'bg-[var(--accent-default)] text-white'
-                          : locked
-                            ? 'bg-[var(--surface-elevated)] text-[var(--text-muted)] opacity-60'
-                            : 'bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                      }`}
-                    >
-                      {locked && <Lock className="w-3 h-3" />}
-                      {p}
-                    </button>
-                  )
-                })}
+      {isLive &&
+        (() => {
+          const { label, periods } = periodConfigFor(sport)
+          const isLocked = (p: number) => lockedPeriods.includes(p)
+          const currentIsLocked = isLocked(currentPeriod)
+          return (
+            <Card className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm font-medium">{label}:</span>
+                <div className="flex gap-2 flex-wrap">
+                  {periods.map((p, i) => {
+                    const n = i + 1
+                    const locked = isLocked(n)
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        disabled={!isLockHolder || periodBusy || locked}
+                        title={locked ? `${p} is validated and locked` : `Switch to ${p}`}
+                        onClick={() => void handleChangePeriod(n)}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-colors inline-flex items-center gap-1 disabled:cursor-not-allowed ${
+                          currentPeriod === n
+                            ? 'bg-[var(--accent-default)] text-white'
+                            : locked
+                              ? 'bg-[var(--surface-elevated)] text-[var(--text-muted)] opacity-60'
+                              : 'bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {locked && <Lock className="w-3 h-3" />}
+                        {p}
+                      </button>
+                    )
+                  })}
+                </div>
+                {isLockHolder && !currentIsLocked && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={periodBusy}
+                    icon={<Lock className="w-3.5 h-3.5" />}
+                    onClick={() => void handleValidatePeriod()}
+                  >
+                    Validate {periods[currentPeriod - 1] ?? label}
+                  </Button>
+                )}
               </div>
-              {isLockHolder && !currentIsLocked && (
-                <Button size="sm" variant="secondary" loading={periodBusy} icon={<Lock className="w-3.5 h-3.5" />} onClick={() => void handleValidatePeriod()}>
-                  Validate {periods[currentPeriod - 1] ?? label}
-                </Button>
+              {validateSuccess && (
+                <Alert type="success" onDismiss={() => setValidateSuccess(null)}>
+                  <span className="font-semibold">{validateSuccess.label} validated</span> — final
+                  score {validateSuccess.scoreA}–{validateSuccess.scoreB}, now locked.
+                  {validateSuccess.nextLabel
+                    ? ` Now scoring ${validateSuccess.nextLabel}.`
+                    : ' That was the last period — you can now end the match.'}
+                </Alert>
               )}
-            </div>
-            {validateSuccess && (
-              <Alert type="success" onDismiss={() => setValidateSuccess(null)}>
-                <span className="font-semibold">{validateSuccess.label} validated</span> — final score {validateSuccess.scoreA}–{validateSuccess.scoreB}, now locked.
-                {validateSuccess.nextLabel
-                  ? ` Now scoring ${validateSuccess.nextLabel}.`
-                  : ' That was the last period — you can now end the match.'}
-              </Alert>
-            )}
-            {currentIsLocked ? (
-              <Alert type="warning">
-                {periods[currentPeriod - 1]} is validated and locked — scores and undo are frozen for it. An admin must reopen it to make changes.
-              </Alert>
-            ) : (
-              <p className="text-xs text-[var(--text-muted)]">
-                Validating freezes this {label.toLowerCase()}&apos;s score so it can no longer be edited, then advances to the next one.
-              </p>
-            )}
-          </Card>
-        )
-      })()}
+              {currentIsLocked ? (
+                <Alert type="warning">
+                  {periods[currentPeriod - 1]} is validated and locked — scores and undo are frozen
+                  for it. An admin must reopen it to make changes.
+                </Alert>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Validating freezes this {label.toLowerCase()}&apos;s score so it can no longer be
+                  edited, then advances to the next one.
+                </p>
+              )}
+            </Card>
+          )
+        })()}
 
       {/* Serve tracking + timeouts/subs (volleyball & table tennis only) */}
       {isLive && (sport === 'volleyball' || sport === 'table-tennis') && (
@@ -1002,8 +1350,22 @@ export default function OrganizerScoring() {
             {!serveInfo?.servingParticipantId ? (
               <div className="flex gap-2 items-center flex-wrap">
                 <span className="text-xs text-[var(--text-muted)]">Who serves first?</span>
-                <Button size="sm" variant="secondary" disabled={!isLockHolder || firstServerBusy} onClick={() => void handleSetFirstServer(participantAId)}>{nameA}</Button>
-                <Button size="sm" variant="secondary" disabled={!isLockHolder || firstServerBusy} onClick={() => void handleSetFirstServer(participantBId)}>{nameB}</Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!isLockHolder || firstServerBusy}
+                  onClick={() => void handleSetFirstServer(participantAId)}
+                >
+                  {nameA}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!isLockHolder || firstServerBusy}
+                  onClick={() => void handleSetFirstServer(participantBId)}
+                >
+                  {nameB}
+                </Button>
               </div>
             ) : (
               <div className="flex gap-2 items-center flex-wrap">
@@ -1015,7 +1377,13 @@ export default function OrganizerScoring() {
                     type="button"
                     disabled={firstServerBusy}
                     className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] underline disabled:opacity-50"
-                    onClick={() => void handleSetFirstServer(serveInfo.servingParticipantId === participantAId ? participantBId : participantAId)}
+                    onClick={() =>
+                      void handleSetFirstServer(
+                        serveInfo.servingParticipantId === participantAId
+                          ? participantBId
+                          : participantAId,
+                      )
+                    }
                   >
                     correct it
                   </button>
@@ -1028,28 +1396,46 @@ export default function OrganizerScoring() {
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--text-muted)]">
               <span>
                 {nameA} subs {volleyballInfo.subsUsed.a ?? 0}/{gameLimits.subsPerSet}
-                {(volleyballInfo.subsUsed.a ?? 0) >= gameLimits.subsPerSet && <span className="text-[var(--danger)] ml-1">limit reached</span>}
+                {(volleyballInfo.subsUsed.a ?? 0) >= gameLimits.subsPerSet && (
+                  <span className="text-[var(--danger)] ml-1">limit reached</span>
+                )}
                 {' · '}timeouts {volleyballInfo.timeouts.a ?? 0}/{gameLimits.timeoutsPerSetVB}
               </span>
               <span>
                 {nameB} subs {volleyballInfo.subsUsed.b ?? 0}/{gameLimits.subsPerSet}
-                {(volleyballInfo.subsUsed.b ?? 0) >= gameLimits.subsPerSet && <span className="text-[var(--danger)] ml-1">limit reached</span>}
+                {(volleyballInfo.subsUsed.b ?? 0) >= gameLimits.subsPerSet && (
+                  <span className="text-[var(--danger)] ml-1">limit reached</span>
+                )}
                 {' · '}timeouts {volleyballInfo.timeouts.b ?? 0}/{gameLimits.timeoutsPerSetVB}
               </span>
             </div>
           )}
           {sport === 'table-tennis' && tableTennisInfo && gameLimits && (
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span>{nameA} timeouts {tableTennisInfo.timeouts.a ?? 0}/{gameLimits.timeoutsPerMatchTT}</span>
-              <span>{nameB} timeouts {tableTennisInfo.timeouts.b ?? 0}/{gameLimits.timeoutsPerMatchTT}</span>
+              <span>
+                {nameA} timeouts {tableTennisInfo.timeouts.a ?? 0}/{gameLimits.timeoutsPerMatchTT}
+              </span>
+              <span>
+                {nameB} timeouts {tableTennisInfo.timeouts.b ?? 0}/{gameLimits.timeoutsPerMatchTT}
+              </span>
             </div>
           )}
 
           <div className="flex justify-center gap-2">
-            <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => void handleAction(participantAId, 'timeout')}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!isLockHolder}
+              onClick={() => void handleAction(participantAId, 'timeout')}
+            >
               {nameA} timeout
             </Button>
-            <Button size="sm" variant="secondary" disabled={!isLockHolder} onClick={() => void handleAction(participantBId, 'timeout')}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!isLockHolder}
+              onClick={() => void handleAction(participantBId, 'timeout')}
+            >
               {nameB} timeout
             </Button>
           </div>
@@ -1057,41 +1443,54 @@ export default function OrganizerScoring() {
       )}
 
       {/* Box Score */}
-      {isLive && (participantAId || participantBId) && (() => {
-        const statKeys: { key: string; label: string }[] =
-          sport === 'basketball'
-            ? [...BASKETBALL_STATS, ...BASKETBALL_MISSES].map(s => ({ key: s.key, label: s.label }))
-            : sport === 'volleyball'
-              ? VOLLEYBALL_STATS.map(s => ({ key: s.key, label: s.label }))
-              : TABLE_TENNIS_STATS.map(s => ({ key: s.key, label: s.label }))
-        const hasAny = statKeys.some(s => statFor(participantAId, s.key) > 0 || statFor(participantBId, s.key) > 0)
-        if (!hasAny) return null
-        return (
-          <Card>
-            <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Box Score</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-[var(--text-muted)] text-xs">
-                    <th className="text-left py-1 pr-3">Stat</th>
-                    <th className="text-center py-1 px-2">{nameA}</th>
-                    <th className="text-center py-1 px-2">{nameB}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statKeys.map(s => (
-                    <tr key={s.key} className="border-t border-[var(--border-subtle)]">
-                      <td className="py-1.5 pr-3 text-[var(--text-secondary)]">{s.label}</td>
-                      <td className="py-1.5 px-2 text-center font-medium">{statFor(participantAId, s.key)}</td>
-                      <td className="py-1.5 px-2 text-center font-medium">{statFor(participantBId, s.key)}</td>
+      {isLive &&
+        (participantAId || participantBId) &&
+        (() => {
+          const statKeys: { key: string; label: string }[] =
+            sport === 'basketball'
+              ? [...BASKETBALL_STATS, ...BASKETBALL_MISSES].map((s) => ({
+                  key: s.key,
+                  label: s.label,
+                }))
+              : sport === 'volleyball'
+                ? VOLLEYBALL_STATS.map((s) => ({ key: s.key, label: s.label }))
+                : TABLE_TENNIS_STATS.map((s) => ({ key: s.key, label: s.label }))
+          const hasAny = statKeys.some(
+            (s) => statFor(participantAId, s.key) > 0 || statFor(participantBId, s.key) > 0,
+          )
+          if (!hasAny) return null
+          return (
+            <Card>
+              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                Box Score
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-[var(--text-muted)] text-xs">
+                      <th className="text-left py-1 pr-3">Stat</th>
+                      <th className="text-center py-1 px-2">{nameA}</th>
+                      <th className="text-center py-1 px-2">{nameB}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )
-      })()}
+                  </thead>
+                  <tbody>
+                    {statKeys.map((s) => (
+                      <tr key={s.key} className="border-t border-[var(--border-subtle)]">
+                        <td className="py-1.5 pr-3 text-[var(--text-secondary)]">{s.label}</td>
+                        <td className="py-1.5 px-2 text-center font-medium">
+                          {statFor(participantAId, s.key)}
+                        </td>
+                        <td className="py-1.5 px-2 text-center font-medium">
+                          {statFor(participantBId, s.key)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )
+        })()}
 
       <Card className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex gap-2">
@@ -1101,17 +1500,30 @@ export default function OrganizerScoring() {
                 Start Match
               </Button>
             ) : (
-              <span className="text-sm text-[var(--text-muted)]">Start the event first before scoring this match.</span>
+              <span className="text-sm text-[var(--text-muted)]">
+                Start the event first before scoring this match.
+              </span>
             )
           ) : (
             <>
               {isLockHolder && (
-                <Button variant="danger" icon={<Square className="w-4 h-4" />} onClick={() => setEndConfirm(true)} size="sm">
+                <Button
+                  variant="danger"
+                  icon={<Square className="w-4 h-4" />}
+                  onClick={() => setEndConfirm(true)}
+                  size="sm"
+                >
                   End Match
                 </Button>
               )}
               {!isLockHolder && (
-                <Button size="sm" onClick={async () => { await api.post(`/scoring/${matchId}/transfer-lock`); await loadState() }}>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    await api.post(`/scoring/${matchId}/transfer-lock`)
+                    await loadState()
+                  }}
+                >
                   Take Scoring Lock
                 </Button>
               )}
@@ -1120,21 +1532,31 @@ export default function OrganizerScoring() {
         </div>
         {recentActions.length > 0 && (
           <div className="text-xs text-[var(--text-muted)] text-right max-w-[55%]">
-            Last: {recentActions[0]?.action_type} ({recentActions[0]?.value > 0 ? '+' : ''}{recentActions[0]?.value})
+            Last: {recentActions[0]?.action_type} ({recentActions[0]?.value > 0 ? '+' : ''}
+            {recentActions[0]?.value})
           </div>
         )}
       </Card>
 
       {/* Fouled-out confirmation — warn, don't block */}
       {foulOutConfirm && (
-        <Modal open={!!foulOutConfirm} onClose={() => setFoulOutConfirm(null)} title="Player has fouled out">
+        <Modal
+          open={!!foulOutConfirm}
+          onClose={() => setFoulOutConfirm(null)}
+          title="Player has fouled out"
+        >
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">
-              <strong className="text-[var(--text-primary)]">{foulOutConfirm.name}</strong> already has {gameLimits?.personalFouls ?? 5}+ personal fouls. Record this stat anyway?
+              <strong className="text-[var(--text-primary)]">{foulOutConfirm.name}</strong> already
+              has {gameLimits?.personalFouls ?? 5}+ personal fouls. Record this stat anyway?
             </p>
             <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setFoulOutConfirm(null)}>Cancel</Button>
-              <Button variant="danger" onClick={foulOutConfirm.onConfirm}>Record Anyway</Button>
+              <Button variant="secondary" onClick={() => setFoulOutConfirm(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={foulOutConfirm.onConfirm}>
+                Record Anyway
+              </Button>
             </div>
           </div>
         </Modal>
@@ -1145,9 +1567,13 @@ export default function OrganizerScoring() {
         <Modal open={!!subModal} onClose={() => setSubModal(null)} title="Substitution">
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-muted)]">
-              Replacing <strong className="text-[var(--text-primary)]">
-                {(subModal.side === 'a' ? membersA : membersB).find((m) => m.athlete?.id === subModal.outId)?.athlete?.profile?.full_name ?? subModal.outId.slice(0, 8)}
-              </strong> — choose the player coming in from the bench.
+              Replacing{' '}
+              <strong className="text-[var(--text-primary)]">
+                {(subModal.side === 'a' ? membersA : membersB).find(
+                  (m) => m.athlete?.id === subModal.outId,
+                )?.athlete?.profile?.full_name ?? subModal.outId.slice(0, 8)}
+              </strong>{' '}
+              — choose the player coming in from the bench.
             </p>
             <Select
               label="Sub in"
@@ -1168,8 +1594,12 @@ export default function OrganizerScoring() {
               ]}
             />
             <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setSubModal(null)}>Cancel</Button>
-              <Button loading={subBusy} disabled={!subInId} onClick={handleSub}>Confirm Sub</Button>
+              <Button variant="secondary" onClick={() => setSubModal(null)}>
+                Cancel
+              </Button>
+              <Button loading={subBusy} disabled={!subInId} onClick={handleSub}>
+                Confirm Sub
+              </Button>
             </div>
           </div>
         </Modal>
@@ -1177,11 +1607,13 @@ export default function OrganizerScoring() {
 
       <Modal open={endConfirm} onClose={() => setEndConfirm(false)} title="End Match">
         <div className="space-y-4">
-          <p className="text-sm text-[var(--text-muted)]">Select the winner to officially end this match.</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            Select the winner to officially end this match.
+          </p>
           <Select
             label="Winner"
             value={winnerId}
-            onChange={e => setWinnerId(e.target.value)}
+            onChange={(e) => setWinnerId(e.target.value)}
             options={[
               { value: '', label: 'Select winner...' },
               { value: participantAId, label: nameA },
@@ -1189,8 +1621,12 @@ export default function OrganizerScoring() {
             ]}
           />
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setEndConfirm(false)}>Cancel</Button>
-            <Button variant="danger" loading={ending} onClick={handleEnd} disabled={!winnerId}>Confirm End Match</Button>
+            <Button variant="secondary" onClick={() => setEndConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" loading={ending} onClick={handleEnd} disabled={!winnerId}>
+              Confirm End Match
+            </Button>
           </div>
         </div>
       </Modal>

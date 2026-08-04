@@ -10,7 +10,7 @@ interface PlayerGameStats {
   stats: Record<string, number>
 }
 
-const INSIGHT_THRESHOLD = 0.10
+const INSIGHT_THRESHOLD = 0.1
 
 const KEY_STATS: Record<string, string[]> = {
   basketball: ['total_points', 'total_rebounds', 'total_assists', 'total_steals'],
@@ -45,9 +45,7 @@ const STANDOUT_THRESHOLDS: Record<string, { key: string; min: number; label: str
     { key: 'kills', min: 5, label: 'kills' },
     { key: 'aces', min: 3, label: 'aces' },
   ],
-  'table-tennis': [
-    { key: 'pts_scored', min: 11, label: 'points scored' },
-  ],
+  'table-tennis': [{ key: 'pts_scored', min: 11, label: 'points scored' }],
 }
 
 function statBag(stats: unknown): Record<string, number> {
@@ -68,7 +66,8 @@ async function fetchAthleteName(athleteId: string): Promise<string> {
     .eq('id', athleteId)
     .single()
 
-  const prRaw = (athlete as { profile?: { full_name?: string } | { full_name?: string }[] } | null)?.profile
+  const prRaw = (athlete as { profile?: { full_name?: string } | { full_name?: string }[] } | null)
+    ?.profile
   const pr = Array.isArray(prRaw) ? prRaw[0] : prRaw
   return pr?.full_name ?? 'Athlete'
 }
@@ -118,15 +117,24 @@ async function clearInsight(
 
 /** A short clause naming 1-2 supporting stats beyond whichever one triggered the headline,
  *  plus a shooting split for basketball — turns "24 points" into a fuller box-score sentence. */
-function debutSecondaryClause(sport: string, stats: Record<string, number>, triggerKey: string): string {
+function debutSecondaryClause(
+  sport: string,
+  stats: Record<string, number>,
+  triggerKey: string,
+): string {
   if (sport === 'basketball') {
     const parts: string[] = []
-    if (stats.total_rebounds) parts.push(`${stats.total_rebounds} rebound${stats.total_rebounds === 1 ? '' : 's'}`)
-    if (stats.total_assists) parts.push(`${stats.total_assists} assist${stats.total_assists === 1 ? '' : 's'}`)
-    if (stats.total_steals) parts.push(`${stats.total_steals} steal${stats.total_steals === 1 ? '' : 's'}`)
-    if (stats.total_blocks) parts.push(`${stats.total_blocks} block${stats.total_blocks === 1 ? '' : 's'}`)
+    if (stats.total_rebounds)
+      parts.push(`${stats.total_rebounds} rebound${stats.total_rebounds === 1 ? '' : 's'}`)
+    if (stats.total_assists)
+      parts.push(`${stats.total_assists} assist${stats.total_assists === 1 ? '' : 's'}`)
+    if (stats.total_steals)
+      parts.push(`${stats.total_steals} steal${stats.total_steals === 1 ? '' : 's'}`)
+    if (stats.total_blocks)
+      parts.push(`${stats.total_blocks} block${stats.total_blocks === 1 ? '' : 's'}`)
     let clause = parts.length ? ` with ${parts.slice(0, 2).join(' and ')}` : ''
-    if (stats.fg_attempted) clause += `${clause ? ',' : ''} shooting ${stats.fg_made ?? 0}-of-${stats.fg_attempted} from the field`
+    if (stats.fg_attempted)
+      clause += `${clause ? ',' : ''} shooting ${stats.fg_made ?? 0}-of-${stats.fg_attempted} from the field`
     return clause
   }
   if (sport === 'volleyball') {
@@ -170,7 +178,13 @@ async function computeDebutStandout(
           season_id: seasonId,
           insight_text: `${name} recorded ${val} ${label} in their opening game${secondary}.`,
           insight_type: 'debut_standout',
-          data: { stat_key: key, value: val, threshold: min, full_stats: gameStats, match_id: matchId },
+          data: {
+            stat_key: key,
+            value: val,
+            threshold: min,
+            full_stats: gameStats,
+            match_id: matchId,
+          },
         })
         return
       }
@@ -203,7 +217,10 @@ async function computePlayerInsights(matchId: string, seasonId: string): Promise
   // Confine the "last 3 games" window to completed matches in THIS season.
   // Without this the trend compared games from other seasons against the
   // current season's average.
-  const { data: seasonEvents } = await supabase.from('events').select('id').eq('season_id', seasonId)
+  const { data: seasonEvents } = await supabase
+    .from('events')
+    .select('id')
+    .eq('season_id', seasonId)
   const eventIds = (seasonEvents ?? []).map((e) => (e as { id: string }).id)
   let seasonMatchIds: string[] = []
   if (eventIds.length > 0) {
@@ -254,7 +271,8 @@ async function computePlayerInsights(matchId: string, seasonId: string): Promise
       if (seasonAvg === 0) continue
 
       const rolling3Avg =
-        last3.reduce((sum: number, g: { stats: unknown }) => sum + statBag(g.stats)[statKey], 0) / last3.length
+        last3.reduce((sum: number, g: { stats: unknown }) => sum + statBag(g.stats)[statKey], 0) /
+        last3.length
 
       const delta = (rolling3Avg - seasonAvg) / seasonAvg
 
@@ -275,12 +293,23 @@ async function computePlayerInsights(matchId: string, seasonId: string): Promise
           season_id: seasonId,
           insight_text,
           insight_type: direction,
-          data: { stat_key: statKey, season_avg: seasonAvg, rolling_avg: rolling3Avg, delta_pct: pct, match_id: matchId },
+          data: {
+            stat_key: statKey,
+            season_avg: seasonAvg,
+            rolling_avg: rolling3Avg,
+            delta_pct: pct,
+            match_id: matchId,
+          },
         })
 
         // The opposite trend can no longer be true.
-        await clearInsight('player', athlete_id, sport, seasonId,
-          direction === 'trending_up' ? 'trending_down' : 'trending_up')
+        await clearInsight(
+          'player',
+          athlete_id,
+          sport,
+          seasonId,
+          direction === 'trending_up' ? 'trending_down' : 'trending_up',
+        )
       } else {
         // The player is back within the threshold — drop any stale trend claim
         // rather than leaving it to expire on its own a week later.
@@ -300,13 +329,20 @@ async function computeTeamInsights(matchId: string, seasonId: string): Promise<v
 
   if (!match) return
 
-  const { data: event } = await supabase.from('events').select('sport').eq('id', match.event_id).single()
+  const { data: event } = await supabase
+    .from('events')
+    .select('sport')
+    .eq('id', match.event_id)
+    .single()
 
   if (!event) return
 
   const teamIds = [match.participant_a_id, match.participant_b_id].filter(Boolean) as string[]
 
-  const { data: seasonEvents } = await supabase.from('events').select('id').eq('season_id', seasonId)
+  const { data: seasonEvents } = await supabase
+    .from('events')
+    .select('id')
+    .eq('season_id', seasonId)
   const eventIds = (seasonEvents ?? []).map((e: { id: string }) => e.id)
   if (eventIds.length === 0) return
 
@@ -334,12 +370,19 @@ async function computeTeamInsights(matchId: string, seasonId: string): Promise<v
       .order('created_at', { ascending: false })
       .limit(16)
 
-    const inSeason = (recentMatches ?? []).filter((r: { bracket_id: string | null }) => Boolean(r.bracket_id))
-    const bracketIds = [...new Set(inSeason.map((r) => r.bracket_id).filter((id): id is string => Boolean(id)))]
+    const inSeason = (recentMatches ?? []).filter((r: { bracket_id: string | null }) =>
+      Boolean(r.bracket_id),
+    )
+    const bracketIds = [
+      ...new Set(inSeason.map((r) => r.bracket_id).filter((id): id is string => Boolean(id))),
+    ]
 
     if (bracketIds.length < 1) continue
 
-    const { data: brackets } = await supabase.from('brackets').select('id, winner_id').in('id', bracketIds)
+    const { data: brackets } = await supabase
+      .from('brackets')
+      .select('id, winner_id')
+      .in('id', bracketIds)
 
     const winnerByBracket = new Map(
       (brackets ?? []).map((b: { id: string; winner_id: string | null }) => [b.id, b.winner_id]),
@@ -365,10 +408,15 @@ async function computeTeamInsights(matchId: string, seasonId: string): Promise<v
     } else if (streak === 1 && tss.wins === 1) {
       // Opponent is already on hand from the match row fetched at the top of this
       // function — no extra lookup needed for the other team's name.
-      const opponentId = match.participant_a_id === teamId ? match.participant_b_id : match.participant_a_id
+      const opponentId =
+        match.participant_a_id === teamId ? match.participant_b_id : match.participant_a_id
       let opponentName = 'their opponent'
       if (opponentId) {
-        const { data: opp } = await supabase.from('teams').select('name').eq('id', opponentId).maybeSingle()
+        const { data: opp } = await supabase
+          .from('teams')
+          .select('name')
+          .eq('id', opponentId)
+          .maybeSingle()
         if (opp?.name) opponentName = opp.name
       }
       await upsertInsight({
@@ -391,5 +439,8 @@ async function computeTeamInsights(matchId: string, seasonId: string): Promise<v
 
 /** Run after a match ends / finalize — writes `insights` rows using service-role DB client. */
 export async function computeInsightsForMatch(matchId: string, seasonId: string): Promise<void> {
-  await Promise.all([computePlayerInsights(matchId, seasonId), computeTeamInsights(matchId, seasonId)])
+  await Promise.all([
+    computePlayerInsights(matchId, seasonId),
+    computeTeamInsights(matchId, seasonId),
+  ])
 }

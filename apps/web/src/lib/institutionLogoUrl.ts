@@ -1,4 +1,5 @@
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/+$/, '') ?? ''
+const supabaseUrl =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/+$/, '') ?? ''
 
 /** Make logo URLs load when DB stores a path or protocol-relative URL. */
 export function resolveInstitutionLogoUrl(raw: string | null | undefined): string | null {

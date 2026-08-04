@@ -35,7 +35,15 @@ export default function MatchReview() {
   const [finalized, setFinalized] = useState(false)
   const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false)
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false)
-  const [pendingDiff, setPendingDiff] = useState<{ athleteId: string; playerName: string; statLabel: string; oldValue: number; newValue: number }[]>([])
+  const [pendingDiff, setPendingDiff] = useState<
+    {
+      athleteId: string
+      playerName: string
+      statLabel: string
+      oldValue: number
+      newValue: number
+    }[]
+  >([])
   // Justification stored alongside the before/after diff in audit_logs.
   const [editReason, setEditReason] = useState('')
 
@@ -53,12 +61,16 @@ export default function MatchReview() {
       setLiveStats(data.liveStats ?? {})
       setNameA(data.participantNames?.a ?? 'Home')
       setNameB(data.participantNames?.b ?? 'Away')
-      const mergedSport = (data.match as { event?: { sport?: string } } | null)?.event?.sport ?? 'basketball'
+      const mergedSport =
+        (data.match as { event?: { sport?: string } } | null)?.event?.sport ?? 'basketball'
       const defs = STAT_KEYS[mergedSport] ?? STAT_KEYS.basketball
       const zeros = Object.fromEntries(defs.map((d) => [d.key, 0])) as Record<string, number>
       const initial: Record<string, Record<string, number>> = {}
       for (const ps of data.playerStats ?? []) {
-        initial[ps.athlete_id] = { ...zeros, ...((ps.stats as Record<string, number> | undefined) ?? {}) }
+        initial[ps.athlete_id] = {
+          ...zeros,
+          ...((ps.stats as Record<string, number> | undefined) ?? {}),
+        }
       }
       setEditedStats(initial)
       setBaselineStats(initial)
@@ -69,13 +81,15 @@ export default function MatchReview() {
     }
   }, [matchId])
 
-  useEffect(() => { loadReview() }, [loadReview])
+  useEffect(() => {
+    loadReview()
+  }, [loadReview])
 
   const sport: string = match?.event?.sport ?? 'basketball'
   const statDefs = STAT_KEYS[sport] ?? STAT_KEYS.basketball
 
   const handleStatChange = (athleteId: string, key: string, value: number) => {
-    setEditedStats(prev => ({
+    setEditedStats((prev) => ({
       ...prev,
       [athleteId]: { ...(prev[athleteId] ?? {}), [key]: Math.max(0, value) },
     }))
@@ -92,7 +106,13 @@ export default function MatchReview() {
         const oldVal = baseline[def.key] ?? 0
         const newVal = edited[def.key] ?? 0
         if (oldVal !== newVal) {
-          changes.push({ athleteId: ps.athlete_id, playerName, statLabel: def.label, oldValue: oldVal, newValue: newVal })
+          changes.push({
+            athleteId: ps.athlete_id,
+            playerName,
+            statLabel: def.label,
+            oldValue: oldVal,
+            newValue: newVal,
+          })
         }
       }
     }
@@ -160,8 +180,8 @@ export default function MatchReview() {
    *  sets/games won, not by points — reading the basketball columns made both
    *  tie at 0-0 and always return participant A. */
   function derivedWinnerId(): string | null {
-    const scoreA = scores.find(s => s.participant_id === match?.participant_a_id)
-    const scoreB = scores.find(s => s.participant_id === match?.participant_b_id)
+    const scoreA = scores.find((s) => s.participant_id === match?.participant_a_id)
+    const scoreB = scores.find((s) => s.participant_id === match?.participant_b_id)
     if (!scoreA || !scoreB) return null
 
     let a: number
@@ -182,8 +202,16 @@ export default function MatchReview() {
     return null // a genuine tie — refuse to guess
   }
 
-  if (loading) return <div className="space-y-4 max-w-4xl mx-auto">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
-  if (!match) return <div className="text-center py-12 text-[var(--text-muted)]">Match not found</div>
+  if (loading)
+    return (
+      <div className="space-y-4 max-w-4xl mx-auto">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-16" />
+        ))}
+      </div>
+    )
+  if (!match)
+    return <div className="text-center py-12 text-[var(--text-muted)]">Match not found</div>
 
   if (finalized) {
     return (
@@ -191,14 +219,22 @@ export default function MatchReview() {
         <CheckCircle className="w-16 h-16 mx-auto text-[var(--success)]" />
         <h1 className="text-2xl font-bold">Match Finalized</h1>
         <p className="text-[var(--text-muted)]">
-          Season totals, standings and insights now reflect these numbers. Any later correction recalculates them automatically and is recorded in the audit log.
+          Season totals, standings and insights now reflect these numbers. Any later correction
+          recalculates them automatically and is recorded in the audit log.
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
-          <Button icon={<FileText className="w-4 h-4" />} onClick={() => navigate(`/organizer/match-review/${matchId}/score-sheet`)}>
+          <Button
+            icon={<FileText className="w-4 h-4" />}
+            onClick={() => navigate(`/organizer/match-review/${matchId}/score-sheet`)}
+          >
             View Score Sheet
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/organizer/events')}>Back to Events</Button>
-          <Button variant="secondary" onClick={() => navigate('/organizer/analytics')}>View Analytics</Button>
+          <Button variant="secondary" onClick={() => navigate('/organizer/events')}>
+            Back to Events
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/organizer/analytics')}>
+            View Analytics
+          </Button>
         </div>
         <button
           type="button"
@@ -211,53 +247,79 @@ export default function MatchReview() {
     )
   }
 
-  const scoreA = scores.find(s => s.participant_id === match.participant_a_id)
-  const scoreB = scores.find(s => s.participant_id === match.participant_b_id)
+  const scoreA = scores.find((s) => s.participant_id === match.participant_a_id)
+  const scoreB = scores.find((s) => s.participant_id === match.participant_b_id)
 
-  const bbTotal = (s: any) => (s?.q1 ?? 0) + (s?.q2 ?? 0) + (s?.q3 ?? 0) + (s?.q4 ?? 0) + (s?.ot ?? 0) + (s?.ot2 ?? 0) + (s?.ot3 ?? 0)
+  const bbTotal = (s: any) =>
+    (s?.q1 ?? 0) +
+    (s?.q2 ?? 0) +
+    (s?.q3 ?? 0) +
+    (s?.q4 ?? 0) +
+    (s?.ot ?? 0) +
+    (s?.ot2 ?? 0) +
+    (s?.ot3 ?? 0)
   const vbSetsWon = (s: any) => s?.sets_won ?? 0
   const ttGamesWon = (s: any) => s?.games_won ?? 0
 
-  const finalScoreLabel = sport === 'basketball'
-    ? `${bbTotal(scoreA)} – ${bbTotal(scoreB)}`
-    : sport === 'volleyball'
-      ? `Sets: ${vbSetsWon(scoreA)} – ${vbSetsWon(scoreB)}`
-      : `Games: ${ttGamesWon(scoreA)} – ${ttGamesWon(scoreB)}`
+  const finalScoreLabel =
+    sport === 'basketball'
+      ? `${bbTotal(scoreA)} – ${bbTotal(scoreB)}`
+      : sport === 'volleyball'
+        ? `Sets: ${vbSetsWon(scoreA)} – ${vbSetsWon(scoreB)}`
+        : `Games: ${ttGamesWon(scoreA)} – ${ttGamesWon(scoreB)}`
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(-1)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="min-w-0">
           <h1 className="text-xl font-bold">Post-Game Review</h1>
-          <p className="text-[var(--text-muted)] text-xs">{nameA} vs {nameB}</p>
+          <p className="text-[var(--text-muted)] text-xs">
+            {nameA} vs {nameB}
+          </p>
         </div>
         <div className="flex-1" />
         <Badge variant="success">Completed</Badge>
       </div>
 
-      {error && <Alert type="danger" onDismiss={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert type="danger" onDismiss={() => setError('')}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <h3 className="font-semibold mb-1">Final Score</h3>
-        <p className="text-3xl font-black text-center py-4">{nameA} {finalScoreLabel} {nameB}</p>
+        <p className="text-3xl font-black text-center py-4">
+          {nameA} {finalScoreLabel} {nameB}
+        </p>
         <p className="text-center text-xs text-[var(--text-muted)]">{formatEnumLabel(sport)}</p>
       </Card>
 
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Player Stats</h3>
-          <Button size="sm" variant="secondary" icon={<Save className="w-3 h-3" />} loading={saving} onClick={openSaveConfirm}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Save className="w-3 h-3" />}
+            loading={saving}
+            onClick={openSaveConfirm}
+          >
             Save changes
           </Button>
         </div>
 
         {playerStats.length === 0 ? (
           <p className="text-center py-8 text-[var(--text-muted)]">
-            No roster athletes are linked to these match participants. Confirm team rosters and that players are on the official roster for this
-            event.
+            No roster athletes are linked to these match participants. Confirm team rosters and that
+            players are on the official roster for this event.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -270,49 +332,64 @@ export default function MatchReview() {
                   <th className="text-left py-2 pr-3 min-w-[8rem] sticky left-36 z-[2] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
                     Player
                   </th>
-                  {statDefs.map(s => (
-                    <th key={s.key} className="text-center py-2 px-2 min-w-[3.5rem]">{s.label}</th>
+                  {statDefs.map((s) => (
+                    <th key={s.key} className="text-center py-2 px-2 min-w-[3.5rem]">
+                      {s.label}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {playerStats.map(ps => {
+                {playerStats.map((ps) => {
                   const teamLabel =
-                    ps.team_name?.trim()
-                    ?? (ps.participant_side === 'a' ? nameA : ps.participant_side === 'b' ? nameB : 'Team')
+                    ps.team_name?.trim() ??
+                    (ps.participant_side === 'a'
+                      ? nameA
+                      : ps.participant_side === 'b'
+                        ? nameB
+                        : 'Team')
                   return (
-                  <tr key={ps.athlete_id} className="border-t border-[var(--border-subtle)]">
-                    <td className="py-2 pr-3 w-36 min-w-36 max-w-36 shrink-0 align-top text-[var(--text-secondary)] sticky left-0 z-[1] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
-                      <span className="line-clamp-2 break-words text-xs sm:text-sm" title={teamLabel}>
-                        {teamLabel}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 font-medium min-w-[8rem] sticky left-36 z-[1] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
-                      {ps.athlete?.profile?.full_name ?? `Athlete ${ps.athlete_id.slice(0, 6)}`}
-                    </td>
-                    {statDefs.map(s => {
-                      const editedVal = editedStats[ps.athlete_id]?.[s.key] ?? 0
-                      const liveVal = liveStats[ps.athlete_id]?.[s.key] ?? 0
-                      const diverged = liveVal !== editedVal
-                      return (
-                        <td key={s.key} className="py-2 px-1 text-center">
-                          <input
-                            type="number"
-                            min={0}
-                            title={`${ps.athlete?.profile?.full_name ?? 'Athlete'} — ${s.label}`}
-                            value={editedVal}
-                            onChange={e => handleStatChange(ps.athlete_id, s.key, parseInt(e.target.value) || 0)}
-                            className={`w-14 text-center bg-[var(--surface-elevated)] border rounded px-1 py-1 text-sm text-[var(--text-primary)] ${diverged ? 'border-amber-500/60' : 'border-[var(--border-subtle)]'}`}
-                          />
-                          {diverged && (
-                            <div className="text-[10px] text-amber-400/70 mt-0.5 leading-none">
-                              live: {liveVal}
-                            </div>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
+                    <tr key={ps.athlete_id} className="border-t border-[var(--border-subtle)]">
+                      <td className="py-2 pr-3 w-36 min-w-36 max-w-36 shrink-0 align-top text-[var(--text-secondary)] sticky left-0 z-[1] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
+                        <span
+                          className="line-clamp-2 break-words text-xs sm:text-sm"
+                          title={teamLabel}
+                        >
+                          {teamLabel}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 font-medium min-w-[8rem] sticky left-36 z-[1] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
+                        {ps.athlete?.profile?.full_name ?? `Athlete ${ps.athlete_id.slice(0, 6)}`}
+                      </td>
+                      {statDefs.map((s) => {
+                        const editedVal = editedStats[ps.athlete_id]?.[s.key] ?? 0
+                        const liveVal = liveStats[ps.athlete_id]?.[s.key] ?? 0
+                        const diverged = liveVal !== editedVal
+                        return (
+                          <td key={s.key} className="py-2 px-1 text-center">
+                            <input
+                              type="number"
+                              min={0}
+                              title={`${ps.athlete?.profile?.full_name ?? 'Athlete'} — ${s.label}`}
+                              value={editedVal}
+                              onChange={(e) =>
+                                handleStatChange(
+                                  ps.athlete_id,
+                                  s.key,
+                                  parseInt(e.target.value) || 0,
+                                )
+                              }
+                              className={`w-14 text-center bg-[var(--surface-elevated)] border rounded px-1 py-1 text-sm text-[var(--text-primary)] ${diverged ? 'border-amber-500/60' : 'border-[var(--border-subtle)]'}`}
+                            />
+                            {diverged && (
+                              <div className="text-[10px] text-amber-400/70 mt-0.5 leading-none">
+                                live: {liveVal}
+                              </div>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
                   )
                 })}
               </tbody>
@@ -324,16 +401,29 @@ export default function MatchReview() {
       <Card className="flex items-center justify-between">
         <div>
           <p className="font-semibold">Ready to finalize?</p>
-          <p className="text-xs text-[var(--text-muted)]">This will update season leaderboards, team standings, and generate insights.</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            This will update season leaderboards, team standings, and generate insights.
+          </p>
         </div>
-        <Button loading={finalizing} onClick={() => setFinalizeConfirmOpen(true)} icon={<CheckCircle className="w-4 h-4" />}>
+        <Button
+          loading={finalizing}
+          onClick={() => setFinalizeConfirmOpen(true)}
+          icon={<CheckCircle className="w-4 h-4" />}
+        >
           Finalize Match
         </Button>
       </Card>
 
-      <Modal open={saveConfirmOpen} onClose={() => !saving && setSaveConfirmOpen(false)} title="Confirm stat changes" size="md">
+      <Modal
+        open={saveConfirmOpen}
+        onClose={() => !saving && setSaveConfirmOpen(false)}
+        title="Confirm stat changes"
+        size="md"
+      >
         <div className="space-y-4">
-          <p className="text-sm text-[var(--text-secondary)]">The following stats will be updated:</p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            The following stats will be updated:
+          </p>
           <div className="max-h-64 overflow-y-auto border border-[var(--border-subtle)] rounded-lg">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-[var(--surface-card)]">
@@ -349,8 +439,12 @@ export default function MatchReview() {
                   <tr key={i} className="border-t border-[var(--border-subtle)]">
                     <td className="py-1.5 px-3 font-medium">{c.playerName}</td>
                     <td className="py-1.5 px-2 text-[var(--text-secondary)]">{c.statLabel}</td>
-                    <td className="py-1.5 px-2 text-center text-[var(--text-muted)]">{c.oldValue}</td>
-                    <td className="py-1.5 px-2 text-center font-bold text-[var(--text-primary)]">{c.newValue}</td>
+                    <td className="py-1.5 px-2 text-center text-[var(--text-muted)]">
+                      {c.oldValue}
+                    </td>
+                    <td className="py-1.5 px-2 text-center font-bold text-[var(--text-primary)]">
+                      {c.newValue}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -364,27 +458,49 @@ export default function MatchReview() {
             required
           />
           <p className="text-xs text-[var(--text-muted)]">
-            This reason and the exact before/after values are recorded in the audit log. Season totals
-            are recalculated as soon as you save.
+            This reason and the exact before/after values are recorded in the audit log. Season
+            totals are recalculated as soon as you save.
           </p>
           <div className="flex gap-3 justify-end flex-wrap">
-            <Button variant="secondary" disabled={saving} onClick={() => setSaveConfirmOpen(false)}>Cancel</Button>
-            <Button loading={saving} disabled={editReason.trim().length < 3} onClick={() => void handleConfirmedSave()} icon={<Save className="w-4 h-4" />}>Confirm Save</Button>
+            <Button variant="secondary" disabled={saving} onClick={() => setSaveConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              loading={saving}
+              disabled={editReason.trim().length < 3}
+              onClick={() => void handleConfirmedSave()}
+              icon={<Save className="w-4 h-4" />}
+            >
+              Confirm Save
+            </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={finalizeConfirmOpen} onClose={() => !finalizing && setFinalizeConfirmOpen(false)} title="Finalize match" size="md">
+      <Modal
+        open={finalizeConfirmOpen}
+        onClose={() => !finalizing && setFinalizeConfirmOpen(false)}
+        title="Finalize match"
+        size="md"
+      >
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            Finalizing publishes these stats to season leaderboards, standings, and insights. Double-check scores above — fixing mistakes
-            afterward requires another review pass.
+            Finalizing publishes these stats to season leaderboards, standings, and insights.
+            Double-check scores above — fixing mistakes afterward requires another review pass.
           </p>
           <div className="flex gap-3 justify-end flex-wrap">
-            <Button variant="secondary" disabled={finalizing} onClick={() => setFinalizeConfirmOpen(false)}>
+            <Button
+              variant="secondary"
+              disabled={finalizing}
+              onClick={() => setFinalizeConfirmOpen(false)}
+            >
               Cancel
             </Button>
-            <Button loading={finalizing} onClick={() => void handleFinalize()} icon={<CheckCircle className="w-4 h-4" />}>
+            <Button
+              loading={finalizing}
+              onClick={() => void handleFinalize()}
+              icon={<CheckCircle className="w-4 h-4" />}
+            >
               Yes, finalize
             </Button>
           </div>

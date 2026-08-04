@@ -79,12 +79,12 @@ export const useAuthStore = create<AuthState>()(
             dbRole === 'Admin'
               ? 'Admin'
               : dbRole === 'Organizer'
-              ? 'Organizer'
-              : dbRole === 'Coach'
-              ? 'Coach'
-              : athlete
-              ? 'Athlete'
-              : 'Guest'
+                ? 'Organizer'
+                : dbRole === 'Coach'
+                  ? 'Coach'
+                  : athlete
+                    ? 'Athlete'
+                    : 'Guest'
 
           set({ profile: { ...profileRow, role: effectiveRole }, athlete, organizer })
         } catch (err) {
@@ -104,6 +104,6 @@ export const useAuthStore = create<AuthState>()(
         athlete: state.athlete,
         organizer: state.organizer,
       }),
-    }
-  )
+    },
+  ),
 )

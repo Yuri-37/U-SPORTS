@@ -69,14 +69,22 @@ const importRowSchema = z.object({
 function normalizeImportRow(row: Record<string, unknown>) {
   const lowered = new Map<string, unknown>()
   for (const [key, value] of Object.entries(row)) {
-    lowered.set(key.trim().toLowerCase().replace(/[\s-]+/g, '_'), value)
+    lowered.set(
+      key
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, '_'),
+      value,
+    )
   }
   return {
     full_name: lowered.get('full_name') ?? lowered.get('name'),
     student_id: lowered.get('student_id') ?? lowered.get('school_id') ?? lowered.get('id_number'),
     year_level: lowered.get('year_level') ?? lowered.get('year'),
     course: lowered.get('course'),
-    department: String(lowered.get('department') ?? '').trim().toUpperCase(),
+    department: String(lowered.get('department') ?? '')
+      .trim()
+      .toUpperCase(),
     sport: lowered.get('sport'),
     email: lowered.get('email'),
     password: lowered.get('password'),
@@ -84,7 +92,10 @@ function normalizeImportRow(row: Record<string, unknown>) {
 }
 
 function generatedEmail(studentId: string) {
-  return `${studentId.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-')}@ursports.local`
+  return `${studentId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')}@ursports.local`
 }
 
 function generatedPassword(studentId: string) {
@@ -129,7 +140,10 @@ router.post(
 
       for (const [idx, raw] of rawRows.entries()) {
         const normalized = normalizeImportRow(raw)
-        const parsed = importRowSchema.safeParse({ ...normalized, sport: normalized.sport || body.sport })
+        const parsed = importRowSchema.safeParse({
+          ...normalized,
+          sport: normalized.sport || body.sport,
+        })
         if (!parsed.success) {
           errors.push({ row: idx + 1, error: parsed.error.issues[0]?.message ?? 'Invalid row' })
           continue
@@ -137,7 +151,10 @@ router.post(
 
         const row = parsed.data
         if (!row.sport) {
-          errors.push({ row: idx + 1, error: 'Sport is required either in the file row or request body.' })
+          errors.push({
+            row: idx + 1,
+            error: 'Sport is required either in the file row or request body.',
+          })
           continue
         }
         const email = (row.email ?? generatedEmail(row.student_id)).toLowerCase()
@@ -195,7 +212,10 @@ router.post(
           .select('id')
           .single()
         if (athleteError || !athlete) {
-          errors.push({ row: idx + 1, error: athleteError?.message ?? 'Could not create athlete row' })
+          errors.push({
+            row: idx + 1,
+            error: athleteError?.message ?? 'Could not create athlete row',
+          })
           continue
         }
 
@@ -271,7 +291,10 @@ router.post(
 
       for (const [idx, raw] of rawRows.entries()) {
         const normalized = normalizeImportRow(raw)
-        const parsed = importRowSchema.safeParse({ ...normalized, sport: normalized.sport || body.sport })
+        const parsed = importRowSchema.safeParse({
+          ...normalized,
+          sport: normalized.sport || body.sport,
+        })
         if (!parsed.success) {
           preview.push({
             row: idx + 1,
@@ -298,12 +321,22 @@ router.post(
         }
 
         if (!row.sport) {
-          preview.push({ row: idx + 1, valid: false, error: 'Sport is required either in the file row or request body.', ...common })
+          preview.push({
+            row: idx + 1,
+            valid: false,
+            error: 'Sport is required either in the file row or request body.',
+            ...common,
+          })
           continue
         }
 
         if (seenStudentIds.has(row.student_id)) {
-          preview.push({ row: idx + 1, valid: false, error: `Student ID ${row.student_id} is duplicated within this file.`, ...common })
+          preview.push({
+            row: idx + 1,
+            valid: false,
+            error: `Student ID ${row.student_id} is duplicated within this file.`,
+            ...common,
+          })
           continue
         }
         seenStudentIds.add(row.student_id)
@@ -317,7 +350,13 @@ router.post(
           .eq('student_id', row.student_id)
           .maybeSingle()
         if (existingAthlete) {
-          preview.push({ row: idx + 1, valid: false, error: `Student ID ${row.student_id} already exists.`, ...common, email })
+          preview.push({
+            row: idx + 1,
+            valid: false,
+            error: `Student ID ${row.student_id} already exists.`,
+            ...common,
+            email,
+          })
           continue
         }
 
@@ -392,13 +431,12 @@ router.get(
 
       const buffer = await wb.xlsx.writeBuffer()
       res.setHeader('Content-Type', XLSX_MIME)
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename="athletes-import-template.xlsx"',
-      )
+      res.setHeader('Content-Disposition', 'attachment; filename="athletes-import-template.xlsx"')
       res.send(Buffer.from(buffer))
     } catch (err: unknown) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Could not build template' })
+      res
+        .status(500)
+        .json({ error: err instanceof Error ? err.message : 'Could not build template' })
     }
   },
 )

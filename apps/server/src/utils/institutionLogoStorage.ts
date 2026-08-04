@@ -24,10 +24,12 @@ export async function uploadInstitutionLogoBuffer(params: {
   const ext = institutionLogoExtension(params.mimetype)
   if (!ext) throw new Error('Invalid image type')
   const objectPath = `${params.folder}/logo-${crypto.randomUUID()}.${ext}`
-  const { error } = await supabase.storage.from('institution-assets').upload(objectPath, params.buffer, {
-    contentType: params.mimetype,
-    upsert: false,
-  })
+  const { error } = await supabase.storage
+    .from('institution-assets')
+    .upload(objectPath, params.buffer, {
+      contentType: params.mimetype,
+      upsert: false,
+    })
   if (error) throw new Error(error.message)
   const { data } = supabase.storage.from('institution-assets').getPublicUrl(objectPath)
   return { publicUrl: data.publicUrl }

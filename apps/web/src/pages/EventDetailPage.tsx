@@ -4,7 +4,14 @@ import { Tv2, ArrowLeft, ChevronRight } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, TabBar } from '../components/ui'
 import { supabase } from '../lib/supabase'
 import api from '../lib/api'
-import { cn, getSportLabel, getSportIcon, formatDateTime, formatEnumLabel, eventPublicLifecycleLabel } from '../lib/utils'
+import {
+  cn,
+  getSportLabel,
+  getSportIcon,
+  formatDateTime,
+  formatEnumLabel,
+  eventPublicLifecycleLabel,
+} from '../lib/utils'
 import BracketView from '../components/brackets/BracketView'
 import PublicMatchDetailModal from '../components/events/PublicMatchDetailModal'
 import EventPodiumStrip from '../components/events/EventPodiumStrip'
@@ -23,7 +30,11 @@ export type EventDetailPageProps = {
   outerClassName?: string
 }
 
-export default function EventDetailPage({ backPath, backAriaLabel, outerClassName }: EventDetailPageProps) {
+export default function EventDetailPage({
+  backPath,
+  backAriaLabel,
+  outerClassName,
+}: EventDetailPageProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -31,7 +42,9 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
   const [brackets, setBrackets] = useState<Bracket[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'bracket' | 'matches'>(() => tabFromSearch(searchParams.get('tab')))
+  const [tab, setTab] = useState<'bracket' | 'matches'>(() =>
+    tabFromSearch(searchParams.get('tab')),
+  )
   const [participantLabels, setParticipantLabels] = useState<Record<string, string>>({})
   const [matchDetailId, setMatchDetailId] = useState<string | null>(null)
 
@@ -58,10 +71,10 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'brackets', filter: `event_id=eq.${id}` },
-        () => api.get(`/brackets/${id}`).then((r) => setBrackets(r.data))
+        () => api.get(`/brackets/${id}`).then((r) => setBrackets(r.data)),
       )
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'match_scores' }, () =>
-        api.get(`/events/${id}/matches`).then((r) => setMatches(r.data))
+        api.get(`/events/${id}/matches`).then((r) => setMatches(r.data)),
       )
       .subscribe()
     return () => {
@@ -71,7 +84,9 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
 
   useEffect(() => {
     const bracketIds = collectBracketParticipantIds(brackets)
-    const matchIds = matches.flatMap((m) => [m.participant_a_id, m.participant_b_id].filter((x): x is string => !!x))
+    const matchIds = matches.flatMap((m) =>
+      [m.participant_a_id, m.participant_b_id].filter((x): x is string => !!x),
+    )
     const ids = [...new Set([...bracketIds, ...matchIds])]
     if (ids.length === 0) {
       setParticipantLabels({})
@@ -98,7 +113,7 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
         else n.set('tab', idTab)
         return n
       },
-      { replace: true }
+      { replace: true },
     )
   }
 
@@ -110,7 +125,8 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
         ))}
       </div>
     )
-  if (!event) return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
+  if (!event)
+    return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
 
   return (
     <div className={cn('max-w-4xl mx-auto space-y-6', outerClassName)}>
@@ -132,7 +148,9 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
             {getSportLabel(event.sport as any)} · {formatEnumLabel(event.format ?? '')}
           </p>
           {event.description ? (
-            <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">{event.description}</p>
+            <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">
+              {event.description}
+            </p>
           ) : null}
         </div>
         <Badge
@@ -160,7 +178,11 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
       />
 
       {event.status === 'completed' && podium && podium.length > 0 ? (
-        <EventPodiumStrip placements={podium} labelByParticipantId={participantLabels} title="Final standings" />
+        <EventPodiumStrip
+          placements={podium}
+          labelByParticipantId={participantLabels}
+          title="Final standings"
+        />
       ) : null}
 
       {tab === 'bracket' && (
@@ -176,13 +198,16 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
         <div className="space-y-3">
           {matches.map((m) => {
             const labelA = m.participant_a_id
-              ? participantLabels[m.participant_a_id] ?? `Team ${m.participant_a_id.slice(0, 6)}`
+              ? (participantLabels[m.participant_a_id] ?? `Team ${m.participant_a_id.slice(0, 6)}`)
               : 'TBD'
             const labelB = m.participant_b_id
-              ? participantLabels[m.participant_b_id] ?? `Team ${m.participant_b_id.slice(0, 6)}`
+              ? (participantLabels[m.participant_b_id] ?? `Team ${m.participant_b_id.slice(0, 6)}`)
               : 'TBD'
             return (
-              <Card key={m.id} className="flex flex-col sm:flex-row sm:items-stretch p-0 overflow-hidden">
+              <Card
+                key={m.id}
+                className="flex flex-col sm:flex-row sm:items-stretch p-0 overflow-hidden"
+              >
                 <button
                   type="button"
                   className="flex flex-1 min-w-0 items-center justify-between gap-3 flex-wrap text-left px-4 py-3 rounded-xl hover:bg-[var(--surface-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF] focus-visible:ring-inset"
@@ -190,7 +215,8 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-sm">
-                      {labelA} <span className="text-[var(--text-muted)] font-normal">vs</span> {labelB}
+                      {labelA} <span className="text-[var(--text-muted)] font-normal">vs</span>{' '}
+                      {labelB}
                     </p>
                     {m.scheduled_at && (
                       <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -199,14 +225,30 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
                       </p>
                     )}
                   </div>
-                  <ChevronRight className="w-5 h-5 text-[var(--text-muted)] shrink-0 hidden sm:block" aria-hidden />
+                  <ChevronRight
+                    className="w-5 h-5 text-[var(--text-muted)] shrink-0 hidden sm:block"
+                    aria-hidden
+                  />
                 </button>
                 <div className="flex items-center gap-2 shrink-0 px-4 py-3 sm:pl-0 border-t border-[var(--border-subtle)] sm:border-t-0">
-                  <Badge variant={m.status === 'live' ? 'danger' : m.status === 'completed' ? 'success' : 'default'} size="sm">
+                  <Badge
+                    variant={
+                      m.status === 'live'
+                        ? 'danger'
+                        : m.status === 'completed'
+                          ? 'success'
+                          : 'default'
+                    }
+                    size="sm"
+                  >
                     {m.status === 'live' ? '● LIVE' : formatEnumLabel(m.status)}
                   </Badge>
                   {m.status === 'live' && (
-                    <Button size="sm" icon={<Tv2 className="w-3.5 h-3.5" />} onClick={() => window.open(`/jumbotron/${m.id}`, '_blank')}>
+                    <Button
+                      size="sm"
+                      icon={<Tv2 className="w-3.5 h-3.5" />}
+                      onClick={() => window.open(`/jumbotron/${m.id}`, '_blank')}
+                    >
                       Watch
                     </Button>
                   )}
@@ -214,7 +256,9 @@ export default function EventDetailPage({ backPath, backAriaLabel, outerClassNam
               </Card>
             )
           })}
-          {matches.length === 0 && <p className="text-center text-[var(--text-muted)] py-8">No matches yet</p>}
+          {matches.length === 0 && (
+            <p className="text-center text-[var(--text-muted)] py-8">No matches yet</p>
+          )}
         </div>
       )}
 

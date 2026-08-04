@@ -26,7 +26,12 @@ export default function SettingsSignOutSection() {
       <p className="text-sm text-[var(--text-muted)] mb-4">
         End your session on this browser. You will need to sign in again to use your dashboard.
       </p>
-      <Button variant="danger" loading={loading} icon={<LogOut className="w-4 h-4" />} onClick={handleSignOut}>
+      <Button
+        variant="danger"
+        loading={loading}
+        icon={<LogOut className="w-4 h-4" />}
+        onClick={handleSignOut}
+      >
         Sign out
       </Button>
     </Card>

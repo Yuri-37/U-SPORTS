@@ -88,7 +88,7 @@ export default function OnlineOrganizers() {
           <div
             className={cn(
               'absolute bottom-0 right-0 w-2 h-2 rounded-full border-2 border-[var(--surface-card)]',
-              isIdle ? 'bg-amber-400' : 'bg-[var(--success)]'
+              isIdle ? 'bg-amber-400' : 'bg-[var(--success)]',
             )}
           />
           {/* Tooltip */}

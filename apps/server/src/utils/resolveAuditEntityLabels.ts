@@ -20,7 +20,9 @@ function collectUuids(value: unknown, out: Set<string>, depth = 0): void {
 }
 
 /** Every UUID referenced anywhere in an audit log row — its `entity_id` plus any id-shaped value in `details`. */
-export function collectAuditLogUuids(rows: Array<{ entity_id?: string | null; details?: unknown }>): string[] {
+export function collectAuditLogUuids(
+  rows: Array<{ entity_id?: string | null; details?: unknown }>,
+): string[] {
   const ids = new Set<string>()
   for (const row of rows) {
     if (row.entity_id) ids.add(row.entity_id)

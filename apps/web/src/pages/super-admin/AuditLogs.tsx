@@ -63,7 +63,8 @@ type StatChange = { from: number; to: number }
  * one batch, see GET /admin/audit) swaps those for names instead of UUIDs.
  */
 function AuditDetails({ details, labels }: { details: unknown; labels: Record<string, string> }) {
-  if (!details || typeof details !== 'object') return <span className="text-[var(--text-muted)]">—</span>
+  if (!details || typeof details !== 'object')
+    return <span className="text-[var(--text-muted)]">—</span>
   const d = details as Record<string, unknown>
   const changed = d.changed as Record<string, StatChange> | undefined
   const reason = typeof d.reason === 'string' ? d.reason : null
@@ -76,21 +77,25 @@ function AuditDetails({ details, labels }: { details: unknown; labels: Record<st
 
   return (
     <div className="flex flex-col gap-1 text-xs max-w-md">
-      {reason && (
-        <p className="italic text-[var(--text-secondary)]">“{reason}”</p>
-      )}
+      {reason && <p className="italic text-[var(--text-secondary)]">“{reason}”</p>}
       {changed && Object.keys(changed).length > 0 && (
         <div className="flex flex-wrap gap-1">
           {Object.entries(changed).map(([key, v]) => (
-            <span key={key} className="font-mono bg-[var(--surface-elevated)] px-1.5 py-0.5 rounded">
-              {key}: <span className="text-[var(--text-muted)]">{v.from}</span> → <span className="font-bold">{v.to}</span>
+            <span
+              key={key}
+              className="font-mono bg-[var(--surface-elevated)] px-1.5 py-0.5 rounded"
+            >
+              {key}: <span className="text-[var(--text-muted)]">{v.from}</span> →{' '}
+              <span className="font-bold">{v.to}</span>
             </span>
           ))}
         </div>
       )}
       {otherKeys.length > 0 && (
         <span className="text-[var(--text-secondary)]">
-          {otherKeys.map((k) => `${humanizeKey(k)}: ${formatDetailValue(d[k], labels)}`).join(' · ')}
+          {otherKeys
+            .map((k) => `${humanizeKey(k)}: ${formatDetailValue(d[k], labels)}`)
+            .join(' · ')}
         </span>
       )}
     </div>
@@ -107,8 +112,13 @@ export default function SuperAdminAuditLogs() {
 
   useEffect(() => {
     setLoading(true)
-    api.get(`/admin/audit?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`)
-      .then(r => { setLogs(r.data.data); setTotal(r.data.total); setLabels(r.data.labels ?? {}) })
+    api
+      .get(`/admin/audit?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`)
+      .then((r) => {
+        setLogs(r.data.data)
+        setTotal(r.data.total)
+        setLabels(r.data.labels ?? {})
+      })
       .finally(() => setLoading(false))
   }, [page])
 
@@ -128,7 +138,7 @@ export default function SuperAdminAuditLogs() {
           { key: 'details', label: 'Details' },
           { key: 'time', label: 'Time' },
         ]}
-        data={logs.map(log => ({
+        data={logs.map((log) => ({
           actor: (
             <div className="flex flex-col gap-0.5">
               <span className="font-medium">{log.actor?.full_name ?? 'System'}</span>
@@ -137,26 +147,53 @@ export default function SuperAdminAuditLogs() {
               ) : null}
             </div>
           ),
-          action: <code className="text-xs bg-[var(--surface-elevated)] px-2 py-0.5 rounded">{log.action}</code>,
+          action: (
+            <code className="text-xs bg-[var(--surface-elevated)] px-2 py-0.5 rounded">
+              {log.action}
+            </code>
+          ),
           entity: (
             <div className="flex flex-col gap-0.5 items-start">
               <Badge size="sm">{log.entity_type}</Badge>
-              <span className="text-xs text-[var(--text-secondary)]" title={log.entity_id ?? undefined}>
+              <span
+                className="text-xs text-[var(--text-secondary)]"
+                title={log.entity_id ?? undefined}
+              >
                 {formatEntityId(log.entity_id, labels)}
               </span>
             </div>
           ),
-          details: <AuditDetails details={(log as { details?: unknown }).details} labels={labels} />,
-          time: <span className="text-xs text-[var(--text-muted)]">{formatDateTime(log.created_at)}</span>,
+          details: (
+            <AuditDetails details={(log as { details?: unknown }).details} labels={labels} />
+          ),
+          time: (
+            <span className="text-xs text-[var(--text-muted)]">
+              {formatDateTime(log.created_at)}
+            </span>
+          ),
         }))}
         emptyMessage="No audit logs found"
       />
 
       {total > PAGE_SIZE && (
         <div className="flex justify-center gap-2">
-          <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-4 py-2 rounded text-sm disabled:opacity-50">← Prev</button>
-          <span className="px-4 py-2 text-sm text-[var(--text-muted)]">Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}</span>
-          <button disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => setPage(p => p + 1)} className="px-4 py-2 rounded text-sm disabled:opacity-50">Next →</button>
+          <button
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+            className="px-4 py-2 rounded text-sm disabled:opacity-50"
+          >
+            ← Prev
+          </button>
+          <span className="px-4 py-2 text-sm text-[var(--text-muted)]">
+            Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}
+          </span>
+          <button
+            disabled={(page + 1) * PAGE_SIZE >= total}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-4 py-2 rounded text-sm disabled:opacity-50"
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

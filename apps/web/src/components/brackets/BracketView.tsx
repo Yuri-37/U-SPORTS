@@ -19,7 +19,7 @@ function slotLabel(
   id: string | null | undefined,
   participantLabels: Record<string, string> | undefined,
   slot: 'a' | 'b',
-  isBye: boolean
+  isBye: boolean,
 ): string {
   if (slot === 'b' && isBye) return 'BYE'
   if (!id) return 'TBD'
@@ -57,12 +57,9 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
   const rounds = Array.from({ length: maxRound }, (_, i) => i + 1)
 
   const getBracketsForRound = (round: number) =>
-    visibleBrackets
-      .filter((b) => b.round === round)
-      .sort((a, b) => a.match_order - b.match_order)
+    visibleBrackets.filter((b) => b.round === round).sort((a, b) => a.match_order - b.match_order)
 
-  const getMatch = (bracketId: string) =>
-    matches.find(m => m.bracket_id === bracketId)
+  const getMatch = (bracketId: string) => matches.find((m) => m.bracket_id === bracketId)
 
   const handleExport = async () => {
     if (!bracketRef.current) return
@@ -74,32 +71,48 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
   }
 
   if (visibleBrackets.length === 0) {
-    return <div className="text-center text-[var(--text-muted)] py-12">No bracket generated yet</div>
+    return (
+      <div className="text-center text-[var(--text-muted)] py-12">No bracket generated yet</div>
+    )
   }
 
   return (
     <div className="relative">
       <div className="flex gap-2 mb-3 justify-end">
-        <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--surface-elevated)] hover:bg-[var(--border-subtle)] transition-colors">
-          <Download className="w-3.5 h-3.5" />Export PNG
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--surface-elevated)] hover:bg-[var(--border-subtle)] transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export PNG
         </button>
       </div>
-      <TransformWrapper
-        initialScale={1}
-        minScale={0.3}
-        maxScale={2}
-        centerOnInit
-      >
+      <TransformWrapper initialScale={1} minScale={0.3} maxScale={2} centerOnInit>
         {({ zoomIn, zoomOut, resetTransform }) => (
           <div className="rounded-xl overflow-hidden border border-[var(--border-subtle)] bg-[#111118]">
             <div className="flex gap-2 p-2 bg-[var(--surface-card)] border-b border-[var(--border-subtle)]">
-              <button onClick={() => zoomIn()} className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"><ZoomIn className="w-4 h-4" /></button>
-              <button onClick={() => zoomOut()} className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"><ZoomOut className="w-4 h-4" /></button>
-              <button onClick={() => resetTransform()} className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"><Maximize2 className="w-4 h-4" /></button>
+              <button
+                onClick={() => zoomIn()}
+                className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => zoomOut()}
+                className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => resetTransform()}
+                className="p-1.5 rounded hover:bg-[var(--surface-elevated)] transition-colors"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
             </div>
             <TransformComponent>
               <div ref={bracketRef} className="flex gap-0 p-6 min-w-max">
-                {rounds.map(round => {
+                {rounds.map((round) => {
                   const roundBrackets = getBracketsForRound(round)
                   return (
                     <div key={round} className="flex flex-col justify-around min-w-[180px]">
@@ -107,7 +120,7 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                         {roundColumnLabel(round, maxRound, roundBrackets)}
                       </div>
                       <div className="flex flex-col justify-around flex-1 gap-4">
-                        {roundBrackets.map(bracket => {
+                        {roundBrackets.map((bracket) => {
                           const match = getMatch(bracket.id)
                           const isLive = match?.status === 'live'
                           const isDone = match?.status === 'completed' || bracket.is_bye
@@ -119,7 +132,9 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                                 tabIndex={clickable ? 0 : undefined}
                                 className={cn(
                                   'border rounded-xl overflow-hidden transition-all text-left',
-                                  isLive ? 'border-[#FF3355] shadow-[0_0_12px_rgba(255,51,85,0.3)]' : 'border-[var(--border-subtle)]',
+                                  isLive
+                                    ? 'border-[#FF3355] shadow-[0_0_12px_rgba(255,51,85,0.3)]'
+                                    : 'border-[var(--border-subtle)]',
                                   isDone ? 'opacity-80' : '',
                                   clickable
                                     ? 'cursor-pointer hover:border-[#0066FF]/50 hover:shadow-[0_0_8px_rgba(0,102,255,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]'
@@ -141,24 +156,46 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                                   </div>
                                 )}
                                 {/* Participant A */}
-                                <div className={cn(
-                                  'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)] border-b border-[var(--border-subtle)]',
-                                  isWinnerSlot(bracket.participant_a_id, bracket.winner_id) && 'bg-[var(--success)]/10'
-                                )}>
-                                  <span className="text-xs font-medium truncate flex-1" title={bracket.participant_a_id ?? undefined}>
-                                    {slotLabel(bracket.participant_a_id, participantLabels, 'a', bracket.is_bye)}
+                                <div
+                                  className={cn(
+                                    'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)] border-b border-[var(--border-subtle)]',
+                                    isWinnerSlot(bracket.participant_a_id, bracket.winner_id) &&
+                                      'bg-[var(--success)]/10',
+                                  )}
+                                >
+                                  <span
+                                    className="text-xs font-medium truncate flex-1"
+                                    title={bracket.participant_a_id ?? undefined}
+                                  >
+                                    {slotLabel(
+                                      bracket.participant_a_id,
+                                      participantLabels,
+                                      'a',
+                                      bracket.is_bye,
+                                    )}
                                   </span>
                                   {isWinnerSlot(bracket.participant_a_id, bracket.winner_id) && (
                                     <span className="text-[var(--success)] text-xs ml-1">✓</span>
                                   )}
                                 </div>
                                 {/* Participant B */}
-                                <div className={cn(
-                                  'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)]',
-                                  isWinnerSlot(bracket.participant_b_id, bracket.winner_id) && 'bg-[var(--success)]/10'
-                                )}>
-                                  <span className="text-xs font-medium truncate flex-1" title={bracket.participant_b_id ?? undefined}>
-                                    {slotLabel(bracket.participant_b_id, participantLabels, 'b', bracket.is_bye)}
+                                <div
+                                  className={cn(
+                                    'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)]',
+                                    isWinnerSlot(bracket.participant_b_id, bracket.winner_id) &&
+                                      'bg-[var(--success)]/10',
+                                  )}
+                                >
+                                  <span
+                                    className="text-xs font-medium truncate flex-1"
+                                    title={bracket.participant_b_id ?? undefined}
+                                  >
+                                    {slotLabel(
+                                      bracket.participant_b_id,
+                                      participantLabels,
+                                      'b',
+                                      bracket.is_bye,
+                                    )}
                                   </span>
                                   {isWinnerSlot(bracket.participant_b_id, bracket.winner_id) && (
                                     <span className="text-[var(--success)] text-xs ml-1">✓</span>

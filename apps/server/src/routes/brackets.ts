@@ -33,27 +33,43 @@ router.patch(
       .single()
     if (mErr || !match) return res.status(404).json({ error: 'Match not found' })
 
-    const { data: evBr } = await supabase.from('events').select('sport').eq('id', match.event_id).maybeSingle()
+    const { data: evBr } = await supabase
+      .from('events')
+      .select('sport')
+      .eq('id', match.event_id)
+      .maybeSingle()
     if (!evBr) return res.status(404).json({ error: 'Event not found' })
     if (await respondIfSportForbidden(req, res, evBr.sport as string)) return
 
     if (match.status === 'live' || match.status === 'completed') {
-      return res.status(400).json({ error: 'Cannot change participants once the match has started or finished' })
+      return res
+        .status(400)
+        .json({ error: 'Cannot change participants once the match has started or finished' })
     }
 
-    const { data: br } = await supabase.from('brackets').select('bracket_type').eq('id', match.bracket_id).single()
+    const { data: br } = await supabase
+      .from('brackets')
+      .select('bracket_type')
+      .eq('id', match.bracket_id)
+      .single()
 
     const t = br?.bracket_type ?? ''
     if (!['crossover_semi', 'knockout_final'].includes(t)) {
       return res.status(400).json({
-        error: 'Participants can only be edited for crossover semifinals and the knockout final before play',
+        error:
+          'Participants can only be edited for crossover semifinals and the knockout final before play',
       })
     }
 
-    const nextA = body.participant_a_id !== undefined ? body.participant_a_id : match.participant_a_id
-    const nextB = body.participant_b_id !== undefined ? body.participant_b_id : match.participant_b_id
+    const nextA =
+      body.participant_a_id !== undefined ? body.participant_a_id : match.participant_a_id
+    const nextB =
+      body.participant_b_id !== undefined ? body.participant_b_id : match.participant_b_id
 
-    const { data: ep } = await supabase.from('event_participants').select('participant_id').eq('event_id', match.event_id)
+    const { data: ep } = await supabase
+      .from('event_participants')
+      .select('participant_id')
+      .eq('event_id', match.event_id)
     const allowed = new Set((ep ?? []).map((r) => r.participant_id))
     if (nextA != null && !allowed.has(nextA)) {
       return res.status(400).json({ error: 'participant_a_id must be a team in this event' })
@@ -92,40 +108,54 @@ router.patch(
     })
 
     res.json({ success: true })
-  }
+  },
 )
 
 // Generate bracket for an event
-router.post('/:eventId/generate', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
-  const schema = z.object({
-    participantIds: z.array(z.string().uuid()),
-    seeds: z.record(z.string(), z.number()).optional(),
-  })
-
-  try {
-    const { participantIds, seeds } = schema.parse(req.body)
-
-    const { data: event } = await supabase.from('events').select('format, sport').eq('id', req.params.eventId).single()
-    if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
-
-    const result = await generateBracket(req.params.eventId as string, participantIds, event.format as any, seeds)
-    await writeAuditLog({
-      actorId: req.user!.id,
-      action: 'bracket_generated',
-      entityType: 'event',
-      entityId: req.params.eventId,
-      details: {
-        participant_count: participantIds.length,
-        format: event.format,
-      },
+router.post(
+  '/:eventId/generate',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const schema = z.object({
+      participantIds: z.array(z.string().uuid()),
+      seeds: z.record(z.string(), z.number()).optional(),
     })
-    res.json(result)
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Bracket generation failed'
-    res.status(400).json({ error: message })
-  }
-})
+
+    try {
+      const { participantIds, seeds } = schema.parse(req.body)
+
+      const { data: event } = await supabase
+        .from('events')
+        .select('format, sport')
+        .eq('id', req.params.eventId)
+        .single()
+      if (!event) return res.status(404).json({ error: 'Event not found' })
+      if (await respondIfSportForbidden(req, res, event.sport as string)) return
+
+      const result = await generateBracket(
+        req.params.eventId as string,
+        participantIds,
+        event.format as any,
+        seeds,
+      )
+      await writeAuditLog({
+        actorId: req.user!.id,
+        action: 'bracket_generated',
+        entityType: 'event',
+        entityId: req.params.eventId,
+        details: {
+          participant_count: participantIds.length,
+          format: event.format,
+        },
+      })
+      res.json(result)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Bracket generation failed'
+      res.status(400).json({ error: message })
+    }
+  },
+)
 
 // Get brackets for an event
 router.get('/:eventId', async (req, res) => {
@@ -141,33 +171,46 @@ router.get('/:eventId', async (req, res) => {
 })
 
 // Advance winner
-router.post('/advance', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
-  const schema = z.object({
-    matchId: z.string().uuid(),
-    winnerId: z.string().uuid(),
-  })
-
-  try {
-    const { matchId, winnerId } = schema.parse(req.body)
-    const { data: matchAdv } = await supabase.from('matches').select('event_id').eq('id', matchId).maybeSingle()
-    if (!matchAdv) return res.status(404).json({ error: 'Match not found' })
-    const { data: evAdv } = await supabase.from('events').select('sport').eq('id', matchAdv.event_id).maybeSingle()
-    if (!evAdv) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, evAdv.sport as string)) return
-
-    await advanceWinner(matchId, winnerId)
-    await writeAuditLog({
-      actorId: req.user!.id,
-      action: 'bracket_winner_advanced',
-      entityType: 'match',
-      entityId: matchId,
-      details: { winner_id: winnerId, event_id: matchAdv.event_id },
+router.post(
+  '/advance',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const schema = z.object({
+      matchId: z.string().uuid(),
+      winnerId: z.string().uuid(),
     })
-    res.json({ success: true })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Advance failed'
-    res.status(400).json({ error: message })
-  }
-})
+
+    try {
+      const { matchId, winnerId } = schema.parse(req.body)
+      const { data: matchAdv } = await supabase
+        .from('matches')
+        .select('event_id')
+        .eq('id', matchId)
+        .maybeSingle()
+      if (!matchAdv) return res.status(404).json({ error: 'Match not found' })
+      const { data: evAdv } = await supabase
+        .from('events')
+        .select('sport')
+        .eq('id', matchAdv.event_id)
+        .maybeSingle()
+      if (!evAdv) return res.status(404).json({ error: 'Event not found' })
+      if (await respondIfSportForbidden(req, res, evAdv.sport as string)) return
+
+      await advanceWinner(matchId, winnerId)
+      await writeAuditLog({
+        actorId: req.user!.id,
+        action: 'bracket_winner_advanced',
+        entityType: 'match',
+        entityId: matchId,
+        details: { winner_id: winnerId, event_id: matchAdv.event_id },
+      })
+      res.json({ success: true })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Advance failed'
+      res.status(400).json({ error: message })
+    }
+  },
+)
 
 export default router

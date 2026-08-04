@@ -18,7 +18,10 @@ export async function resolveParticipantLabelMap(ids: string[]): Promise<Record<
     .in('id', missing)
 
   for (const row of athletes ?? []) {
-    const r = row as { id: string; profile?: { full_name?: string } | null | { full_name?: string }[] }
+    const r = row as {
+      id: string
+      profile?: { full_name?: string } | null | { full_name?: string }[]
+    }
     const prof = Array.isArray(r.profile) ? r.profile[0] : r.profile
     const n = prof?.full_name?.trim()
     if (n) map[r.id] = n
