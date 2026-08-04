@@ -37,9 +37,12 @@ export function collectAuditLogUuids(
  * team_id, etc.) with no name attached, so the label lookup happens once here at
  * read time rather than needing every one of the ~40 call sites updated.
  * Checks teams/athletes (already covered by resolveParticipantLabelMap, since a
- * match/bracket "participant" can be either), then events, seasons, and profiles.
- * IDs that don't belong to any of these (e.g. a bracket or scoring-action id) are
- * simply left unresolved — the caller falls back to a truncated id for those.
+ * match/bracket "participant" can be either), then events, seasons, profiles,
+ * the institution row, and announcements. Matches (the highest-volume entity —
+ * every scoring action logs against one) have no name of their own, so they're
+ * resolved to "Team A vs Team B" via their participants. IDs that still don't
+ * belong to any of these (e.g. a bracket id, or a team/event_participant join
+ * row) are left unresolved — the caller falls back to a truncated id for those.
  */
 export async function resolveAuditEntityLabels(ids: string[]): Promise<Record<string, string>> {
   const uniq = [...new Set(ids.filter(Boolean))]
@@ -49,14 +52,39 @@ export async function resolveAuditEntityLabels(ids: string[]): Promise<Record<st
   const remaining = uniq.filter((id) => !map[id])
   if (remaining.length === 0) return map
 
-  const [eventsRes, seasonsRes, profilesRes] = await Promise.all([
-    supabase.from('events').select('id, name').in('id', remaining),
-    supabase.from('seasons').select('id, name').in('id', remaining),
-    supabase.from('profiles').select('id, full_name').in('id', remaining),
-  ])
+  const [eventsRes, seasonsRes, profilesRes, institutionsRes, announcementsRes, matchesRes] =
+    await Promise.all([
+      supabase.from('events').select('id, name').in('id', remaining),
+      supabase.from('seasons').select('id, name').in('id', remaining),
+      supabase.from('profiles').select('id, full_name').in('id', remaining),
+      supabase.from('institution').select('id, name').in('id', remaining),
+      supabase.from('announcements').select('id, title').in('id', remaining),
+      // entity_type: 'match' is the highest-volume audit source (every scoring
+      // action logs against it) but a match has no name of its own — resolve
+      // it to "Team A vs Team B" via its participants instead.
+      supabase
+        .from('matches')
+        .select('id, participant_a_id, participant_b_id')
+        .in('id', remaining),
+    ])
   for (const e of eventsRes.data ?? []) map[e.id] = e.name
   for (const s of seasonsRes.data ?? []) map[s.id] = s.name
   for (const p of profilesRes.data ?? []) map[p.id] = p.full_name
+  for (const i of institutionsRes.data ?? []) map[i.id] = i.name
+  for (const a of announcementsRes.data ?? []) map[a.id] = a.title
+
+  const matches = matchesRes.data ?? []
+  if (matches.length > 0) {
+    const participantIds = matches.flatMap((m) =>
+      [m.participant_a_id, m.participant_b_id].filter((v): v is string => Boolean(v)),
+    )
+    const participantLabels = await resolveParticipantLabelMap(participantIds)
+    for (const m of matches) {
+      const a = m.participant_a_id ? (participantLabels[m.participant_a_id] ?? 'TBD') : 'TBD'
+      const b = m.participant_b_id ? (participantLabels[m.participant_b_id] ?? 'TBD') : 'TBD'
+      map[m.id] = `${a} vs ${b}`
+    }
+  }
 
   return map
 }
