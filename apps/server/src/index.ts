@@ -22,6 +22,13 @@ import { bootstrapDefaultAdmin } from './utils/bootstrapAdmin'
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// Render sits in front of this app as a single reverse proxy hop — trust
+// exactly that one hop so req.ip resolves from X-Forwarded-For correctly.
+// Without this, express-rate-limit refuses to trust the header at all and
+// throws on every request (ERR_ERL_UNEXPECTED_X_FORWARDED_FOR), crashing
+// the process since Render always sets this header.
+app.set('trust proxy', 1)
+
 // Security middleware
 app.use(helmet())
 app.use(
