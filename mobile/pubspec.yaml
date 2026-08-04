@@ -43,15 +43,17 @@ flutter:
     - assets/images/
     - assets/icons/
 
-# App icon generation: drop a 1024x1024 PNG (square, no transparency needed
-# for Android adaptive icons but fine for iOS) at assets/icons/app_icon.png,
-# then run:
+# App icon generation. Two source images:
+#   app_icon.png            - full design, opaque background (iOS + legacy Android)
+#   app_icon_foreground.png - glyph only, transparent background, padded to fit
+#                             Android's adaptive-icon safe zone (composited over
+#                             adaptive_icon_background below)
+# Regenerate everything with:
 #   dart run flutter_launcher_icons
-# This regenerates every Android mipmap density and the full iOS
-# AppIcon.appiconset in one shot — no manual per-size exporting.
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   image_path: assets/icons/app_icon.png
-  adaptive_icon_background: '#002D62'
-  adaptive_icon_foreground: assets/icons/app_icon.png
+  adaptive_icon_background: '#0066FF'
+  adaptive_icon_foreground: assets/icons/app_icon_foreground.png
