@@ -26,9 +26,21 @@
     "supabase:status": "npx supabase status",
     "seed:insights-demo": "pnpm --filter server seed:insights-demo",
     "seed:insights-demo:player": "pnpm --filter server seed:insights-demo:player",
-    "seed:mock-brackets": "pnpm --filter server seed:mock-brackets"
+    "seed:mock-brackets": "pnpm --filter server seed:mock-brackets",
+    "lint": "eslint apps/web/src apps/server/src",
+    "lint:fix": "eslint apps/web/src apps/server/src --fix",
+    "format": "prettier --write \"apps/**/src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"apps/**/src/**/*.{ts,tsx}\""
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^9.2.1",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8"
   }
 }
