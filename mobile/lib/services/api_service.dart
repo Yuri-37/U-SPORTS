@@ -53,6 +53,21 @@ class ApiClient {
     return jsonDecode(res.body);
   }
 
+  Future<dynamic> deleteJson(String path, {Map<String, dynamic>? body}) async {
+    final token = await _bearer();
+    final res = await http.delete(
+      _uri(path),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: body == null ? null : jsonEncode(body),
+    );
+    _throwIfError(res);
+    if (res.body.isEmpty) return null;
+    return jsonDecode(res.body);
+  }
+
   void _throwIfError(http.Response res) {
     if (res.statusCode >= 200 && res.statusCode < 300) return;
     String msg = 'Request failed (${res.statusCode})';

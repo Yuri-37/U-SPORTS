@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/appearance_provider.dart';
+import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_section.dart';
 
@@ -28,21 +29,35 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Appearance', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text('Appearance',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           SwitchListTile(
             title: const Text('Dark mode'),
             subtitle: const Text('Easier on the eyes in low light'),
             value: dark,
-            onChanged: (_) => ref.read(appearanceDarkModeProvider.notifier).toggle(),
+            onChanged: (_) =>
+                ref.read(appearanceDarkModeProvider.notifier).toggle(),
           ),
           if (shell == SettingsShell.guest) ...[
             const Divider(height: 32),
-            Text('Account', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('Account',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
               "You're browsing as a guest. Sign in to see your stats, schedule and team.",
-              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -51,24 +66,39 @@ class SettingsScreen extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: () => context.push('/auth/login'),
                 icon: const Icon(Icons.login_rounded, size: 20),
-                label: const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                label: const Text('Sign In',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
           if (shell == SettingsShell.athlete) ...[
             const Divider(height: 32),
-            Text('Security', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('Security',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             const ChangePasswordSection(),
           ],
           if (shell != SettingsShell.guest) ...[
             const Divider(height: 32),
-            Text('Account', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('Account',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.logout, color: AppTheme.danger),
-              title: const Text('Sign out', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700)),
+              title: const Text('Sign out',
+                  style: TextStyle(
+                      color: AppTheme.danger, fontWeight: FontWeight.w700)),
               onTap: () async {
+                await ref
+                    .read(pushNotificationsServiceProvider)
+                    .unregisterToken();
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/');
               },

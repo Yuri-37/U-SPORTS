@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required on Android 13+ (API 33+) to post any notification, including
+         FCM push — requested at runtime too via FirebaseMessaging.requestPermission(). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Local Supabase/API use http:// — cleartext is blocked by default on Android 9+. -->
     <application
         android:label="u_sports_mobile"
@@ -37,6 +40,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Channel FCM uses for background/terminated notifications — must match
+             the channel id created at runtime in push_notifications_service.dart. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

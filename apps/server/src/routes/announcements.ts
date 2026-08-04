@@ -3,6 +3,7 @@ import { z, type ZodIssue } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
+import { insertNotificationsForProfiles } from '../utils/athleteNotifications'
 
 const router = Router()
 
@@ -400,17 +401,23 @@ async function broadcastNotification(
 
   if (recipientIds.length === 0) return
 
-  const notifications = recipientIds.map((id) => ({
-    recipient_id: id,
-    type: `announcement_${announcement.type}`,
-    title: announcement.title,
-    body: announcement.body,
-    data: { announcement_id: announcementId },
-  }))
-
-  // Insert in batches of 100
-  for (let i = 0; i < notifications.length; i += 100) {
-    await supabase.from('notifications').insert(notifications.slice(i, i + 100))
+  // insertNotificationsForProfiles also attempts a push to each recipient's
+  // registered devices (see athleteNotifications.ts) — this used to insert
+  // straight into `notifications` and skip push entirely, so even emergency
+  // announcements never reached anyone outside the in-app inbox. Wrapped in
+  // its own try/catch: this runs after the announcement row already exists
+  // (see the caller), so a DB hiccup here must not turn a successful
+  // announcement into a failed request — same best-effort spirit as
+  // insertNotificationsForProfiles's own push attempt.
+  try {
+    await insertNotificationsForProfiles(recipientIds, {
+      type: `announcement_${announcement.type}`,
+      title: announcement.title,
+      body: announcement.body,
+      data: { announcement_id: announcementId },
+    })
+  } catch (err) {
+    console.warn('[announcements] notification insert failed:', (err as Error).message)
   }
 }
 

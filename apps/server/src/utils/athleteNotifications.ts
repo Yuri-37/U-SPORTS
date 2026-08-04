@@ -1,6 +1,7 @@
 import supabase from './supabase'
+import { sendPushToProfiles } from './sendPushNotification'
 
-/** Batch insert inbox rows (service_role bypasses RLS). */
+/** Batch insert inbox rows (service_role bypasses RLS), then best-effort push to registered devices. */
 export async function insertNotificationsForProfiles(
   recipientIds: string[],
   payload: { type: string; title: string; body: string; data?: Record<string, unknown> },
@@ -17,6 +18,15 @@ export async function insertNotificationsForProfiles(
   for (let i = 0; i < rows.length; i += 100) {
     const { error } = await supabase.from('notifications').insert(rows.slice(i, i + 100))
     if (error) throw new Error(error.message)
+  }
+
+  // Best-effort — a push failure should never fail the request that got us here.
+  try {
+    const data: Record<string, string> = { type: payload.type }
+    for (const [k, v] of Object.entries(payload.data ?? {})) data[k] = String(v)
+    await sendPushToProfiles(unique, { title: payload.title, body: payload.body, data })
+  } catch (err) {
+    console.warn('[push] send failed:', (err as Error).message)
   }
 }
 

@@ -1,8 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import 'push_notifications_service.dart';
 import '../screens/athlete/athlete_dashboard_screen.dart';
 import '../screens/auth_screen.dart';
 import '../screens/bracket_screen.dart';
@@ -16,6 +18,12 @@ import '../screens/athlete_profile_screen.dart';
 import '../screens/sport_detail_screen.dart';
 import '../screens/team_detail_screen.dart';
 import '../widgets/app_shell.dart';
+
+/// Lets push_notifications_service.dart navigate on a tap (foreground local
+/// notification, backgrounded-tap, or cold-start-from-terminated) without a
+/// BuildContext of its own — the standard go_router pattern for navigating
+/// from outside the widget tree.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 bool _isGuestAllowedPath(String path) {
   if (path == '/' || path == '/auth/login') return true;
@@ -32,6 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(authRefreshNotifierProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) async {
@@ -52,8 +61,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Staff (Admin/Organizer/Coach — plus legacy super_admin/organizer) must use the web platform.
-      const staffRoles = {'Admin', 'Organizer', 'Coach', 'super_admin', 'organizer'};
+      const staffRoles = {
+        'Admin',
+        'Organizer',
+        'Coach',
+        'super_admin',
+        'organizer'
+      };
       if (staffRoles.contains(role)) {
+        await ref.read(pushNotificationsServiceProvider).unregisterToken();
         await Supabase.instance.client.auth.signOut();
         return '/auth/login';
       }
@@ -79,19 +95,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Four persistent tab branches, wrapped in AppShell's bottom nav bar.
       // Each branch keeps its own Navigator/state across tab switches.
       StatefulShellRoute.indexedStack(
-        builder: (ctx, state, navigationShell) => AppShell(navigationShell: navigationShell),
+        builder: (ctx, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/', builder: (ctx, _) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/leaderboards', builder: (ctx, _) => const LeaderboardScreen()),
+            GoRoute(
+                path: '/leaderboards',
+                builder: (ctx, _) => const LeaderboardScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/events', builder: (ctx, _) => const EventsScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/athlete/dashboard', builder: (ctx, _) => const AthleteDashboardScreen()),
+            GoRoute(
+                path: '/athlete/dashboard',
+                builder: (ctx, _) => const AthleteDashboardScreen()),
           ]),
         ],
       ),
@@ -109,17 +130,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/athletes/:id',
-        builder: (ctx, st) => AthleteProfileScreen(athleteId: st.pathParameters['id']!),
+        builder: (ctx, st) =>
+            AthleteProfileScreen(athleteId: st.pathParameters['id']!),
       ),
       GoRoute(
         path: '/teams/:id',
-        builder: (ctx, st) => TeamDetailScreen(teamId: st.pathParameters['id']!),
+        builder: (ctx, st) =>
+            TeamDetailScreen(teamId: st.pathParameters['id']!),
       ),
       GoRoute(
         path: '/sport/:sport',
-        builder: (ctx, st) => SportDetailScreen(sport: st.pathParameters['sport']!),
+        builder: (ctx, st) =>
+            SportDetailScreen(sport: st.pathParameters['sport']!),
       ),
-      GoRoute(path: '/notifications', builder: (ctx, _) => const NotificationsScreen()),
+      GoRoute(
+          path: '/notifications',
+          builder: (ctx, _) => const NotificationsScreen()),
       GoRoute(path: '/auth/login', builder: (ctx, _) => const AuthScreen()),
       GoRoute(
         path: '/settings',

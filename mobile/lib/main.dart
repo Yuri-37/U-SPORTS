@@ -4,7 +4,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'config/env.dart';
 import 'providers/appearance_provider.dart';
+import 'services/push_notifications_service.dart';
 import 'services/router.dart';
+import 'widgets/offline_banner.dart';
+
+/// Set once Firebase.initializeApp() succeeds below — push setup is skipped
+/// entirely otherwise (no google-services.json/GoogleService-Info.plist yet
+/// means every FirebaseMessaging call would throw).
+bool _firebaseReady = false;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +29,8 @@ Future<void> main() async {
   }
   final supaUri = Uri.tryParse(Env.supabaseUrl);
   if (supaUri == null || !supaUri.hasScheme || supaUri.host.isEmpty) {
-    throw StateError('SUPABASE_URL must be an absolute URL (e.g. http://192.168.1.10:54321), got: "${Env.supabaseUrl}"');
+    throw StateError(
+        'SUPABASE_URL must be an absolute URL (e.g. http://192.168.1.10:54321), got: "${Env.supabaseUrl}"');
   }
 
   await Supabase.initialize(
@@ -34,18 +42,33 @@ Future<void> main() async {
 
   try {
     await Firebase.initializeApp();
+    _firebaseReady = true;
   } catch (e, st) {
-    debugPrint('Firebase init skipped (configure FlutterFire for push): $e\n$st');
+    debugPrint(
+        'Firebase init skipped (configure FlutterFire for push): $e\n$st');
   }
 
   runApp(const ProviderScope(child: USportsApp()));
 }
 
-class USportsApp extends ConsumerWidget {
+class USportsApp extends ConsumerStatefulWidget {
   const USportsApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<USportsApp> createState() => _USportsAppState();
+}
+
+class _USportsAppState extends ConsumerState<USportsApp> {
+  @override
+  void initState() {
+    super.initState();
+    if (_firebaseReady) {
+      ref.read(pushNotificationsServiceProvider).init();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final theme = ref.watch(appThemeProvider);
 
@@ -54,6 +77,14 @@ class USportsApp extends ConsumerWidget {
       theme: theme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            const OfflineBanner(),
+          ],
+        );
+      },
     );
   }
 }
