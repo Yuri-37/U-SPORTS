@@ -43,6 +43,17 @@
   box-sizing: border-box;
 }
 
+/*
+  Smooth dark-mode switching: every themed color token above resolves through
+  these properties, so transitioning them here (rather than per-component)
+  covers the whole app from one place. Scoped to color-only properties so it
+  doesn't fight transform/opacity animations (modals, hovers) elsewhere.
+*/
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, fill 0.2s ease,
+    stroke 0.2s ease;
+}
+
 html, body {
   margin: 0;
   padding: 0;

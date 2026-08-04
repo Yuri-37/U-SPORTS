@@ -1,7 +1,6 @@
 import React from 'react'
 import { Keyboard, Shield } from 'lucide-react'
 import { Card } from '../../components/ui'
-import AppearanceSection from '../../components/settings/AppearanceSection'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
@@ -11,11 +10,9 @@ export default function SuperAdminPreferences() {
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-[var(--text-muted)] text-sm">
-          Personal preferences and how U-Sports looks on your device.
+          Personal preferences — dark mode is in the header.
         </p>
       </div>
-
-      <AppearanceSection />
 
       <ChangePasswordSection />
 

@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import OnlineOrganizers from './OnlineOrganizers'
 import HeaderAccountCluster from './HeaderAccountCluster'
+import DarkModeToggle from './DarkModeToggle'
 
 /** Top bar beside the sidebar — branding lives in {@link Sidebar}, so this stays actions-only. */
 export default function TopNav() {
@@ -15,6 +16,7 @@ export default function TopNav() {
         {(scopedProfile?.role === 'Organizer' ||
           scopedProfile?.role === 'Coach' ||
           scopedProfile?.role === 'Admin') && <OnlineOrganizers />}
+        <DarkModeToggle />
         <HeaderAccountCluster />
       </div>
     </header>

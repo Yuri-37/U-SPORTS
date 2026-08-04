@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router'
-import { Trophy, Calendar, LogIn, Globe, LayoutDashboard, Settings } from 'lucide-react'
+import { Trophy, Calendar, LogIn, Globe, LayoutDashboard } from 'lucide-react'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { useAuthStore } from '../../stores/authStore'
 import { Button } from '../ui'
 import AnnouncementBanner from '../announcements/AnnouncementBanner'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import HeaderAccountCluster from './HeaderAccountCluster'
+import DarkModeToggle from './DarkModeToggle'
 
 export default function GuestLayout() {
   const { institution } = useInstitutionStore()
@@ -106,22 +107,7 @@ export default function GuestLayout() {
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
-          {!isAuthed && (
-            <NavLink
-              to="/guest/settings"
-              className={({ isActive }) =>
-                `inline-flex items-center justify-center rounded-lg p-2 transition-colors ${
-                  isActive
-                    ? 'text-[var(--text-primary)] bg-[var(--surface-elevated)]'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]'
-                }`
-              }
-              aria-label="Settings"
-              title="Settings"
-            >
-              <Settings className="w-5 h-5" />
-            </NavLink>
-          )}
+          <DarkModeToggle />
           {isAuthed && role === 'Admin' && (
             <Button
               size="sm"

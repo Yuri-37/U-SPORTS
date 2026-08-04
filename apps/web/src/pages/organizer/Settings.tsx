@@ -3,7 +3,6 @@ import { Card, Badge } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
-import AppearanceSection from '../../components/settings/AppearanceSection'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
@@ -17,8 +16,6 @@ export default function OrganizerSettings() {
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-[var(--text-muted)] text-sm">Your organizer account details</p>
       </div>
-
-      <AppearanceSection />
 
       <Card>
         <div className="flex items-center gap-4 mb-6">

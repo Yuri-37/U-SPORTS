@@ -1,5 +1,4 @@
 import React from 'react'
-import AppearanceSection from '../../components/settings/AppearanceSection'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
@@ -9,11 +8,10 @@ export default function AthleteSettings() {
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-[var(--text-muted)] text-sm">
-          Appearance for your athlete account. Profile and notifications are in the sidebar.
+          Your athlete account. Profile and notifications are in the sidebar — dark mode is in the
+          header.
         </p>
       </div>
-
-      <AppearanceSection />
 
       <ChangePasswordSection />
 
