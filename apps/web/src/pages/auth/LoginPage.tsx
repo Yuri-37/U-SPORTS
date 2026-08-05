@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { loginFormSchema } from '../../lib/validation/forms'
 import { defaultPostLoginPath, safeInternalPath } from '../../lib/navigation'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
+import { friendlyAuthError } from '../../lib/utils'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -48,8 +49,8 @@ export default function LoginPage() {
         const returnTo = safeInternalPath((location.state as { from?: string } | null)?.from)
         navigate(returnTo ?? defaultPostLoginPath(scoped?.role), { replace: true })
       }
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password')
+    } catch (err) {
+      setError(friendlyAuthError(err, 'Invalid email or password'))
     } finally {
       setLoading(false)
     }

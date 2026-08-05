@@ -8,6 +8,7 @@ import { useInstitutionStore } from '../../stores/institutionStore'
 import { loginFormSchema } from '../../lib/validation/forms'
 import { defaultPostLoginPath } from '../../lib/navigation'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
+import { friendlyAuthError } from '../../lib/utils'
 
 const STAFF_ROLES = new Set(['Admin', 'Organizer', 'Coach'])
 
@@ -61,8 +62,8 @@ export default function SuperAdminLoginPage() {
           replace: true,
         })
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Invalid credentials')
+    } catch (err) {
+      setError(friendlyAuthError(err, 'Invalid credentials'))
     } finally {
       setSubmitting(false)
     }

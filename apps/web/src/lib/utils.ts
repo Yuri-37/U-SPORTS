@@ -137,3 +137,18 @@ export function generateStudentEmail(fullName: string, studentDomain: string): s
 export function generateStaffEmail(fullName: string, staffDomain: string): string {
   return generateStudentEmail(fullName, staffDomain)
 }
+
+/**
+ * Supabase auth errors (`authError.message`) are already clean, human-readable
+ * text (e.g. "Invalid login credentials") — safe to show as-is. But a
+ * connectivity failure surfaces as the browser's raw fetch error instead
+ * (e.g. "Failed to fetch"), which reads as a bug report, not a message.
+ * This catches that one case and leaves everything else untouched.
+ */
+export function friendlyAuthError(err: unknown, fallback: string): string {
+  const message = err instanceof Error ? err.message : ''
+  if (/failed to fetch|network ?error|load failed/i.test(message)) {
+    return 'No internet connection. Check your network and try again.'
+  }
+  return message || fallback
+}
