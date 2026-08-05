@@ -2,7 +2,7 @@
 -- by the server (service_role, bypasses RLS) via POST/DELETE
 -- /notifications/push-token — never queried directly by client-side
 -- Supabase calls, so RLS is enabled with no policies (default deny).
-CREATE TABLE push_tokens (
+CREATE TABLE IF NOT EXISTS push_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   token TEXT NOT NULL UNIQUE,
@@ -11,6 +11,6 @@ CREATE TABLE push_tokens (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX push_tokens_profile_id_idx ON push_tokens(profile_id);
+CREATE INDEX IF NOT EXISTS push_tokens_profile_id_idx ON push_tokens(profile_id);
 
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
