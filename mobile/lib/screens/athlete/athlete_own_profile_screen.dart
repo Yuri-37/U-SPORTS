@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/layout_tokens.dart';
 import '../../utils/event_placements.dart';
 import '../../utils/sport_helpers.dart';
+import '../../utils/error_helpers.dart';
 
 class AthleteOwnProfileScreen extends ConsumerStatefulWidget {
   const AthleteOwnProfileScreen({super.key});
@@ -56,11 +57,11 @@ class _AthleteOwnProfileScreenState extends ConsumerState<AthleteOwnProfileScree
       ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text(friendlyError(e))),
         data: (profile) {
           return athleteAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('$e')),
+            error: (e, _) => Center(child: Text(friendlyError(e))),
             data: (athlete) {
               if (profile == null || athlete == null) {
                 return const Center(child: Text('Unable to load athlete record.'));

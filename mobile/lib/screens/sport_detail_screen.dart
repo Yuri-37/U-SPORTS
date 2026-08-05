@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/leaderboard_stats.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 
 /// Drill-down page for a single sport, reached from Home's "Browse by Sport"
@@ -101,7 +102,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: seasonsAsync.when(
             loading: () => const LinearProgressIndicator(minHeight: 2),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => Text(friendlyError(e)),
             data: (seasons) {
               if (seasons.isEmpty) return const SizedBox.shrink();
               final effectiveId = (_seasonId != null && seasons.any((s) => s['id'] == _seasonId))
@@ -134,7 +135,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
           child: _showTeams
               ? teams?.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('$e')),
+                    error: (e, _) => Center(child: Text(friendlyError(e))),
                     data: (rows) {
                       if (_seasonId == null) return const Center(child: Text('No seasons available yet.'));
                       if (rows.isEmpty) {
@@ -177,7 +178,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                   const SizedBox()
               : players?.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('$e')),
+                    error: (e, _) => Center(child: Text(friendlyError(e))),
                     data: (rows) {
                       if (_seasonId == null) return const Center(child: Text('No seasons available yet.'));
                       if (rows.isEmpty) {
@@ -231,7 +232,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
   Widget _eventsTab(BuildContext context, AsyncValue<List<Map<String, dynamic>>> eventsAsync) {
     return eventsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('$e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (events) {
         if (events.isEmpty) {
           return Center(child: Text('No ${sportLabel(widget.sport)} events yet.', style: TextStyle(color: LayoutTokens.mutedText(context))));

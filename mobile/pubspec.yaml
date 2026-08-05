@@ -35,6 +35,7 @@ dev_dependencies:
   build_runner: ^2.4.10
   riverpod_generator: ^2.4.3
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
@@ -42,6 +43,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/splash/
 
 # App icon generation. Two source images:
 #   app_icon.png            - full design, opaque background (iOS + legacy Android)
@@ -57,3 +59,23 @@ flutter_launcher_icons:
   image_path: assets/icons/app_icon.png
   adaptive_icon_background: '#0066FF'
   adaptive_icon_foreground: assets/icons/app_icon_foreground.png
+
+# Splash screen shown natively before Flutter's first frame. Uses brand blue
+# for both light/dark (not the app's theme backgrounds) because the logo mark
+# and wordmark are white — white-on-near-white (the light theme bg) would be
+# invisible, and blue matches the app icon's own look either way.
+# Regenerate with:
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: '#0066FF'
+  color_dark: '#0066FF'
+  image: assets/splash/splash_logo.png
+  branding: assets/splash/splash_branding.png
+  branding_dark: assets/splash/splash_branding.png
+  branding_mode: bottom
+  android_12:
+    color: '#0066FF'
+    color_dark: '#0066FF'
+    image: assets/splash/splash_logo.png
+    icon_background_color: '#0066FF'
+    icon_background_color_dark: '#0066FF'

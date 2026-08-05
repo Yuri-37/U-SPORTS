@@ -16,6 +16,7 @@ import '../../utils/sport_helpers.dart';
 import '../../widgets/double_back_exit.dart';
 import '../../widgets/notification_bell_icon_button.dart';
 import '../../widgets/stat_chip.dart';
+import '../../utils/error_helpers.dart';
 
 class AthleteDashboardScreen extends ConsumerWidget {
   const AthleteDashboardScreen({super.key});
@@ -42,7 +43,7 @@ class AthleteDashboardScreen extends ConsumerWidget {
       ),
       body: athleteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text(friendlyError(e))),
         data: (athlete) {
           if (athlete == null) {
             return const Center(child: Text('Athlete profile not found.'));

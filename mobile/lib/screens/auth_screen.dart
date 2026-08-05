@@ -9,6 +9,7 @@ import '../providers/institution_provider.dart';
 import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
+import '../utils/error_helpers.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -97,7 +98,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e);
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -164,25 +165,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     return Column(
                       children: [
                         if (logo != null && logo.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: CachedNetworkImage(
-                              imageUrl: logo,
-                              height: 72,
-                              width: 72,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) =>
-                                  const SizedBox(height: 72, width: 72),
-                              errorWidget: (_, __, ___) => CircleAvatar(
-                                radius: 36,
-                                backgroundColor:
-                                    AppTheme.accent.withValues(alpha: 0.2),
-                                child: Text(
-                                  abbr,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 18),
-                                ),
+                          // Full uncropped logo — BoxFit.contain never crops,
+                          // unlike the .cover + circular clip this replaced.
+                          CachedNetworkImage(
+                            imageUrl: logo,
+                            height: 72,
+                            width: 120,
+                            fit: BoxFit.contain,
+                            placeholder: (_, __) =>
+                                const SizedBox(height: 72, width: 120),
+                            errorWidget: (_, __, ___) => CircleAvatar(
+                              radius: 36,
+                              backgroundColor:
+                                  AppTheme.accent.withValues(alpha: 0.2),
+                              child: Text(
+                                abbr,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18),
                               ),
                             ),
                           )

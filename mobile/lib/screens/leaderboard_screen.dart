@@ -11,6 +11,7 @@ import '../widgets/double_back_exit.dart';
 import '../widgets/notification_bell_icon_button.dart';
 import '../utils/leaderboard_stats.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -155,7 +156,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: seasonsAsync.when(
               loading: () => const LinearProgressIndicator(minHeight: 2),
-              error: (e, _) => Text('$e'),
+              error: (e, _) => Text(friendlyError(e)),
               data: (seasons) {
                 final filtered = _filteredSeasons(seasons);
                 final effectiveId = _seasonId != null && seasons.any((s) => s['id'] == _seasonId)
@@ -224,7 +225,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                     Expanded(
                       child: players?.when(
                             loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (e, _) => Center(child: Text('$e')),
+                            error: (e, _) => Center(child: Text(friendlyError(e))),
                             data: (rows) {
                               if (_seasonId == null) {
                                 return const Center(child: Text('No seasons available yet.'));
@@ -294,7 +295,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                 ),
                 teams?.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('$e')),
+                      error: (e, _) => Center(child: Text(friendlyError(e))),
                       data: (rows) {
                         if (_seasonId == null) {
                           return const Center(child: Text('No seasons available yet.'));

@@ -8,6 +8,7 @@ import '../providers/notifications_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/format_helpers.dart';
+import '../utils/error_helpers.dart';
 
 /// Icon + accent color for a notification's `type` (see server routes
 /// `teams.ts`, `events.ts`, `announcements.ts` for the values this covers).
@@ -245,7 +246,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             child: listAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('$e', style: TextStyle(color: scheme.error)),
+                child: Text(friendlyError(e), style: TextStyle(color: scheme.error)),
               ),
               data: (allRows) {
                 Widget body;

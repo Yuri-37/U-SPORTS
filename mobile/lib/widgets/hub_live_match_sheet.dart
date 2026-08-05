@@ -8,6 +8,7 @@ import '../theme/layout_tokens.dart';
 import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 
 /// Live hub detail sheet — watches [hubLiveProvider] so scores update as super admin scores.
 void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
@@ -34,7 +35,7 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('$e'),
+              child: Text(friendlyError(e)),
             ),
             data: (snap) {
               Map<String, dynamic>? match;

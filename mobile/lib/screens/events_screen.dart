@@ -9,6 +9,7 @@ import '../providers/notifications_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 import '../widgets/notification_bell_icon_button.dart';
 
@@ -194,7 +195,7 @@ class _EventsList extends ConsumerWidget {
 
     return allAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('$e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (all) {
         var list = all.where((ev) => statuses.contains(ev['status'] as String? ?? '')).toList();
         if (sportFilter.isNotEmpty) {

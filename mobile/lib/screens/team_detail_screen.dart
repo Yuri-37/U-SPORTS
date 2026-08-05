@@ -8,6 +8,7 @@ import '../theme/layout_tokens.dart';
 import '../utils/format_helpers.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 
 class _RosterEntry {
   _RosterEntry({required this.athleteId, required this.name, required this.position, required this.jerseyNumber});
@@ -146,7 +147,7 @@ class TeamDetailScreen extends ConsumerWidget {
       ),
       body: teamAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text(friendlyError(e))),
         data: (team) {
           if (team == null) {
             return const Center(child: Text('Team not found.'));
@@ -232,7 +233,7 @@ class TeamDetailScreen extends ConsumerWidget {
               const SizedBox(height: 10),
               matchesAsync.when(
                 loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-                error: (e, _) => Text('$e'),
+                error: (e, _) => Text(friendlyError(e)),
                 data: (matches) {
                   if (matches.isEmpty) {
                     return Text('No matches yet.', style: TextStyle(color: LayoutTokens.mutedText(context)));
