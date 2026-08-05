@@ -9,11 +9,25 @@ import {
   liveScorePresentation,
 } from '../../lib/liveMatchPresentation'
 import type { Match, MatchScore } from '../../types'
+import PublicRosterStats from './PublicRosterStats'
 
 type MatchStatePayload = {
   match: (Match & { winner_id?: string | null }) | null
   scores: Partial<MatchScore>[]
   participantNames?: { a: string; b: string }
+}
+
+type RosterPayload = {
+  match: { id: string; status: string } | null
+  participantNames?: { a: string; b: string }
+  playerStats: Array<{
+    athlete_id: string
+    athlete?: { id: string; profile?: { full_name: string } | null } | null
+    team_id?: string | null
+    team_name?: string | null
+    participant_side?: 'a' | 'b' | null
+    stats: Record<string, number>
+  }>
 }
 
 type Props = {
@@ -27,11 +41,13 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [payload, setPayload] = useState<MatchStatePayload | null>(null)
+  const [roster, setRoster] = useState<RosterPayload | null>(null)
 
   useEffect(() => {
     if (!open || !matchId) {
       setPayload(null)
       setError('')
+      setRoster(null)
       return
     }
     let cancelled = false
@@ -47,6 +63,16 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
+      })
+    // Independent request/failure from /state — a missing roster shouldn't
+    // block the score view above it from rendering.
+    void api
+      .get<RosterPayload>(`/scoring/${matchId}/roster`)
+      .then((res) => {
+        if (!cancelled) setRoster(res.data)
+      })
+      .catch(() => {
+        if (!cancelled) setRoster(null)
       })
     return () => {
       cancelled = true
@@ -235,6 +261,18 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
               </p>
             )}
           </div>
+
+          {roster &&
+          roster.playerStats.length > 0 &&
+          (match.status === 'live' || match.status === 'completed') ? (
+            <PublicRosterStats
+              sport={sport}
+              playerStats={roster.playerStats}
+              nameA={nameA}
+              nameB={nameB}
+              showStats={match.status === 'completed'}
+            />
+          ) : null}
 
           {match.status === 'live' ? (
             <Button

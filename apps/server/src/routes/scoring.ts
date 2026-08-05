@@ -1097,6 +1097,45 @@ router.get('/:matchId/state', async (req, res) => {
   })
 })
 
+// Public roster + per-player stats for a match. Roster shows for live and
+// completed matches; individual stats are only ever populated once the
+// match is completed — zeroed out here, server-side, so the rule holds even
+// if a client inspects the network response directly, not just a UI hide.
+// Reuses the same roster/stat assembly as the organizer-only /review route,
+// but hand-builds the response so organizer-sensitive fields (scorerName,
+// lock holders, active_lineup) never reach a public caller.
+router.get('/:matchId/roster', async (req, res) => {
+  const data = await getMatchReviewData(req.params.matchId)
+  if (!data) return res.status(404).json({ error: 'Match not found' })
+
+  const matchStatus = (data.match as { status?: string }).status ?? 'scheduled'
+  const isCompleted = matchStatus === 'completed'
+
+  const playerStats = (
+    data.playerStats as Array<{
+      athlete_id: string
+      athlete: unknown
+      team_id: string | null
+      team_name: string
+      participant_side: 'a' | 'b' | null
+      stats: Record<string, unknown>
+    }>
+  ).map((p) => ({
+    athlete_id: p.athlete_id,
+    athlete: p.athlete,
+    team_id: p.team_id,
+    team_name: p.team_name,
+    participant_side: p.participant_side,
+    stats: isCompleted ? p.stats : {},
+  }))
+
+  res.json({
+    match: { id: (data.match as { id: string }).id, status: matchStatus },
+    participantNames: data.participantNames,
+    playerStats,
+  })
+})
+
 // Transfer scoring lock
 router.post(
   '/:matchId/transfer-lock',

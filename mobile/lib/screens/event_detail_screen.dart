@@ -9,6 +9,8 @@ import '../utils/event_placements.dart';
 import '../utils/format_helpers.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
+import '../widgets/match_roster_stats.dart';
 import '../widgets/tournament_bracket_view.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
@@ -97,7 +99,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                     padding: EdgeInsets.all(24),
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text('$e')),
+                  error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
                   data: (data) {
                     final names = data['participantNames'] as Map<String, dynamic>? ?? {};
                     final match = data['match'] as Map<String, dynamic>? ?? {};
@@ -258,6 +260,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                             );
                           }),
                         ],
+                        MatchRosterStats(matchId: matchId, sport: sport, nameA: nameA, nameB: nameB),
                         if (scores.isEmpty && !isLive) ...[
                           const SizedBox(height: 16),
                           Center(child: Text('No score data recorded for this match.', style: TextStyle(color: LayoutTokens.mutedText(context), fontSize: 13))),
@@ -288,7 +291,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
 
     return evAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+      error: (e, _) => Scaffold(body: Center(child: Text(friendlyError(e)))),
       data: (event) {
         if (event == null) {
           return const Scaffold(body: Center(child: Text('Event not found')));

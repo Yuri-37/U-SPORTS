@@ -296,3 +296,14 @@ final scoringStateProvider = StreamProvider.autoDispose.family<Map<String, dynam
   });
   return ctrl.stream;
 });
+
+/// Roster (always) + per-player stats (finished matches only — the server
+/// zeroes `stats` itself for anything not completed, see
+/// apps/server/src/routes/scoring.ts's /:matchId/roster route). No realtime
+/// subscription: unlike scoringStateProvider, roster composition and final
+/// stats don't change mid-render the way live scores do.
+final matchRosterProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, matchId) async {
+  final api = ref.read(apiClientProvider);
+  final data = await api.getJson('/scoring/$matchId/roster');
+  return data is Map ? Map<String, dynamic>.from(data) : {};
+});
