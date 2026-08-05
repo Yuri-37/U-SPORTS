@@ -10,7 +10,10 @@ import supabase from './supabase'
  */
 function getMessagingClient() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-  if (!raw) return null
+  if (!raw) {
+    console.warn('[push] FIREBASE_SERVICE_ACCOUNT_JSON not set — push disabled')
+    return null
+  }
   try {
     if (getApps().length === 0) {
       initializeApp({ credential: cert(JSON.parse(raw)) })
@@ -37,13 +40,24 @@ export async function sendPushToProfiles(
     .from('push_tokens')
     .select('token')
     .in('profile_id', unique)
-  if (error || !tokenRows || tokenRows.length === 0) return
+  if (error) {
+    console.warn('[push] failed to look up tokens:', error.message)
+    return
+  }
+  if (!tokenRows || tokenRows.length === 0) {
+    console.warn(`[push] no registered devices for ${unique.length} recipient(s)`)
+    return
+  }
 
   const tokens = tokenRows.map((r) => r.token)
   const res = await messaging.sendEachForMulticast({
     tokens,
     notification: { title: payload.title, body: payload.body },
     data: payload.data ?? {},
+  })
+  console.log(`[push] sent to ${res.successCount}/${tokens.length} device(s)`)
+  res.responses.forEach((r, i) => {
+    if (!r.success) console.warn(`[push] delivery failed for token ${tokens[i].slice(0, 12)}...:`, r.error?.code, r.error?.message)
   })
 
   const deadTokens = res.responses
