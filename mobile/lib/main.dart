@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'config/env.dart';
 import 'providers/appearance_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/connectivity_provider.dart';
 import 'services/push_notifications_service.dart';
 import 'services/router.dart';
 import 'widgets/offline_banner.dart';
@@ -65,6 +67,21 @@ class _USportsAppState extends ConsumerState<USportsApp> {
     if (_firebaseReady) {
       ref.read(pushNotificationsServiceProvider).init();
     }
+
+    // A profile fetch stuck mid-offline (see auth_provider.dart's
+    // _authFetchTimeout / router.dart's fail-open redirect) never retries on
+    // its own once connectivity returns — nothing else in the app watches
+    // isOnlineProvider. Invalidate and force the router to re-run its
+    // redirect so a previously-failed/guest-downgraded session recovers
+    // automatically instead of staying stuck.
+    ref.listenManual(isOnlineProvider, (prev, next) {
+      final wasOffline = prev?.value == false;
+      final isOnlineNow = next.value == true;
+      if (wasOffline && isOnlineNow) {
+        ref.invalidate(profileProvider);
+        ref.read(routerProvider).refresh();
+      }
+    });
   }
 
   @override

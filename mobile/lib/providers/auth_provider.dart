@@ -15,6 +15,14 @@ final authUserProvider = Provider<User?>((ref) {
   return Supabase.instance.client.auth.currentUser;
 });
 
+/// Un-timed-out Supabase calls here used to be able to hang indefinitely
+/// offline (TCP retransmits far outlast the OS-level connectivity-drop
+/// signal), which stalled the router's `redirect` forever — see
+/// router.dart's redirect and main.dart's reconnect listener, which together
+/// close the loop this timeout opens: fail fast here, fail open there, retry
+/// on reconnect in main.dart.
+const _authFetchTimeout = Duration(seconds: 8);
+
 final profileProvider = FutureProvider<ProfileRow?>((ref) async {
   ref.watch(authRefreshNotifierProvider);
   final user = Supabase.instance.client.auth.currentUser;
@@ -23,7 +31,8 @@ final profileProvider = FutureProvider<ProfileRow?>((ref) async {
       .from('profiles')
       .select()
       .eq('id', user.id)
-      .maybeSingle();
+      .maybeSingle()
+      .timeout(_authFetchTimeout);
   if (row == null) return null;
   final map = Map<String, dynamic>.from(row as Map);
 
@@ -36,7 +45,8 @@ final profileProvider = FutureProvider<ProfileRow?>((ref) async {
         .from('athletes')
         .select('id')
         .eq('profile_id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(_authFetchTimeout);
     map['role'] = athlete != null ? 'athlete' : 'guest';
   }
   return ProfileRow.fromJson(map);

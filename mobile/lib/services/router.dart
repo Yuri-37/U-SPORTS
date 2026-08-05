@@ -52,8 +52,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/auth/login';
       }
 
-      final profile = await ref.read(profileProvider.future);
-      final role = profile?.role ?? 'guest';
+      // A timed-out/failed profile fetch (see auth_provider.dart's
+      // _authFetchTimeout) must not leave this redirect stuck forever —
+      // fail open to guest so the app still renders something. main.dart's
+      // reconnect listener retries the real fetch once connectivity returns.
+      String role;
+      try {
+        final profile = await ref.read(profileProvider.future);
+        role = profile?.role ?? 'guest';
+      } catch (_) {
+        role = 'guest';
+      }
 
       if (path == '/settings') {
         if (role == 'athlete') return '/athlete/settings';
