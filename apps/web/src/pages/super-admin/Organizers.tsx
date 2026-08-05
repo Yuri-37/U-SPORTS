@@ -25,10 +25,13 @@ function SportCheckboxes({
   role,
   sports,
   onChange,
+  takenBy = {},
 }: {
   role: string
   sports: string[]
   onChange: (s: string[]) => void
+  /** sport -> name of the coach already holding it in the selected department. */
+  takenBy?: Record<string, string>
 }) {
   return (
     <div>
@@ -37,22 +40,27 @@ function SportCheckboxes({
       </label>
       {role === 'Coach' && (
         <p className="text-xs text-[var(--text-muted)] mb-2">
-          Coaches can be assigned up to 3 sports.
+          Coaches can be assigned up to 3 sports, and each sport can have only one coach per
+          department.
         </p>
       )}
       <div className="space-y-2">
         {SPORTS.map((s) => {
           const checked = sports.includes(s)
           const atLimit = role === 'Coach' && sports.length >= 3 && !checked
+          // Mirrors the server-side one-coach-per-sport-per-department rule so
+          // the clash is visible before submitting rather than as a 400.
+          const takenByName = role === 'Coach' && !checked ? takenBy[s] : undefined
+          const disabled = atLimit || Boolean(takenByName)
           return (
             <label
               key={s}
-              className={`flex items-center gap-2 ${atLimit ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              className={`flex items-center gap-2 ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <input
                 type="checkbox"
                 checked={checked}
-                disabled={atLimit}
+                disabled={disabled}
                 onChange={(e) =>
                   onChange(e.target.checked ? [...sports, s] : sports.filter((x) => x !== s))
                 }
@@ -60,6 +68,9 @@ function SportCheckboxes({
               />
               <span className="text-sm">
                 {getSportIcon(s as any)} {getSportLabel(s as any)}
+                {takenByName && (
+                  <span className="text-[var(--text-muted)]"> — coached by {takenByName}</span>
+                )}
               </span>
             </label>
           )
@@ -175,6 +186,23 @@ export default function SuperAdminOrganizers() {
   // Toggle active
   const [toggleConfirm, setToggleConfirm] = useState<StaffWithProfile | null>(null)
   const [toggleBusy, setToggleBusy] = useState(false)
+
+  /**
+   * Sports already claimed by a coach in `department`, as sport -> coach name.
+   * `excludeId` skips the staff row being edited so their own current sports
+   * don't read as conflicts against themselves.
+   */
+  const takenSportsFor = (department: string, excludeId?: string): Record<string, string> => {
+    const taken: Record<string, string> = {}
+    for (const s of staff) {
+      if (s.id === excludeId) continue
+      if (s.profile?.role !== 'Coach' || s.profile?.department !== department) continue
+      for (const sport of s.assigned_sports ?? []) {
+        taken[sport] ??= s.profile?.full_name ?? 'another coach'
+      }
+    }
+    return taken
+  }
 
   const fetchStaff = () => {
     api
@@ -489,11 +517,21 @@ export default function SuperAdminOrganizers() {
               <Select
                 label="Department"
                 value={editDepartment}
-                onChange={(e) => setEditDepartment(e.target.value)}
+                onChange={(e) => {
+                  const dept = e.target.value
+                  setEditDepartment(dept)
+                  const taken = takenSportsFor(dept, editTarget?.id)
+                  setEditSports((prev) => prev.filter((s) => !taken[s]))
+                }}
                 options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
               />
             </div>
-            <SportCheckboxes role={editRole} sports={editSports} onChange={setEditSports} />
+            <SportCheckboxes
+              role={editRole}
+              sports={editSports}
+              onChange={setEditSports}
+              takenBy={takenSportsFor(editDepartment, editTarget?.id)}
+            />
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" onClick={() => setEditTarget(null)} disabled={editBusy}>
                 Cancel
@@ -679,11 +717,23 @@ export default function SuperAdminOrganizers() {
             <Select
               label="Department"
               value={addDepartment}
-              onChange={(e) => setAddDepartment(e.target.value)}
+              onChange={(e) => {
+                const dept = e.target.value
+                setAddDepartment(dept)
+                // Sports free in the old department may be taken in the new one —
+                // drop those so a stale tick can't submit a known conflict.
+                const taken = takenSportsFor(dept)
+                setAddSports((prev) => prev.filter((s) => !taken[s]))
+              }}
               options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
             />
           </div>
-          <SportCheckboxes role={addRole} sports={addSports} onChange={setAddSports} />
+          <SportCheckboxes
+            role={addRole}
+            sports={addSports}
+            onChange={setAddSports}
+            takenBy={takenSportsFor(addDepartment)}
+          />
           <Button className="w-full" loading={adding} onClick={handleAddStaff}>
             Create account
           </Button>

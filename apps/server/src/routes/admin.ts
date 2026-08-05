@@ -56,6 +56,51 @@ router.get('/organizers', requireAuth, requireRole('Admin'), async (_req, res) =
   res.json(data ?? [])
 })
 
+/**
+ * One coach per sport, per department: two Coach accounts in the same
+ * department may not share a sport. A coach may still hold up to 3 sports,
+ * and each department may have its own coach for the same sport. Organizers
+ * are unconstrained — the rule applies to the Coach role only.
+ *
+ * Enforced in the route rather than as a DB constraint because the rule spans
+ * two tables (profiles.department + organizers.assigned_sports) and every
+ * staff write already goes through the two endpoints below. Same non-atomic
+ * tradeoff accepted elsewhere for lock claims — two simultaneous creates could
+ * still race, which is not a practical concern for admin-driven staff setup.
+ */
+async function findCoachSportConflict(
+  department: string,
+  assignedSports: string[],
+  excludeProfileId?: string,
+): Promise<{ sport: string; coachName: string } | null> {
+  const { data, error } = await supabase
+    .from('organizers')
+    .select(
+      'profile_id, assigned_sports, profile:profiles!organizers_profile_id_fkey(full_name, role, department)',
+    )
+  if (error) throw new Error(error.message)
+
+  const wanted = new Set(assignedSports)
+  for (const row of data ?? []) {
+    const profile = (row as { profile?: { full_name?: string; role?: string; department?: string } })
+      .profile
+    if (!profile || profile.role !== 'Coach' || profile.department !== department) continue
+    if (excludeProfileId && row.profile_id === excludeProfileId) continue
+
+    const clash = (row.assigned_sports ?? []).find((s: string) => wanted.has(s))
+    if (clash) return { sport: clash, coachName: profile.full_name ?? 'Another coach' }
+  }
+  return null
+}
+
+/** 'table-tennis' -> 'Table Tennis' (assigned_sports are stored as slugs). */
+function sportLabel(slug: string): string {
+  return slug
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
 // Create organizer account (no email — super admin sets password and shares credentials)
 router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z
@@ -80,6 +125,16 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     const department = parsed.department
     const assigned_sports = parsed.assigned_sports
     const password = parsed.password
+
+    // Check before createUser so a rejection can't leave an orphaned auth user.
+    if (role === 'Coach') {
+      const conflict = await findCoachSportConflict(department, assigned_sports)
+      if (conflict) {
+        return res.status(400).json({
+          error: `${conflict.coachName} is already the ${sportLabel(conflict.sport)} coach for ${department}. Each sport can have only one coach per department.`,
+        })
+      }
+    }
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -164,6 +219,20 @@ router.patch(
         .eq('id', req.params.id)
         .single()
       if (!org) return res.status(404).json({ error: 'Staff member not found' })
+
+      // Exclude this staff member so re-saving their own unchanged sports passes.
+      if (parsed.role === 'Coach') {
+        const conflict = await findCoachSportConflict(
+          parsed.department,
+          parsed.assigned_sports,
+          org.profile_id,
+        )
+        if (conflict) {
+          return res.status(400).json({
+            error: `${conflict.coachName} is already the ${sportLabel(conflict.sport)} coach for ${parsed.department}. Each sport can have only one coach per department.`,
+          })
+        }
+      }
 
       const { error: profileErr } = await supabase
         .from('profiles')
