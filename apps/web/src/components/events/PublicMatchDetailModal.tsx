@@ -154,11 +154,10 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
             )}
           </div>
 
-          {/* Score card stays compact even though the modal is now wide enough
-              for the stats table below — a 2-column score grid doesn't need
-              896px, it just reads as sparse. mx-auto keeps it centered in the
-              wider modal instead of hugging the left edge. */}
-          <div className="max-w-xl mx-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+          {/* Full width, matching the Player Stats/Roster card below it — a
+              narrower constrained card here left uneven whitespace next to
+              the full-width table underneath. */}
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
               Matchup
             </p>
