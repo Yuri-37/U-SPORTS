@@ -294,6 +294,7 @@ export interface Notification {
   body: string
   data: Record<string, unknown>
   read: boolean
+  hidden: boolean
   created_at: string
 }
 

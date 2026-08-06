@@ -23,12 +23,14 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
         .from('notifications')
         .select('*')
         .eq('recipient_id', userId)
+        .eq('hidden', false)
         .order('created_at', { ascending: false })
         .limit(50),
       supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('recipient_id', userId)
+        .eq('hidden', false)
         .eq('read', false),
     ])
 
@@ -65,13 +67,15 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     await get().fetchNotifications(userId)
   },
 
+  // Soft-hide, not a real delete — the row (and the user's notification
+  // history) survives; it just drops out of `fetchNotifications`'s results.
   deleteNotification: async (id, userId) => {
-    await supabase.from('notifications').delete().eq('id', id).eq('recipient_id', userId)
+    await supabase.from('notifications').update({ hidden: true }).eq('id', id).eq('recipient_id', userId)
     await get().fetchNotifications(userId)
   },
 
   clearAll: async (userId) => {
-    await supabase.from('notifications').delete().eq('recipient_id', userId)
+    await supabase.from('notifications').update({ hidden: true }).eq('recipient_id', userId)
     await get().fetchNotifications(userId)
   },
 

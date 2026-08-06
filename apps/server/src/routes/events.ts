@@ -573,17 +573,12 @@ async function notifyMatchSchedule(match: {
   const timeStr = scheduledDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const venueStr = match.venue ? ` at ${match.venue}` : ''
 
-  const notifications = recipientIds.map((id) => ({
-    recipient_id: id,
+  await insertNotificationsForProfiles(recipientIds, {
     type: 'match_scheduled',
     title: 'Match Scheduled',
     body: `Your upcoming match is set for ${dateStr}, ${timeStr}${venueStr}.`,
     data: { match_id: match.id, scheduled_at: match.scheduled_at, venue: match.venue },
-  }))
-
-  for (let i = 0; i < notifications.length; i += 100) {
-    await supabase.from('notifications').insert(notifications.slice(i, i + 100))
-  }
+  })
 }
 
 export default router

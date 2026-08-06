@@ -95,6 +95,7 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
             body: String(row.body ?? ''),
             data: (row.data as Record<string, unknown>) ?? {},
             read: Boolean(row.read),
+            hidden: Boolean(row.hidden),
             created_at: String(row.created_at ?? ''),
           })
         },

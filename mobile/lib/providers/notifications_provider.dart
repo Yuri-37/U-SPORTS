@@ -13,6 +13,7 @@ final unreadNotificationsCountProvider = FutureProvider.autoDispose<int>((ref) a
       .from('notifications')
       .count(CountOption.exact)
       .eq('recipient_id', profile.id)
+      .eq('hidden', false)
       .eq('read', false);
   return count;
 });
@@ -29,6 +30,7 @@ final notificationsListProvider = StreamProvider<List<Map<String, dynamic>>>((re
         .from('notifications')
         .select()
         .eq('recipient_id', profile.id)
+        .eq('hidden', false)
         .order('created_at', ascending: false)
         .limit(50);
     return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -75,12 +77,14 @@ Future<void> markAllNotificationsRead(String recipientId) async {
   await Supabase.instance.client.from('notifications').update({'read': true}).eq('recipient_id', recipientId).eq('read', false);
 }
 
+// Soft-hide, not a real delete — the row (and the user's notification
+// history) survives; it just drops out of [notificationsListProvider]'s results.
 Future<void> deleteNotification(String id) async {
-  await Supabase.instance.client.from('notifications').delete().eq('id', id);
+  await Supabase.instance.client.from('notifications').update({'hidden': true}).eq('id', id);
 }
 
 Future<void> clearAllNotifications(String recipientId) async {
-  await Supabase.instance.client.from('notifications').delete().eq('recipient_id', recipientId);
+  await Supabase.instance.client.from('notifications').update({'hidden': true}).eq('recipient_id', recipientId);
 }
 
 /// Bell badge: exact unread count from [unreadNotificationsCountProvider] for athletes.

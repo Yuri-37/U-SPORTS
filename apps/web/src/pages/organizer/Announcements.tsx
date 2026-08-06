@@ -505,7 +505,16 @@ export default function OrganizerAnnouncements() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => update('display_mode', value)}
+                  onClick={() =>
+                    // Hero slider only ever renders on the public guest hub — pairing it
+                    // with is_public here avoids silently-invisible announcements from
+                    // picking the mode without also checking "Visible to guests" below.
+                    setForm((f) => ({
+                      ...f,
+                      display_mode: value as Announcement['display_mode'],
+                      is_public: value === 'hero_slider' ? true : f.is_public,
+                    }))
+                  }
                   className={`px-3 py-2 rounded-lg text-sm border transition-colors ${
                     form.display_mode === value
                       ? 'bg-[var(--school-primary)] text-[var(--school-secondary)] border-transparent'
