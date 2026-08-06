@@ -24,7 +24,7 @@ type Props = {
 }
 
 function playerName(p: PlayerStat) {
-  return p.athlete?.profile?.full_name ?? `Athlete ${p.athlete_id.slice(0, 6)}`
+  return p.athlete?.profile?.full_name ?? 'Athlete'
 }
 
 /** Read-only — no inputs, no edit state. See MatchReview.tsx for the organizer editable version this mirrors visually. */

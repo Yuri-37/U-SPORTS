@@ -214,10 +214,10 @@ export default function EventDetailPage({
         <div className="space-y-3">
           {matches.map((m) => {
             const labelA = m.participant_a_id
-              ? (participantLabels[m.participant_a_id] ?? `Team ${m.participant_a_id.slice(0, 6)}`)
+              ? (participantLabels[m.participant_a_id] ?? 'Participant')
               : 'TBD'
             const labelB = m.participant_b_id
-              ? (participantLabels[m.participant_b_id] ?? `Team ${m.participant_b_id.slice(0, 6)}`)
+              ? (participantLabels[m.participant_b_id] ?? 'Participant')
               : 'TBD'
             return (
               <Card
