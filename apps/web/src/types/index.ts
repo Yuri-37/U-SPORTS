@@ -125,6 +125,7 @@ export interface Season {
 
 export interface Event {
   id: string
+  slug: string
   name: string
   sport: Sport
   season_id: string

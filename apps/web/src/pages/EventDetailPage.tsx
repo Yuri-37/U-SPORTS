@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
 import { Tv2, ArrowLeft, ChevronRight } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, TabBar } from '../components/ui'
 import { supabase } from '../lib/supabase'
@@ -27,6 +27,8 @@ function tabFromSearch(v: string | null): 'bracket' | 'matches' {
   return v === 'matches' ? 'matches' : 'bracket'
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export type EventDetailPageProps = {
   backPath: string
   backAriaLabel: string
@@ -39,9 +41,12 @@ export default function EventDetailPage({
   backAriaLabel,
   outerClassName,
 }: EventDetailPageProps) {
-  const { id } = useParams<{ id: string }>()
+  const { id: idOrSlug } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [id, setId] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const [event, setEvent] = useState<Event | null>(null)
   const [brackets, setBrackets] = useState<Bracket[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -56,6 +61,36 @@ export default function EventDetailPage({
   useEffect(() => {
     setTab(tabFromSearch(searchParams.get('tab')))
   }, [searchParams])
+
+  // The route param is a slug for links built by this app, but old links (or
+  // anything constructed before slugs existed) may still carry the raw id —
+  // support both rather than breaking those.
+  useEffect(() => {
+    setId(null)
+    setNotFound(false)
+    if (!idOrSlug) return
+    if (UUID_RE.test(idOrSlug)) {
+      setId(idOrSlug)
+      return
+    }
+    let cancelled = false
+    void supabase
+      .from('events')
+      .select('id')
+      .eq('slug', idOrSlug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        if (data) setId(data.id)
+        else {
+          setNotFound(true)
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [idOrSlug])
 
   useEffect(() => {
     if (!id) return
@@ -131,26 +166,36 @@ export default function EventDetailPage({
     )
   }
 
+  // `location.key` is 'default' only for an entry the router itself didn't
+  // create (a fresh page load / direct link) — in every other case the user
+  // navigated here from inside the app, so real browser back returns them to
+  // wherever that actually was (Hub, Events list, etc.) instead of a
+  // hardcoded path that assumes only one possible previous page.
+  const handleBack = () => {
+    if (location.key !== 'default') navigate(-1)
+    else navigate(backPath)
+  }
+
   if (loading)
     return (
-      <div className={cn('max-w-4xl mx-auto space-y-4', outerClassName)}>
+      <div className={cn('max-w-5xl mx-auto space-y-4', outerClassName)}>
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-16" />
         ))}
       </div>
     )
-  if (!event)
+  if (notFound || !event)
     return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
 
   return (
-    <div className={cn('max-w-4xl mx-auto space-y-6', outerClassName)}>
+    <div className={cn('max-w-5xl mx-auto space-y-6', outerClassName)}>
       <div className="flex items-start gap-3">
         <Button
           type="button"
           variant="ghost"
           icon={<ArrowLeft className="w-4 h-4" />}
           className="shrink-0 -ml-1"
-          onClick={() => navigate(backPath)}
+          onClick={handleBack}
           aria-label={backAriaLabel}
         />
         <div className="min-w-0 flex-1">

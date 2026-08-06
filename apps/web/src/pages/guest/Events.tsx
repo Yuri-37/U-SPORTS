@@ -102,7 +102,7 @@ export default function GuestEvents() {
       <Card
         key={e.id}
         className="cursor-pointer hover:border-white/20 transition-colors"
-        onClick={() => navigate(`/guest/events/${e.id}`)}
+        onClick={() => navigate(`/guest/events/${e.slug}`)}
       >
         <div className="flex items-start justify-between mb-3">
           <span className="text-2xl">{getSportIcon(e.sport as Sport)}</span>
@@ -134,7 +134,7 @@ export default function GuestEvents() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-start gap-3">
         <Button
           type="button"

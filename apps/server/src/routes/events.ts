@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
@@ -10,6 +11,16 @@ import {
 } from '../utils/athleteNotifications'
 
 const router = Router()
+
+/** Slugs are generated once at creation and never change, even if the event is later renamed. */
+function slugifyEventName(name: string, id: string): string {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return `${base}-${id.replace(/-/g, '').slice(-6)}`
+}
 
 const EVENT_CATEGORIES: Record<string, string[]> = {
   basketball: ["Men's Open", "Women's Open", "Men's Varsity", "Women's Varsity", 'Mixed'],
@@ -177,15 +188,20 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
     const effectiveBestOf =
       rest.sport === 'volleyball' || rest.sport === 'table-tennis' ? (best_of ?? null) : null
 
+    // Generated up front (not via a DB default) so the id is known before insert —
+    // the slug embeds it for uniqueness without a second round-trip or retry-on-collision.
+    const eventId = randomUUID()
     const { data, error } = await supabase
       .from('events')
       .insert({
+        id: eventId,
         ...rest,
         category,
         description,
         table_tennis_format: ttFormat,
         best_of: effectiveBestOf,
         created_by: req.user!.id,
+        slug: slugifyEventName(rest.name, eventId),
       })
       .select()
       .single()

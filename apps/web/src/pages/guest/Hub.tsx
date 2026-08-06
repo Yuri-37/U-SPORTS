@@ -35,7 +35,7 @@ type LiveHubMatch = {
 }
 
 type ChampionSpotlight = {
-  event: { id: string; name: string; sport: string }
+  event: { id: string; slug: string; name: string; sport: string }
   placements: EventPlacement[]
 }
 
@@ -129,7 +129,7 @@ export default function GuestHub() {
   const loadChampionSpotlights = useCallback(async () => {
     const { data: completed } = await supabase
       .from('events')
-      .select('id,name,sport')
+      .select('id,slug,name,sport')
       .eq('status', 'completed')
       .order('created_at', { ascending: false })
       .limit(8)
@@ -143,7 +143,10 @@ export default function GuestHub() {
         .eq('event_id', ev.id)
       const podium = deriveEliminationPodium(br ?? [])
       if (!podium) continue
-      rows.push({ event: ev as { id: string; name: string; sport: string }, placements: podium })
+      rows.push({
+        event: ev as { id: string; slug: string; name: string; sport: string },
+        placements: podium,
+      })
       podium.forEach((p) => partIds.add(p.participantId))
     }
     setChampionSpotlights(rows)
@@ -213,7 +216,7 @@ export default function GuestHub() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
       {/* Hero */}
       <div
         className="relative rounded-2xl overflow-hidden py-16 px-8 text-center"
@@ -256,7 +259,7 @@ export default function GuestHub() {
                 <Card
                   key={ev.id}
                   className="cursor-pointer hover:border-white/20 transition-colors"
-                  onClick={() => navigate(`/guest/events/${ev.id}`)}
+                  onClick={() => navigate(`/guest/events/${ev.slug}`)}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-xl">{getSportIcon(ev.sport as any)}</span>
@@ -452,7 +455,7 @@ export default function GuestHub() {
               <Card
                 key={e.id}
                 className="cursor-pointer hover:border-white/20"
-                onClick={() => navigate(`/guest/events/${e.id}`)}
+                onClick={() => navigate(`/guest/events/${e.slug}`)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xl">{getSportIcon(e.sport as any)}</span>
