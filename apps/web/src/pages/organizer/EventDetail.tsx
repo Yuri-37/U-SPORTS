@@ -34,10 +34,14 @@ import {
   formatEnumLabel,
   organizerEventStatusLabel,
 } from '../../lib/utils'
-import { collectBracketParticipantIds, fetchParticipantLabels } from '../../lib/participantLabels'
+import {
+  collectBracketParticipantIds,
+  fetchParticipantLabels,
+  fetchParticipantTypes,
+} from '../../lib/participantLabels'
 import BracketView from '../../components/brackets/BracketView'
 import EventPodiumStrip from '../../components/events/EventPodiumStrip'
-import { deriveEliminationPodium } from '../../lib/eventPlacements'
+import { deriveFullEventStandings } from '../../lib/eventPlacements'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
@@ -75,6 +79,7 @@ export default function OrganizerEventDetail() {
   const [crossoverPick, setCrossoverPick] = useState<Record<string, { a: string; b: string }>>({})
   const [savingCrossover, setSavingCrossover] = useState(false)
   const [participantLabels, setParticipantLabels] = useState<Record<string, string>>({})
+  const [participantTypes, setParticipantTypes] = useState<Record<string, 'team' | 'athlete'>>({})
   const [finishOpen, setFinishOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -175,7 +180,14 @@ export default function OrganizerEventDetail() {
     [matches, brackets],
   )
 
-  const eliminationPodium = useMemo(() => deriveEliminationPodium(brackets), [brackets])
+  const standings = useMemo(() => deriveFullEventStandings(brackets), [brackets])
+
+  const handleStandingsSelect = (participantId: string, type: 'team' | 'athlete') => {
+    // No organizer-specific team/athlete detail route exists — the public
+    // guest pages work fine for organizers too and avoid inventing a
+    // parallel route just for this click-through.
+    navigate(type === 'team' ? `/guest/teams/${participantId}` : `/guest/athletes/${participantId}`)
+  }
 
   const lockedMatchIds = useMemo(() => {
     const locked = new Set<string>()
@@ -225,18 +237,28 @@ export default function OrganizerEventDetail() {
     const ids = [...new Set([...bracketIds, ...matchIds])]
     if (ids.length === 0) {
       setParticipantLabels({})
+      setParticipantTypes({})
       return
     }
     const fromTeams: Record<string, string> = {}
     for (const t of teams) fromTeams[t.id] = t.name as string
+    // `teams` is already the full roster for this event — anything in it is
+    // a team, so only the leftover (individual-event athlete) ids need a
+    // lookup below.
+    const typesFromTeams: Record<string, 'team'> = {}
+    for (const id of ids) if (fromTeams[id]) typesFromTeams[id] = 'team'
     const missing = ids.filter((id) => !fromTeams[id])
     if (missing.length === 0) {
       setParticipantLabels(fromTeams)
+      setParticipantTypes(typesFromTeams)
       return
     }
     let cancelled = false
     void fetchParticipantLabels(missing).then((extra) => {
       if (!cancelled) setParticipantLabels({ ...fromTeams, ...extra })
+    })
+    void fetchParticipantTypes(missing).then((extra) => {
+      if (!cancelled) setParticipantTypes({ ...typesFromTeams, ...extra })
     })
     return () => {
       cancelled = true
@@ -638,10 +660,12 @@ export default function OrganizerEventDetail() {
         onChange={setTab}
       />
 
-      {event.status === 'completed' && eliminationPodium && eliminationPodium.length > 0 ? (
+      {event.status === 'completed' && standings && standings.length > 0 ? (
         <EventPodiumStrip
-          placements={eliminationPodium}
+          placements={standings}
           labelByParticipantId={participantLabels}
+          typeByParticipantId={participantTypes}
+          onSelect={handleStandingsSelect}
           title="Final standings"
         />
       ) : null}

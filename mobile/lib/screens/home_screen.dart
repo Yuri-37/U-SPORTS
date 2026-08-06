@@ -252,10 +252,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 20),
+                    // Gold trophy, not the red dot "Live now" uses below —
+                    // sharing that dot made a finished-results section read
+                    // as urgent/live, same as an actually-live match.
                     Row(
                       children: [
-                        Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppTheme.danger, shape: BoxShape.circle)),
+                        const Icon(Icons.emoji_events, size: 18, color: AppTheme.warning),
                         const SizedBox(width: 8),
                         Text(
                           'Recent champions',
@@ -315,10 +318,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             liveAsync.when(
               data: (snap) {
                 if (snap.matches.isEmpty) return const SizedBox.shrink();
+                const visibleCount = 3;
+                final shown = snap.matches.take(visibleCount).toList();
+                final remaining = snap.matches.length - shown.length;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppTheme.danger, shape: BoxShape.circle)),
@@ -334,7 +340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...snap.matches.map((m) {
+                    ...shown.map((m) {
                       final mid = m['id'] as String;
                       final period = snap.periodByMatch[mid] ?? 1;
                       return LiveMatchCard(
@@ -344,20 +350,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onWatch: () => showHubLiveMatchSheet(context, matchId: mid),
                       );
                     }),
+                    if (remaining > 0)
+                      TextButton(
+                        // `go`, not `push` — /events is a bottom-nav tab root, see note below.
+                        onPressed: () => context.go('/events'),
+                        style: TextButton.styleFrom(foregroundColor: LayoutTokens.secondaryText(context)),
+                        child: Text('See $remaining more live →'),
+                      ),
                   ],
                 );
               },
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   'Events',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -365,12 +378,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const Spacer(),
                 // `go`, not `push` — see note on the dashboard banner above;
                 // /events is a bottom-nav tab root.
+                // Secondary text color, not the default accent blue — blue is
+                // reserved for the one primary action (Sign in) above; every
+                // link on this screen sharing it made nothing stand out.
                 TextButton(
                   onPressed: () => context.go('/events'),
+                  style: TextButton.styleFrom(foregroundColor: LayoutTokens.secondaryText(context)),
                   child: const Text('Upcoming →'),
                 ),
                 TextButton(
                   onPressed: () => context.go('/events?view=past'),
+                  style: TextButton.styleFrom(foregroundColor: LayoutTokens.secondaryText(context)),
                   child: const Text('Past results →'),
                 ),
               ],
@@ -387,6 +405,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   );
                 }
+                // Capped — the "Upcoming →" / "Past results →" links above
+                // already exist as the "see more" path, so a long event list
+                // doesn't need to render in full on the home screen too.
+                const visibleCount = 6;
+                final shown = evs.length > visibleCount ? evs.sublist(0, visibleCount) : evs;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -396,9 +419,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 0.95,
                   ),
-                  itemCount: evs.length,
+                  itemCount: shown.length,
                   itemBuilder: (ctx, i) {
-                    final e = evs[i];
+                    final e = shown[i];
                     return EventCard(
                       hubCompact: true,
                       event: e,
@@ -417,7 +440,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text(
               'Browse by Sport',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

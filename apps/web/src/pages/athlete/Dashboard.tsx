@@ -55,7 +55,12 @@ type UpcomingMatchRow = {
   opponentLabel: string
 }
 
-type EventFinishHighlight = { eventId: string; eventName: string; sport: string; rank: 1 | 2 }
+// rank is only ever 1 or 2 here in practice — this only ever consumes
+// deriveEliminationPodium (champion/runner-up), never the full-standings
+// derivation — but the shared EventPlacement.rank type is now `number` (it
+// widened to support full per-event rankings elsewhere), so match that here
+// too rather than fighting the shared type with a local narrowing.
+type EventFinishHighlight = { eventId: string; eventName: string; sport: string; rank: number }
 
 function sortAthleteUpcomingMatches<
   T extends { status?: string | null; scheduled_at?: string | null },

@@ -119,7 +119,7 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
   const showSummaryOnly = Boolean(breakdown && breakdown.rows.length === 0 && breakdown.summaryLine)
 
   return (
-    <Modal open={open} onClose={onClose} title="Match details" size="lg">
+    <Modal open={open} onClose={onClose} title="Match details" size="full">
       {loading ? (
         <div className="space-y-3">
           <Skeleton className="h-8 w-full" />
@@ -154,7 +154,10 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
             )}
           </div>
 
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+          {/* Score card stays compact even though the modal is now wide enough
+              for the stats table below — a 2-column score grid doesn't need
+              896px, it just reads as sparse. */}
+          <div className="max-w-xl rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
               Matchup
             </p>

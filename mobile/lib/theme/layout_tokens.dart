@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 /// Brightness-aware surface/text tokens — values mirror web's CSS custom
 /// properties (`apps/web/src/styles/index.css`) exactly, so the two clients
-/// read as the same product. `danger` and `warning` are deliberately NOT
-/// here: web's own UI kit (`Button`/`Badge`/`Alert` in
-/// `apps/web/src/components/ui/index.tsx`) hardcodes those as fixed brand
-/// colors regardless of theme (`AppTheme.danger`/`AppTheme.warning`) — only
-/// `success` actually varies by theme on web, via `var(--success)`.
+/// read as the same product.
+///
+/// `danger`/`warning` below are for components that mirror a web component
+/// reading `var(--danger)`/`var(--warning)` directly (e.g. `AnnouncementBanner.tsx`
+/// — those CSS vars genuinely shift to a muted `#dc2626`/`#d97706` in light
+/// mode). For components mirroring web's UI kit instead (`Button`/`Badge`/`Alert`
+/// in `apps/web/src/components/ui/index.tsx`, which hardcode the brand colors
+/// regardless of theme), keep using the fixed `AppTheme.danger`/`AppTheme.warning`.
 class LayoutTokens {
   LayoutTokens._();
 
@@ -55,5 +58,21 @@ class LayoutTokens {
     return Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFF22C55E)
         : const Color(0xFF059669);
+  }
+
+  /// Web `--danger`. See class doc — use this over `AppTheme.danger` for
+  /// anything mirroring a web component that reads the CSS var directly.
+  static Color danger(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFFFF3355)
+        : const Color(0xFFDC2626);
+  }
+
+  /// Web `--warning`. See class doc — use this over `AppTheme.warning` for
+  /// anything mirroring a web component that reads the CSS var directly.
+  static Color warning(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFFFFB800)
+        : const Color(0xFFD97706);
   }
 }

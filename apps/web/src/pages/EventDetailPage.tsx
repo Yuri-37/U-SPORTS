@@ -15,8 +15,12 @@ import {
 import BracketView from '../components/brackets/BracketView'
 import PublicMatchDetailModal from '../components/events/PublicMatchDetailModal'
 import EventPodiumStrip from '../components/events/EventPodiumStrip'
-import { collectBracketParticipantIds, fetchParticipantLabels } from '../lib/participantLabels'
-import { deriveEliminationPodium } from '../lib/eventPlacements'
+import {
+  collectBracketParticipantIds,
+  fetchParticipantLabels,
+  fetchParticipantTypes,
+} from '../lib/participantLabels'
+import { deriveFullEventStandings } from '../lib/eventPlacements'
 import type { Event, Bracket, Match } from '../types'
 
 function tabFromSearch(v: string | null): 'bracket' | 'matches' {
@@ -46,6 +50,7 @@ export default function EventDetailPage({
     tabFromSearch(searchParams.get('tab')),
   )
   const [participantLabels, setParticipantLabels] = useState<Record<string, string>>({})
+  const [participantTypes, setParticipantTypes] = useState<Record<string, 'team' | 'athlete'>>({})
   const [matchDetailId, setMatchDetailId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -96,12 +101,21 @@ export default function EventDetailPage({
     void fetchParticipantLabels(ids).then((m) => {
       if (!cancelled) setParticipantLabels(m)
     })
+    // Only needed for standings row click-through — small enough (ids only,
+    // no name column) that it's not worth gating behind event.status.
+    void fetchParticipantTypes(ids).then((m) => {
+      if (!cancelled) setParticipantTypes(m)
+    })
     return () => {
       cancelled = true
     }
   }, [brackets, matches])
 
-  const podium = useMemo(() => deriveEliminationPodium(brackets), [brackets])
+  const standings = useMemo(() => deriveFullEventStandings(brackets), [brackets])
+
+  const handleStandingsSelect = (participantId: string, type: 'team' | 'athlete') => {
+    navigate(type === 'team' ? `/guest/teams/${participantId}` : `/guest/athletes/${participantId}`)
+  }
 
   const handleTabChange = (next: string) => {
     const idTab = next === 'matches' ? 'matches' : 'bracket'
@@ -177,10 +191,12 @@ export default function EventDetailPage({
         onChange={handleTabChange}
       />
 
-      {event.status === 'completed' && podium && podium.length > 0 ? (
+      {event.status === 'completed' && standings && standings.length > 0 ? (
         <EventPodiumStrip
-          placements={podium}
+          placements={standings}
           labelByParticipantId={participantLabels}
+          typeByParticipantId={participantTypes}
+          onSelect={handleStandingsSelect}
           title="Final standings"
         />
       ) : null}

@@ -27,7 +27,10 @@ export default function AthleteProfile() {
   const { profile, athlete } = useAuthStore()
   const navigate = useNavigate()
 
-  type EventFinish = { eventId: string; eventName: string; sport: string; rank: 1 | 2 }
+  // rank is only ever 1 or 2 here in practice (deriveEliminationPodium only),
+  // matching the shared EventPlacement.rank type (now `number` to support
+  // full per-event rankings elsewhere) rather than a local narrowing.
+  type EventFinish = { eventId: string; eventName: string; sport: string; rank: number }
   const [eventFinishes, setEventFinishes] = useState<EventFinish[]>([])
   const [finishesLoading, setFinishesLoading] = useState(false)
 

@@ -39,3 +39,28 @@ export async function fetchParticipantLabels(ids: string[]): Promise<Record<stri
 
   return map
 }
+
+/**
+ * Which of `teams` vs `athletes` each id belongs to — for standings rows
+ * that need to link to a team page or an athlete page. Same team-first
+ * lookup as fetchParticipantLabels, kept separate so callers that only need
+ * names (the common case) don't pay for a query they don't use.
+ */
+export async function fetchParticipantTypes(
+  ids: string[],
+): Promise<Record<string, 'team' | 'athlete'>> {
+  const uniq = [...new Set(ids.filter(Boolean))]
+  const map: Record<string, 'team' | 'athlete'> = {}
+  if (uniq.length === 0) return map
+
+  const { data: teamRows } = await supabase.from('teams').select('id').in('id', uniq)
+  for (const t of teamRows ?? []) map[t.id] = 'team'
+
+  const missing = uniq.filter((id) => !map[id])
+  if (missing.length === 0) return map
+
+  const { data: athleteRows } = await supabase.from('athletes').select('id').in('id', missing)
+  for (const a of athleteRows ?? []) map[a.id] = 'athlete'
+
+  return map
+}

@@ -26,6 +26,7 @@ class EventDetailScreen extends ConsumerStatefulWidget {
 class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabs;
   Map<String, String> _labels = {};
+  Map<String, String> _types = {};
   String _labelSig = '';
 
   @override
@@ -62,9 +63,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
     }
     final map = await fetchParticipantLabels(ids.toList());
     if (mounted) setState(() => _labels = map);
+    final types = await fetchParticipantTypes(ids.toList());
+    if (mounted) setState(() => _types = types);
   }
 
   String _slotLabel(String? id) => participantDisplayLabel(_labels, id);
+
+  /// Standings rows link to a team/athlete page once its type is known;
+  /// null (no tap) while that lookup is still in flight or unresolved.
+  VoidCallback? _tapHandlerFor(String participantId) {
+    final type = _types[participantId];
+    if (type == null) return null;
+    return () => context.push(type == 'team' ? '/teams/$participantId' : '/athletes/$participantId');
+  }
 
   String? _participantIdForMatch(Map<String, dynamic> match, List<Map<String, dynamic>> brackets, String slot) {
     final direct = slot == 'a' ? match['participant_a_id'] : match['participant_b_id'];
@@ -306,7 +317,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _resolveLabels(brackets, matches, event);
         });
-        final podium = deriveEliminationPodium(brackets);
+        final standings = deriveFullEventStandings(brackets);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -366,7 +377,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(desc, style: const TextStyle(fontSize: 13)),
                       ),
-                    if (podium != null && status == 'completed') ...[
+                    if (standings != null && status == 'completed') ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -378,9 +389,25 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (var i = 0; i < podium.length; i++) ...[
+                            for (var i = 0; i < standings.length && i < 2; i++) ...[
                               if (i > 0) const SizedBox(height: 10),
-                              _PodiumRow(rank: podium[i].rank, name: _slotLabel(podium[i].participantId)),
+                              _PodiumRow(
+                                rank: standings[i].rank,
+                                name: _slotLabel(standings[i].participantId),
+                                onTap: _tapHandlerFor(standings[i].participantId),
+                              ),
+                            ],
+                            if (standings.length > 2) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                child: Divider(height: 1, color: LayoutTokens.borderSubtle(context)),
+                              ),
+                              for (var i = 2; i < standings.length; i++)
+                                _StandingsRow(
+                                  rank: standings[i].rank,
+                                  name: _slotLabel(standings[i].participantId),
+                                  onTap: _tapHandlerFor(standings[i].participantId),
+                                ),
                             ],
                           ],
                         ),
@@ -486,42 +513,90 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
 }
 
 class _PodiumRow extends StatelessWidget {
-  const _PodiumRow({required this.rank, required this.name});
+  const _PodiumRow({required this.rank, required this.name, this.onTap});
 
   final int rank;
   final String name;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final isChampion = rank == 1;
     final rankColor = isChampion ? AppTheme.warning : LayoutTokens.mutedText(context);
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(color: rankColor.withValues(alpha: 0.15), shape: BoxShape.circle),
-          child: Icon(isChampion ? Icons.emoji_events : Icons.military_tech, color: rankColor, size: 20),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: rankColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(isChampion ? Icons.emoji_events : Icons.military_tech, color: rankColor, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  placementRankLabel(rank),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: LayoutTokens.secondaryText(context)),
+                ),
+                Text(
+                  name,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) Icon(Icons.chevron_right, size: 20, color: LayoutTokens.mutedText(context)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Everyone past champion/runner-up — a plain numbered, tappable row rather
+/// than the trophy/medal treatment above (mirrors web's EventPodiumStrip
+/// split between the two highlighted top cards and the list below them).
+class _StandingsRow extends StatelessWidget {
+  const _StandingsRow({required this.rank, required this.name, this.onTap});
+
+  final int rank;
+  final String name;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: Text(
                 placementRankLabel(rank),
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: LayoutTokens.secondaryText(context)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context)),
               ),
-              Text(
+            ),
+            Expanded(
+              child: Text(
                 name,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+            if (onTap != null) Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

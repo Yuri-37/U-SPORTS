@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import '../theme/layout_tokens.dart';
 import '../utils/format_helpers.dart';
 
 /// Dismissible public banner row (display_mode = banner).
@@ -41,12 +41,14 @@ class _HubAnnouncementStripState extends State<HubAnnouncementStrip> {
       children: banners.map((a) {
         final id = a['id']?.toString() ?? '';
         final critical = a['urgency'] == 'critical';
+        final dangerColor = LayoutTokens.danger(context);
+        final warningColor = LayoutTokens.warning(context);
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Material(
             color: critical
-                ? AppTheme.danger.withValues(alpha: 0.12)
-                : AppTheme.warning.withValues(alpha: 0.12),
+                ? dangerColor.withValues(alpha: 0.12)
+                : warningColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
@@ -61,8 +63,7 @@ class _HubAnnouncementStripState extends State<HubAnnouncementStrip> {
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
-                              color:
-                                  critical ? AppTheme.danger : AppTheme.warning,
+                              color: critical ? dangerColor : warningColor,
                             )),
                         const SizedBox(height: 4),
                         Text(a['body'] as String? ?? '',
@@ -136,7 +137,7 @@ class HubAnnouncementTicker extends StatelessWidget {
     return Column(
       children: slider.map((a) {
         final critical = a['urgency'] == 'critical';
-        final urgencyColor = critical ? AppTheme.danger : AppTheme.warning;
+        final urgencyColor = critical ? LayoutTokens.danger(context) : LayoutTokens.warning(context);
         return Container(
           height: 36,
           decoration: BoxDecoration(

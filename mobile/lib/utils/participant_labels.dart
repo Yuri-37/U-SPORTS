@@ -65,6 +65,31 @@ Future<Map<String, String>> fetchParticipantLabels(List<String> ids) async {
   return map;
 }
 
+/// Which of `teams` vs `athletes` each id belongs to — for standings rows
+/// that need to link to a team page or an athlete page. Direct-Supabase only
+/// (no server-route-first like fetchParticipantLabels above) since this is a
+/// small, non-critical lookup — mirrors web's fetchParticipantTypes.
+Future<Map<String, String>> fetchParticipantTypes(List<String> ids) async {
+  final uniq = ids.toSet().toList()..removeWhere((e) => e.isEmpty);
+  final map = <String, String>{};
+  if (uniq.isEmpty) return map;
+
+  final teamRows = await Supabase.instance.client.from('teams').select('id').inFilter('id', uniq);
+  for (final t in teamRows as List) {
+    map[(t as Map)['id'] as String] = 'team';
+  }
+
+  final missing = uniq.where((id) => !map.containsKey(id)).toList();
+  if (missing.isEmpty) return map;
+
+  final athleteRows = await Supabase.instance.client.from('athletes').select('id').inFilter('id', missing);
+  for (final a in athleteRows as List) {
+    map[(a as Map)['id'] as String] = 'athlete';
+  }
+
+  return map;
+}
+
 List<String> collectBracketParticipantIds(List<Map<String, dynamic>> brackets) {
   final s = <String>{};
   for (final b in brackets) {
