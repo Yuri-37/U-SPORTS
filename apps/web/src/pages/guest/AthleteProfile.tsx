@@ -11,6 +11,7 @@ export default function GuestAthleteProfile() {
   const [athlete, setAthlete] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
   const [insights, setInsights] = useState<any[]>([])
+  const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -34,11 +35,16 @@ export default function GuestAthleteProfile() {
         .eq('entity_type', 'player')
         .eq('entity_id', id)
         .limit(3),
+      // Team name + sport only (no coach names) — teams/team_members RLS is
+      // fully public, matches the query already used on the athlete's own
+      // profile (pages/athlete/Profile.tsx), trimmed of the coach join.
+      supabase.from('team_members').select('team_id, team:teams(id, name, sport)').eq('athlete_id', id),
     ])
-      .then(([a, s, ins]) => {
+      .then(([a, s, ins, tm]) => {
         setAthlete(a.data)
         setStats(s.data)
         setInsights(ins.data ?? [])
+        setTeams(((tm.data ?? []) as any[]).map((row) => row.team).filter(Boolean))
       })
       .finally(() => setLoading(false))
   }, [id])
@@ -111,6 +117,21 @@ export default function GuestAthleteProfile() {
           </div>
         </div>
       </Card>
+
+      {teams.length > 0 && (
+        <Card>
+          <h3 className="font-bold mb-3">Team</h3>
+          <div className="space-y-2">
+            {teams.map((t) => (
+              <div key={t.id} className="flex items-center gap-2 text-sm">
+                <span>{getSportIcon(t.sport as any)}</span>
+                <span className="font-medium">{t.name}</span>
+                <span className="text-[var(--text-muted)]">· {getSportLabel(t.sport as any)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {stats && (
         <Card>

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/sport_helpers.dart';
+import '../utils/error_helpers.dart';
 import '../widgets/stat_chip.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -43,6 +44,17 @@ final _athleteInsightsProvider = FutureProvider.autoDispose.family<List<Map<Stri
   return (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 });
 
+/// Team name + sport only (no coach names) — teams/team_members RLS is fully
+/// public, matches the two-step query already used on the athlete's own
+/// profile (athlete_own_profile_screen.dart's _loadExtras).
+final _athleteTeamsProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, athleteId) async {
+  final tm = await Supabase.instance.client.from('team_members').select('team_id').eq('athlete_id', athleteId);
+  final teamIds = (tm as List).map((e) => (e as Map)['team_id'] as String).toList();
+  if (teamIds.isEmpty) return [];
+  final teams = await Supabase.instance.client.from('teams').select('id,name,sport').inFilter('id', teamIds);
+  return (teams as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+});
+
 class AthleteProfileScreen extends ConsumerWidget {
   const AthleteProfileScreen({super.key, required this.athleteId});
 
@@ -53,6 +65,7 @@ class AthleteProfileScreen extends ConsumerWidget {
     final athleteAsync = ref.watch(_athletePublicProvider(athleteId));
     final statsAsync = ref.watch(_athleteStatsProvider(athleteId));
     final insAsync = ref.watch(_athleteInsightsProvider(athleteId));
+    final teamsAsync = ref.watch(_athleteTeamsProvider(athleteId));
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -71,7 +84,7 @@ class AthleteProfileScreen extends ConsumerWidget {
       ),
       body: athleteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text(friendlyError(e))),
         data: (athlete) {
           if (athlete == null) {
             return const Center(child: Text('Athlete not found or not public.'));
@@ -88,6 +101,7 @@ class AthleteProfileScreen extends ConsumerWidget {
           final rawStats = stats?['stats'] as Map<String, dynamic>?;
           final highlights = seasonStatHighlights(sport, rawStats, gp);
           final insights = insAsync.valueOrNull ?? [];
+          final teams = teamsAsync.valueOrNull ?? [];
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -128,6 +142,21 @@ class AthleteProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (teams.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const Text('Team', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 8),
+                ...teams.map((t) {
+                  final tSport = t['sport'] as String? ?? '';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '${sportEmoji(tSport)} ${t['name'] as String? ?? ''} · ${sportLabel(tSport)}',
+                      style: TextStyle(color: LayoutTokens.secondaryText(context)),
+                    ),
+                  );
+                }),
+              ],
               if (stats != null) ...[
                 const SizedBox(height: 24),
                 const Text('Season stats', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
