@@ -111,7 +111,10 @@ export function periodScoreBreakdown(
     otKeys.forEach((k, i) => {
       const l = nz(sa?.[k])
       const r = nz(sb?.[k])
-      if (sa?.[k] != null || sb?.[k] != null || l > 0 || r > 0) {
+      // OT columns default to 0 rather than null, so a "stored" check alone
+      // can't tell an unplayed OT period from a played one — a real period
+      // always ends with a nonzero score on at least one side.
+      if (l > 0 || r > 0) {
         rows.push({ label: i === 0 ? 'OT' : `OT${i + 1}`, left: l, right: r })
       }
     })
@@ -153,10 +156,12 @@ export function periodScoreBreakdown(
     const keys = ['set1', 'set2', 'set3', 'set4', 'set5'] as const
     const rows: PeriodScoreRow[] = []
     keys.forEach((k, i) => {
-      const hasStored = sa?.[k] != null || sb?.[k] != null
       const l = nz(sa?.[k])
       const r = nz(sb?.[k])
-      if (hasStored || l > 0 || r > 0) {
+      // Set columns default to 0 rather than null, so a "stored" check alone
+      // can't tell an unplayed set from a played one — a real set always
+      // ends with a nonzero score on at least one side.
+      if (l > 0 || r > 0) {
         rows.push({ label: `Set ${i + 1}`, left: l, right: r })
       }
     })
@@ -177,10 +182,12 @@ export function periodScoreBreakdown(
     const keys = ['game1', 'game2', 'game3', 'game4', 'game5', 'game6', 'game7'] as const
     const rows: PeriodScoreRow[] = []
     keys.forEach((k, i) => {
-      const hasStored = sa?.[k] != null || sb?.[k] != null
       const l = nz(sa?.[k])
       const r = nz(sb?.[k])
-      if (hasStored || l > 0 || r > 0) {
+      // Game columns default to 0 rather than null, so a "stored" check alone
+      // can't tell an unplayed game from a played one — a real game always
+      // ends with a nonzero score on at least one side.
+      if (l > 0 || r > 0) {
         rows.push({ label: `Game ${i + 1}`, left: l, right: r })
       }
     })
