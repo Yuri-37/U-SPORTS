@@ -382,11 +382,14 @@ export default function GuestHub() {
                         {v.nameA}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div
+                      className="flex items-center gap-3 shrink-0 rounded-lg px-4 py-1.5"
+                      style={{ backgroundColor: 'var(--school-primary)' }}
+                    >
                       <span className="text-4xl font-black font-[Barlow_Condensed] text-[var(--school-secondary,#FFD700)]">
                         {v.left}
                       </span>
-                      <span className="text-[var(--text-muted)] text-sm">—</span>
+                      <span className="text-[var(--school-secondary,#FFD700)]/60 text-sm">—</span>
                       <span className="text-4xl font-black font-[Barlow_Condensed] text-[var(--school-secondary,#FFD700)]">
                         {v.right}
                       </span>
