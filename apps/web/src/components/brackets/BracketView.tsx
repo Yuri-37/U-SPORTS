@@ -63,7 +63,12 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
 
   const handleExport = async () => {
     if (!bracketRef.current) return
-    const dataUrl = await toPng(bracketRef.current, { backgroundColor: '#111118' })
+    // Match the canvas to whatever theme is actually active — a hardcoded dark
+    // background here would export white-on-white text in light mode.
+    const canvasBg =
+      getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() ||
+      '#111118'
+    const dataUrl = await toPng(bracketRef.current, { backgroundColor: canvasBg })
     const link = document.createElement('a')
     link.download = 'bracket.png'
     link.href = dataUrl
@@ -89,7 +94,7 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
       </div>
       <TransformWrapper initialScale={1} minScale={0.3} maxScale={2} centerOnInit>
         {({ zoomIn, zoomOut, resetTransform }) => (
-          <div className="rounded-xl overflow-hidden border border-[var(--border-subtle)] bg-[#111118]">
+          <div className="rounded-xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <div className="flex gap-2 p-2 bg-[var(--surface-card)] border-b border-[var(--border-subtle)]">
               <button
                 onClick={() => zoomIn()}
@@ -158,13 +163,22 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                                 {/* Participant A */}
                                 <div
                                   className={cn(
-                                    'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)] border-b border-[var(--border-subtle)]',
-                                    isWinnerSlot(bracket.participant_a_id, bracket.winner_id) &&
-                                      'bg-[var(--success)]/10',
+                                    'flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]',
+                                    // Exactly one background class — stacking a tint on top of
+                                    // bg-surface-card left the winner row's color decided by
+                                    // stylesheet order rather than theme.
+                                    isWinnerSlot(bracket.participant_a_id, bracket.winner_id)
+                                      ? 'bg-[var(--success)]/15'
+                                      : 'bg-[var(--surface-card)]',
                                   )}
                                 >
                                   <span
-                                    className="text-xs font-medium truncate flex-1"
+                                    className={cn(
+                                      'text-xs truncate flex-1 text-[var(--text-primary)]',
+                                      isWinnerSlot(bracket.participant_a_id, bracket.winner_id)
+                                        ? 'font-bold'
+                                        : 'font-medium',
+                                    )}
                                     title={bracket.participant_a_id ?? undefined}
                                   >
                                     {slotLabel(
@@ -181,13 +195,19 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                                 {/* Participant B */}
                                 <div
                                   className={cn(
-                                    'flex items-center justify-between px-3 py-2 bg-[var(--surface-card)]',
-                                    isWinnerSlot(bracket.participant_b_id, bracket.winner_id) &&
-                                      'bg-[var(--success)]/10',
+                                    'flex items-center justify-between px-3 py-2',
+                                    isWinnerSlot(bracket.participant_b_id, bracket.winner_id)
+                                      ? 'bg-[var(--success)]/15'
+                                      : 'bg-[var(--surface-card)]',
                                   )}
                                 >
                                   <span
-                                    className="text-xs font-medium truncate flex-1"
+                                    className={cn(
+                                      'text-xs truncate flex-1 text-[var(--text-primary)]',
+                                      isWinnerSlot(bracket.participant_b_id, bracket.winner_id)
+                                        ? 'font-bold'
+                                        : 'font-medium',
+                                    )}
                                     title={bracket.participant_b_id ?? undefined}
                                   >
                                     {slotLabel(
