@@ -583,20 +583,30 @@ class _TeamCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(sportEmoji(group.sport), style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(group.teamName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                      Text(sportLabel(group.sport), style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
-                    ],
-                  ),
+            // Tapping the header opens the full team page (record, roster, matches) —
+            // the same destination the leaderboard and event screens already link to.
+            InkWell(
+              onTap: () => context.push('/teams/${group.teamId}'),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Text(sportEmoji(group.sport), style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(group.teamName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          Text(sportLabel(group.sport), style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
+                  ],
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 8),
             // Coaches

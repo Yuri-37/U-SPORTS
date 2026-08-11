@@ -101,7 +101,7 @@ export default function GuestEvents() {
     return (
       <Card
         key={e.id}
-        className="cursor-pointer hover:border-white/20 transition-colors"
+        className="cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
         onClick={() => navigate(`/guest/events/${e.slug}`)}
       >
         <div className="flex items-start justify-between mb-3">

@@ -95,7 +95,7 @@ final _teamStatsProvider = FutureProvider.autoDispose.family<Map<String, dynamic
 final _teamMatchesProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, teamId) async {
   final rows = await Supabase.instance.client
       .from('matches')
-      .select('id, scheduled_at, status, participant_a_id, participant_b_id, scores:match_scores(*), event:events(name, sport)')
+      .select('id, event_id, scheduled_at, status, participant_a_id, participant_b_id, scores:match_scores(*), event:events(name, sport)')
       .or('participant_a_id.eq.$teamId,participant_b_id.eq.$teamId')
       .order('scheduled_at', ascending: false)
       .limit(20);
@@ -257,35 +257,46 @@ class TeamDetailScreen extends ConsumerWidget {
                       final scoreLine = (status == 'completed' || status == 'live') && myScore != null && oppScore != null
                           ? '${myScore['total'] ?? 0} - ${oppScore['total'] ?? 0}'
                           : null;
+                      final eventId = m['event_id'] as String?;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Material(
                           color: LayoutTokens.cardBackground(context),
                           borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('vs $opponent', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 2),
-                                      Text(eventName, style: TextStyle(fontSize: 12, color: LayoutTokens.secondaryText(context))),
-                                      if (m['scheduled_at'] != null)
-                                        Text(
-                                          formatDateTime(m['scheduled_at'] as String?),
-                                          style: TextStyle(fontSize: 11, color: LayoutTokens.mutedText(context)),
-                                        ),
-                                    ],
+                          child: InkWell(
+                            // Opens the event this match belongs to — same target the
+                            // athlete dashboard's match rows already use.
+                            onTap: eventId != null ? () => context.push('/events/$eventId') : null,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('vs $opponent', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 2),
+                                        Text(eventName, style: TextStyle(fontSize: 12, color: LayoutTokens.secondaryText(context))),
+                                        if (m['scheduled_at'] != null)
+                                          Text(
+                                            formatDateTime(m['scheduled_at'] as String?),
+                                            style: TextStyle(fontSize: 11, color: LayoutTokens.mutedText(context)),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                if (scoreLine != null)
-                                  Text(scoreLine, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))
-                                else
-                                  Text(matchStatusLabel(status), style: TextStyle(color: LayoutTokens.mutedText(context))),
-                              ],
+                                  if (scoreLine != null)
+                                    Text(scoreLine, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))
+                                  else
+                                    Text(matchStatusLabel(status), style: TextStyle(color: LayoutTokens.mutedText(context))),
+                                  if (eventId != null) ...[
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                         ),

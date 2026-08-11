@@ -1053,9 +1053,30 @@ export default function OrganizerAnalytics() {
                 teamStatsForSport.map((ts) => (
                   <tr
                     key={ts.id}
-                    className="border-t border-[var(--border-subtle)] bg-[var(--surface-card)]"
+                    role={ts.team_id ? 'button' : undefined}
+                    tabIndex={ts.team_id ? 0 : undefined}
+                    className={`border-t border-[var(--border-subtle)] bg-[var(--surface-card)] ${
+                      ts.team_id
+                        ? 'cursor-pointer hover:bg-[var(--surface-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]'
+                        : ''
+                    }`}
+                    onClick={() => ts.team_id && navigate(`/guest/teams/${ts.team_id}`)}
+                    onKeyDown={(e) => {
+                      if (!ts.team_id) return
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        navigate(`/guest/teams/${ts.team_id}`)
+                      }
+                    }}
                   >
-                    <td className="px-4 py-3 font-medium">{ts.team?.name ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {ts.team?.name ?? '—'}
+                      {ts.team_id ? (
+                        <span className="text-[var(--text-muted)] ml-1.5" aria-hidden>
+                          ›
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 text-center font-bold text-[var(--success)]">
                       {ts.wins}
                     </td>

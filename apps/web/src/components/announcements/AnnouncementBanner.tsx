@@ -191,7 +191,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
           <button
             type="button"
             onClick={() => setDismissed((prev) => new Set([...prev, a.id]))}
-            className="text-[var(--text-muted)] hover:text-white transition-colors flex-shrink-0"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors flex-shrink-0"
             aria-label="Dismiss announcement"
           >
             <X className="w-4 h-4" />

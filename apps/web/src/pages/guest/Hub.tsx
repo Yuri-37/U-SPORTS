@@ -258,7 +258,7 @@ export default function GuestHub() {
               return (
                 <Card
                   key={ev.id}
-                  className="cursor-pointer hover:border-white/20 transition-colors"
+                  className="cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
                   onClick={() => navigate(`/guest/events/${ev.slug}`)}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -454,7 +454,7 @@ export default function GuestHub() {
             {recentEvents.map((e) => (
               <Card
                 key={e.id}
-                className="cursor-pointer hover:border-white/20"
+                className="cursor-pointer hover:border-[var(--accent-default)]/40"
                 onClick={() => navigate(`/guest/events/${e.slug}`)}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -485,7 +485,7 @@ export default function GuestHub() {
             <button
               key={s.sport}
               onClick={() => navigate(`/guest/leaderboards?sport=${s.sport}`)}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl border border-[var(--border-subtle)] hover:border-white/20 transition-all"
+              className="flex flex-col items-center gap-3 p-6 rounded-xl border border-[var(--border-subtle)] hover:border-[var(--accent-default)]/40 transition-all"
             >
               <span className="text-4xl">{s.icon}</span>
               <span className="text-sm font-medium">{s.label}</span>

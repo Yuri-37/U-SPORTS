@@ -879,7 +879,12 @@ export default function OrganizerScoring() {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    // Two-column on wide screens: scoring controls stay in their original narrow
+    // column, and the activity log moves to a sticky side rail instead of being
+    // squeezed into the middle of the vertical flow. Below xl it falls back to a
+    // single column with the log at the end.
+    <div className="max-w-4xl xl:max-w-7xl mx-auto flex flex-col xl:flex-row xl:items-start gap-4">
+      <div className="space-y-4 flex-1 min-w-0">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -1380,7 +1385,7 @@ export default function OrganizerScoring() {
                     setShotClockEditValue(String(timer.shotClockSeconds))
                     setShotClockEditing(true)
                   }}
-                  className={`text-2xl font-mono font-bold tabular-nums select-none ${clockHeldByOther ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:text-[var(--accent-default)]'} ${timer.shotClockSeconds <= 5 ? 'text-[#FF3355]' : 'text-white'}`}
+                  className={`text-2xl font-mono font-bold tabular-nums select-none ${clockHeldByOther ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:text-[var(--accent-default)]'} ${timer.shotClockSeconds <= 5 ? 'text-[#FF3355]' : 'text-[var(--text-primary)]'}`}
                 >
                   {String(timer.shotClockSeconds).padStart(2, '0')}
                 </span>
@@ -1526,24 +1531,6 @@ export default function OrganizerScoring() {
           )
         })()}
 
-      {isLive && matchId && (
-        <MatchActivityFeed
-          matchId={matchId}
-          online={online}
-          selfId={scopedProfile?.id ?? null}
-          selfName={scopedProfile?.full_name ?? null}
-          nameA={nameA}
-          nameB={nameB}
-          participantAId={participantAId}
-          participantBId={participantBId}
-          currentPeriod={currentPeriod}
-          periodLabel={periodConfigFor(sport).label}
-          recentActions={recentActions}
-          scoringLockedBy={match?.scoring_locked_by ?? null}
-          clockLockedBy={match?.clock_locked_by ?? null}
-        />
-      )}
-
       {/* Serve tracking + timeouts/subs (volleyball & table tennis only) */}
       {isLive && (sport === 'volleyball' || sport === 'table-tennis') && (
         <Card className="space-y-3">
@@ -1594,52 +1581,47 @@ export default function OrganizerScoring() {
             )}
           </div>
 
-          {sport === 'volleyball' && volleyballInfo && gameLimits && (
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span>
-                {nameA} subs {volleyballInfo.subsUsed.a ?? 0}/{gameLimits.subsPerSet}
-                {(volleyballInfo.subsUsed.a ?? 0) >= gameLimits.subsPerSet && (
-                  <span className="text-[var(--danger)] ml-1">limit reached</span>
+          {/* One column per team, so each team's name, its counters and its timeout
+              button line up in a single vertical stack — previously the counters were
+              left-aligned while the buttons were centered, so nothing matched up. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[var(--border-subtle)]">
+            {(
+              [
+                { id: participantAId, name: nameA, side: 'a' as const },
+                { id: participantBId, name: nameB, side: 'b' as const },
+              ] as const
+            ).map((team) => (
+              <div key={team.side} className="flex flex-col gap-1.5 min-w-0">
+                <p className="text-sm font-medium truncate" title={team.name}>
+                  {team.name}
+                </p>
+                {sport === 'volleyball' && volleyballInfo && gameLimits && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    subs {volleyballInfo.subsUsed[team.side] ?? 0}/{gameLimits.subsPerSet}
+                    {(volleyballInfo.subsUsed[team.side] ?? 0) >= gameLimits.subsPerSet && (
+                      <span className="text-[var(--danger)] ml-1">limit reached</span>
+                    )}
+                    {' · '}timeouts {volleyballInfo.timeouts[team.side] ?? 0}/
+                    {gameLimits.timeoutsPerSetVB}
+                  </p>
                 )}
-                {' · '}timeouts {volleyballInfo.timeouts.a ?? 0}/{gameLimits.timeoutsPerSetVB}
-              </span>
-              <span>
-                {nameB} subs {volleyballInfo.subsUsed.b ?? 0}/{gameLimits.subsPerSet}
-                {(volleyballInfo.subsUsed.b ?? 0) >= gameLimits.subsPerSet && (
-                  <span className="text-[var(--danger)] ml-1">limit reached</span>
+                {sport === 'table-tennis' && tableTennisInfo && gameLimits && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    timeouts {tableTennisInfo.timeouts[team.side] ?? 0}/
+                    {gameLimits.timeoutsPerMatchTT}
+                  </p>
                 )}
-                {' · '}timeouts {volleyballInfo.timeouts.b ?? 0}/{gameLimits.timeoutsPerSetVB}
-              </span>
-            </div>
-          )}
-          {sport === 'table-tennis' && tableTennisInfo && gameLimits && (
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span>
-                {nameA} timeouts {tableTennisInfo.timeouts.a ?? 0}/{gameLimits.timeoutsPerMatchTT}
-              </span>
-              <span>
-                {nameB} timeouts {tableTennisInfo.timeouts.b ?? 0}/{gameLimits.timeoutsPerMatchTT}
-              </span>
-            </div>
-          )}
-
-          <div className="flex justify-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!isLockHolder || actionBusy}
-              onClick={() => void handleAction(participantAId, 'timeout')}
-            >
-              {nameA} timeout
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!isLockHolder || actionBusy}
-              onClick={() => void handleAction(participantBId, 'timeout')}
-            >
-              {nameB} timeout
-            </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={!isLockHolder || actionBusy}
+                  onClick={() => void handleAction(team.id, 'timeout')}
+                >
+                  Timeout
+                </Button>
+              </div>
+            ))}
           </div>
         </Card>
       )}
@@ -1855,6 +1837,27 @@ export default function OrganizerScoring() {
           </div>
         </div>
       </Modal>
+      </div>
+
+      {isLive && matchId && (
+        <aside className="xl:w-80 xl:shrink-0 xl:sticky xl:top-4">
+          <MatchActivityFeed
+            matchId={matchId}
+            online={online}
+            selfId={scopedProfile?.id ?? null}
+            selfName={scopedProfile?.full_name ?? null}
+            nameA={nameA}
+            nameB={nameB}
+            participantAId={participantAId}
+            participantBId={participantBId}
+            currentPeriod={currentPeriod}
+            periodLabel={periodConfigFor(sport).label}
+            recentActions={recentActions}
+            scoringLockedBy={match?.scoring_locked_by ?? null}
+            clockLockedBy={match?.clock_locked_by ?? null}
+          />
+        </aside>
+      )}
     </div>
   )
 }

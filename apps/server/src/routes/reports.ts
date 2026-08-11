@@ -634,6 +634,26 @@ router.get(
   },
 )
 
+/**
+ * Truncates `text` with an ellipsis so it fits `maxWidth` on ONE line at the given
+ * font. Cells here have a fixed height, but PDFKit wraps by default — a long team
+ * name (especially with the " (W)" winner marker appended) would spill onto a
+ * second line and overlap the row beneath it.
+ */
+function fitOneLine(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  bold: boolean,
+): string {
+  doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize)
+  if (doc.widthOfString(text) <= maxWidth) return text
+  let cut = text
+  while (cut.length > 1 && doc.widthOfString(`${cut}...`) > maxWidth) cut = cut.slice(0, -1)
+  return `${cut}...`
+}
+
 /** Draws a bordered "Team | period columns | FINAL" grid — the classic printed
  *  score sheet's box score layout — since PDFKit has no built-in table support. */
 function drawScoreGrid(
@@ -678,7 +698,12 @@ function drawScoreGrid(
 
   for (const row of rows) {
     // Helvetica/WinAnsi has no ✓ glyph — it renders as a mangled stray mark, so use plain ASCII.
-    cell(startX, labelWidth, dataRowHeight, row.isWinner ? `${row.label} (W)` : row.label, true, 9)
+    // The winner marker is measured and reserved first so it always survives truncation;
+    // only the team name is shortened when the two together don't fit on one line.
+    const suffix = row.isWinner ? ' (W)' : ''
+    const suffixWidth = suffix ? doc.font('Helvetica-Bold').fontSize(9).widthOfString(suffix) : 0
+    const label = fitOneLine(doc, row.label, labelWidth - 6 - suffixWidth, 9, true) + suffix
+    cell(startX, labelWidth, dataRowHeight, label, true, 9)
     row.values.forEach((v, i) =>
       cell(startX + labelWidth + i * colWidth, colWidth, dataRowHeight, String(v), false, 9),
     )
@@ -694,6 +719,9 @@ function drawScoreGrid(
   }
 
   doc.y = y + 10
+  // PDFKit keeps `x` wherever the last text() call left it — the far-right cell here.
+  // Without this reset, the next heading renders in a narrow right-hand column.
+  doc.x = startX
 }
 
 const PAGE_TOP = 50
@@ -758,7 +786,7 @@ function drawStatsTable(
   for (const row of rows) {
     if (ensureSpace(rowHeight)) drawHeader()
     const y = doc.y
-    cell(startX, y, nameWidth, rowHeight, row.name, true, 7, 'left')
+    cell(startX, y, nameWidth, rowHeight, fitOneLine(doc, row.name, nameWidth - 6, 7, true), true, 7, 'left')
     row.values.forEach((v, i) =>
       cell(startX + nameWidth + i * colWidth, y, colWidth, rowHeight, String(v), false, fontSize),
     )
@@ -766,6 +794,9 @@ function drawStatsTable(
   }
 
   doc.y += 10
+  // Reset x — see the note in drawScoreGrid; otherwise the next team's
+  // "— Player Stats" heading wraps into a narrow column on the right edge.
+  doc.x = startX
 }
 
 /**
@@ -793,7 +824,7 @@ function drawSignatureBlock(
   }
 
   doc.moveDown(0.5)
-  doc.fontSize(14).font('Helvetica-Bold').text('Certification')
+  doc.fontSize(14).font('Helvetica-Bold').text('Certification', 50, doc.y, { width: 500 })
   doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
   doc.moveDown(2)
 
@@ -995,7 +1026,16 @@ router.get(
       const teamName = side === 'a' ? data.participantNames.a : data.participantNames.b
       const rows = (data.playerStats as any[]).filter((p) => p.participant_side === side)
       if (rows.length === 0) continue
-      doc.fontSize(14).font('Helvetica-Bold').text(`${teamName} — Player Stats`)
+      // Keep the heading with its table: without this, a heading landing near the
+      // bottom of a page is stranded there while drawStatsTable breaks to the next.
+      if (doc.y + 70 > PAGE_BOTTOM) {
+        doc.addPage()
+        doc.y = PAGE_TOP
+      }
+      doc
+        .fontSize(14)
+        .font('Helvetica-Bold')
+        .text(`${teamName} — Player Stats`, 50, doc.y, { width: 500 })
       doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
       doc.moveDown(0.5)
       drawStatsTable(

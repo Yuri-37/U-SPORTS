@@ -220,10 +220,12 @@ export default function MatchActivityFeed({
         <Activity className="w-4 h-4 text-[var(--text-muted)]" />
         Activity
       </div>
-      <div className="max-h-48 overflow-y-auto space-y-1.5">
+      {/* Taller in the xl side rail, where there's vertical room to spare — the
+          48-unit cap only exists for the stacked single-column layout below xl. */}
+      <div className="max-h-48 xl:max-h-[60vh] overflow-y-auto space-y-1.5">
         {lines.map((line) => (
-          <p key={line.id} className="text-xs text-[var(--text-muted)]">
-            <span className="text-[var(--text-secondary)]">{line.text}</span>
+          <p key={line.id} className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            {line.text}
           </p>
         ))}
       </div>

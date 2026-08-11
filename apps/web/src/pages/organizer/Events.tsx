@@ -167,7 +167,7 @@ export default function OrganizerEvents() {
           {filtered.map((e) => (
             <Card
               key={e.id}
-              className="cursor-pointer hover:border-white/20 transition-colors"
+              className="cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
               onClick={() => navigate(`/organizer/events/${e.id}`)}
             >
               <div className="flex items-start justify-between mb-3">

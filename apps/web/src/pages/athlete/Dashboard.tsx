@@ -819,7 +819,7 @@ export default function AthleteDashboard() {
                     onClick={() => openEventDetail(m.event_id)}
                     className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Card className="flex items-start gap-3 hover:border-white/20 transition-colors">
+                    <Card className="flex items-start gap-3 hover:border-[var(--accent-default)]/40 transition-colors">
                       <span className="text-2xl">{getSportIcon(m.sport as any)}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -900,7 +900,7 @@ export default function AthleteDashboard() {
                       onClick={() => openEventDetail(m.event_id)}
                       className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <Card className="flex items-start gap-3 hover:border-white/20 transition-colors">
+                      <Card className="flex items-start gap-3 hover:border-[var(--accent-default)]/40 transition-colors">
                         <span className="text-2xl">{getSportIcon(m.sport as any)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -974,7 +974,7 @@ export default function AthleteDashboard() {
                   onClick={() => setTeamDetailModal(g)}
                   className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]"
                 >
-                  <Card className="hover:border-white/20 transition-colors">
+                  <Card className="hover:border-[var(--accent-default)]/40 transition-colors">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-xl">{getSportIcon(g.sport as any)}</span>
@@ -1084,30 +1084,35 @@ export default function AthleteDashboard() {
                 .sort(sortName)
 
               const row = (m: TeamRosterMember, role: 'starter' | 'bench' | 'member') => (
-                <li
-                  key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] py-2 last:border-0"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {m.profile?.full_name ?? 'Teammate'}
-                    </p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {[m.jersey_number ? `#${m.jersey_number}` : null, m.position?.trim() || null]
-                        .filter(Boolean)
-                        .join(' · ') || '—'}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={role === 'starter' ? 'success' : role === 'bench' ? 'default' : 'info'}
-                    size="sm"
+                <li key={m.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/guest/athletes/${m.id}`)}
+                    className="w-full flex flex-wrap items-center justify-between gap-2 py-2 text-left rounded-lg px-2 -mx-2 hover:bg-[var(--surface-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
                   >
-                    {role === 'starter'
-                      ? `Starting (${m.lineup_slot})`
-                      : role === 'bench'
-                        ? 'Bench'
-                        : 'Roster'}
-                  </Badge>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {m.profile?.full_name ?? 'Teammate'}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {[m.jersey_number ? `#${m.jersey_number}` : null, m.position?.trim() || null]
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        role === 'starter' ? 'success' : role === 'bench' ? 'default' : 'info'
+                      }
+                      size="sm"
+                    >
+                      {role === 'starter'
+                        ? `Starting (${m.lineup_slot})`
+                        : role === 'bench'
+                          ? 'Bench'
+                          : 'Roster'}
+                    </Badge>
+                  </button>
                 </li>
               )
 

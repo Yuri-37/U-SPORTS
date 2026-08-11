@@ -348,7 +348,7 @@ export default function GuestLeaderboards() {
               .map((ts, i) => (
                 <Card
                   key={ts.id}
-                  className="flex items-center gap-4 cursor-pointer hover:border-white/20 transition-colors"
+                  className="flex items-center gap-4 cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
                   onClick={() => ts.team?.id && navigate(`/guest/teams/${ts.team.id}`)}
                 >
                   <span className="text-lg font-bold text-[var(--text-muted)] w-6 text-center">

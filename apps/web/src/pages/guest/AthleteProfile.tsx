@@ -123,11 +123,19 @@ export default function GuestAthleteProfile() {
           <h3 className="font-bold mb-3">Team</h3>
           <div className="space-y-2">
             {teams.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 text-sm">
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => navigate(`/guest/teams/${t.id}`)}
+                className="w-full flex items-center gap-2 text-sm text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-[var(--surface-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
+              >
                 <span>{getSportIcon(t.sport as any)}</span>
                 <span className="font-medium">{t.name}</span>
                 <span className="text-[var(--text-muted)]">· {getSportLabel(t.sport as any)}</span>
-              </div>
+                <span className="text-[var(--text-muted)] ml-auto" aria-hidden>
+                  ›
+                </span>
+              </button>
             ))}
           </div>
         </Card>
