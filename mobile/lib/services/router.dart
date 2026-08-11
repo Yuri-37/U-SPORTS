@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/profile_row.dart';
 import '../providers/auth_provider.dart';
 import 'push_notifications_service.dart';
 import '../screens/athlete/athlete_dashboard_screen.dart';
@@ -14,6 +15,7 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/notifications_screen.dart';
+import '../screens/privacy_notice_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/athlete_profile_screen.dart';
@@ -62,16 +64,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // fail open to guest so the app still renders something. main.dart's
       // reconnect listener retries the real fetch once connectivity returns.
       String role;
+      ProfileRow? profile;
       try {
-        final profile = await ref.read(profileProvider.future);
+        profile = await ref.read(profileProvider.future);
         role = profile?.role ?? 'guest';
       } catch (_) {
-        role = 'guest';
-      }
-
-      if (path == '/settings') {
-        if (role == 'athlete') return '/athlete/settings';
-        return null;
+        role = 'guest'; // profile stays null — fail-open, unchanged
       }
 
       // Staff (Admin/Organizer/Coach — plus legacy super_admin/organizer) must use the web platform.
@@ -86,6 +84,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         await ref.read(pushNotificationsServiceProvider).unregisterToken();
         await Supabase.instance.client.auth.signOut();
         return '/auth/login';
+      }
+
+      // One-time blocking privacy gate — keyed off having a real fetched
+      // profile row, not off `role`, so a failed/timed-out fetch
+      // (profile == null) never gates (preserves the fail-open behavior
+      // above). Runs before every other path branch below, since any of
+      // them could otherwise let a page render (or redirect elsewhere)
+      // without ever passing through this check.
+      if (profile != null &&
+          profile.privacyAcceptedAt == null &&
+          path != '/privacy-notice') {
+        return '/privacy-notice';
+      }
+
+      if (path == '/settings') {
+        if (role == 'athlete') return '/athlete/settings';
+        return null;
       }
 
       if (path.startsWith('/notifications')) {
@@ -160,6 +175,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/notifications',
           builder: (ctx, _) => const NotificationsScreen()),
+      GoRoute(
+        path: '/privacy-notice',
+        builder: (ctx, st) => PrivacyNoticeScreen(
+          readOnly: st.uri.queryParameters['readonly'] == 'true',
+        ),
+      ),
       GoRoute(path: '/auth/login', builder: (ctx, _) => const AuthScreen()),
       GoRoute(
         path: '/auth/forgot-password',

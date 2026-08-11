@@ -7,6 +7,7 @@ class ProfileRow {
     this.avatarUrl,
     this.department,
     this.passwordChangedAt,
+    this.privacyAcceptedAt,
   });
 
   factory ProfileRow.fromJson(Map<String, dynamic> j) {
@@ -18,6 +19,7 @@ class ProfileRow {
       avatarUrl: j['avatar_url'] as String?,
       department: j['department'] as String?,
       passwordChangedAt: j['password_changed_at'] as String?,
+      privacyAcceptedAt: j['privacy_accepted_at'] as String?,
     );
   }
 
@@ -30,6 +32,10 @@ class ProfileRow {
   /// Null means the user has never used self-service change-password — i.e.
   /// they're still on whatever password was set for them at account creation.
   final String? passwordChangedAt;
+  /// Null means the user has not accepted the privacy notice yet —
+  /// router.dart blocks all navigation on this until
+  /// POST /accept-privacy-notice is called.
+  final String? privacyAcceptedAt;
 
   bool get isAthlete => role == 'athlete';
 }

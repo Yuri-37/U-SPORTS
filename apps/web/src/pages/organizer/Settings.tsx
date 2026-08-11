@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
 export default function OrganizerSettings() {
@@ -66,6 +67,8 @@ export default function OrganizerSettings() {
       </Card>
 
       <ChangePasswordSection />
+
+      <PrivacyNoticeLinkSection />
 
       <SettingsSignOutSection />
     </div>

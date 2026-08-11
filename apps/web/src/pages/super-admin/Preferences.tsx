@@ -2,6 +2,7 @@ import React from 'react'
 import { Keyboard, Shield } from 'lucide-react'
 import { Card } from '../../components/ui'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
 export default function SuperAdminPreferences() {
@@ -48,6 +49,8 @@ export default function SuperAdminPreferences() {
           to open the Super Admin portal when signed in as a super admin.
         </p>
       </Card>
+
+      <PrivacyNoticeLinkSection />
 
       <SettingsSignOutSection />
     </div>

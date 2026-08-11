@@ -6,6 +6,7 @@ import { useNotificationStore } from './stores/notificationStore'
 import { Spinner } from './components/ui'
 import { defaultPostLoginPath, safeInternalPath } from './lib/navigation'
 import { sessionScopedProfile } from './lib/sessionProfile'
+import PrivacyNoticeGate from './components/auth/PrivacyNoticeGate'
 
 export default function App() {
   const { session, profile, loading: authLoading } = useAuth()
@@ -50,7 +51,8 @@ export default function App() {
       location.pathname === '/student' ||
       location.pathname.startsWith('/auth') ||
       location.pathname.startsWith('/jumbotron') ||
-      location.pathname === '/super-admin/login'
+      location.pathname === '/super-admin/login' ||
+      location.pathname === '/privacy-notice'
 
     if (!session && !isPublicRoute) {
       const from = `${location.pathname}${location.search}`
@@ -99,6 +101,14 @@ export default function App() {
         </div>
       </div>
     )
+  }
+
+  // /jumbotron runs unattended on a venue TV (already exempt in isPublicRoute
+  // above) — an organizer signed in on that same tab must never have the
+  // live scoreboard silently replaced by this on reload.
+  const isJumbotron = location.pathname.startsWith('/jumbotron')
+  if (session && scopedProfile && !scopedProfile.privacy_accepted_at && !isJumbotron) {
+    return <PrivacyNoticeGate profile={scopedProfile} />
   }
 
   return (

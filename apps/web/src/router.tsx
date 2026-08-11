@@ -14,6 +14,7 @@ import RouteErrorPage from './pages/error/RouteErrorPage'
 const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'))
 const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage'))
+const PrivacyNoticePage = React.lazy(() => import('./pages/PrivacyNoticePage'))
 
 // Super Admin
 const SuperAdminLoginPage = React.lazy(() => import('./pages/super-admin/SuperAdminLoginPage'))
@@ -68,6 +69,7 @@ const router = createBrowserRouter([
       { path: 'auth/login', element: <LoginPage /> },
       { path: 'auth/forgot-password', element: <ForgotPasswordPage /> },
       { path: 'auth/reset-password', element: <ResetPasswordPage /> },
+      { path: 'privacy-notice', element: <PrivacyNoticePage /> },
 
       // Jumbotron (no auth, no layout)
       { path: 'jumbotron/:matchId', element: <JumbotronPage /> },

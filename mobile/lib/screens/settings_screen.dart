@@ -91,6 +91,12 @@ class SettingsScreen extends ConsumerWidget {
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('Privacy notice'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => context.push('/privacy-notice?readonly=true'),
+            ),
+            ListTile(
               leading: const Icon(Icons.logout, color: AppTheme.danger),
               title: const Text('Sign out',
                   style: TextStyle(

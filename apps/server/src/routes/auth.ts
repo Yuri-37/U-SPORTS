@@ -89,4 +89,24 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
   res.json({ success: true, passwordChangedAt: now })
 })
 
+router.post('/accept-privacy-notice', requireAuth, async (req: AuthRequest, res) => {
+  const userId = req.user!.id
+  const now = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ privacy_accepted_at: now })
+    .eq('id', userId)
+  if (error) return res.status(500).json({ error: error.message })
+
+  await writeAuditLog({
+    actorId: userId,
+    action: 'privacy_notice_accepted',
+    entityType: 'profile',
+    entityId: userId,
+  })
+
+  res.json({ success: true, privacyAcceptedAt: now })
+})
+
 export default router

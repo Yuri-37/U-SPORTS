@@ -1,5 +1,6 @@
 import React from 'react'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 
 export default function AthleteSettings() {
@@ -14,6 +15,8 @@ export default function AthleteSettings() {
       </div>
 
       <ChangePasswordSection />
+
+      <PrivacyNoticeLinkSection />
 
       <SettingsSignOutSection />
     </div>

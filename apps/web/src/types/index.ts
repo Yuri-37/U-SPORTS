@@ -79,6 +79,8 @@ export interface Profile {
   department?: string | null
   /** Null means the user has never used self-service change-password. */
   password_changed_at?: string | null
+  /** Null means the user has not accepted the privacy notice yet — App.tsx blocks on this. */
+  privacy_accepted_at?: string | null
 }
 
 export interface Organizer {
