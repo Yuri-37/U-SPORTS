@@ -232,7 +232,7 @@ router.delete(
   async (req: AuthRequest, res) => {
     const { data: event } = await supabase
       .from('events')
-      .select('sport')
+      .select('name, sport')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
@@ -243,7 +243,9 @@ router.delete(
       action: 'event_deleted',
       entityType: 'event',
       entityId: req.params.id,
-      details: { sport: event.sport },
+      // Captured now because the row won't exist for the Audit Logs screen to
+      // resolve a name from afterward.
+      details: { name: event.name, sport: event.sport },
     })
 
     const { error } = await supabase.from('events').delete().eq('id', req.params.id)

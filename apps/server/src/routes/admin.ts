@@ -507,6 +507,12 @@ router.get(
 )
 
 router.delete('/seasons/:id', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
+  const { data: season } = await supabase
+    .from('seasons')
+    .select('name')
+    .eq('id', req.params.id)
+    .maybeSingle()
+
   // Prevent deleting a season that has events/matches tied to it unless they are all completed/cancelled
   const { data: events } = await supabase.from('events').select('id').eq('season_id', req.params.id)
   if (events && events.length > 0) {
@@ -531,7 +537,8 @@ router.delete('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Aut
     action: 'season_deleted',
     entity_type: 'season',
     entity_id: req.params.id,
-    details: {},
+    // Captured before delete since the row won't be there to resolve a name from later.
+    details: { name: season?.name ?? null },
   })
 
   res.json({ ok: true })
@@ -607,14 +614,36 @@ router.patch('/institution', requireAuth, requireRole('Admin'), async (req: Auth
 
 // Get audit logs
 router.get('/audit', requireAuth, requireRole('Admin'), async (req, res) => {
-  const limit = Number(req.query.limit) || 50
+  const limit = Math.min(Number(req.query.limit) || 50, 200)
   const offset = Number(req.query.offset) || 0
+  const action = typeof req.query.action === 'string' ? req.query.action.trim() : ''
+  const entityType = typeof req.query.entityType === 'string' ? req.query.entityType.trim() : ''
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('audit_logs')
     .select('*, actor:profiles(full_name, email)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+
+  if (action) query = query.eq('action', action)
+  if (entityType) query = query.eq('entity_type', entityType)
+
+  if (q) {
+    // Free-text search spans the actor's name/email (resolved to ids first, since
+    // PostgREST .or() can't combine a same-table OR with a joined-table match in
+    // one filter string) plus the action and entity_type columns directly.
+    const { data: matchingActors } = await supabase
+      .from('profiles')
+      .select('id')
+      .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
+      .limit(200)
+    const actorIds = (matchingActors ?? []).map((a) => a.id)
+    const orParts = [`action.ilike.%${q}%`, `entity_type.ilike.%${q}%`]
+    if (actorIds.length > 0) orParts.push(`actor_id.in.(${actorIds.join(',')})`)
+    query = query.or(orParts.join(','))
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1)
 
   if (error) return res.status(500).json({ error: error.message })
 

@@ -39,7 +39,7 @@ export default function GuestTeamDetail() {
       supabase
         .from('team_members')
         .select(
-          'athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name))',
+          'lineup_slot, athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name))',
         )
         .eq('team_id', id),
       supabase
@@ -65,7 +65,19 @@ export default function GuestTeamDetail() {
       .then(async ([t, members, coachRows, ts, m]) => {
         if (cancelled) return
         setTeam(t.data)
-        setRoster((members.data ?? []).map((r: any) => r.athlete).filter(Boolean))
+        setRoster(
+          (members.data ?? [])
+            .filter((r: any) => r.athlete)
+            .map((r: any) => ({ ...r.athlete, lineup_slot: r.lineup_slot }))
+            .sort((a: any, b: any) => {
+              // Starters first (by slot number), then bench — mirrors the athlete
+              // dashboard's "Starting / Bench" roster modal.
+              if (a.lineup_slot != null && b.lineup_slot != null) return a.lineup_slot - b.lineup_slot
+              if (a.lineup_slot != null) return -1
+              if (b.lineup_slot != null) return 1
+              return (a.profile?.full_name ?? '').localeCompare(b.profile?.full_name ?? '')
+            }),
+        )
         setCoaches(
           (coachRows.data ?? [])
             .map((r: any) => r.organizer?.profile?.full_name?.trim())
@@ -219,7 +231,14 @@ export default function GuestTeamDetail() {
                   <p className="font-medium">{a.profile?.full_name ?? 'Athlete'}</p>
                   {a.position && <p className="text-xs text-[var(--text-muted)]">{a.position}</p>}
                 </div>
-                {a.jersey_number && <Badge size="sm">#{a.jersey_number}</Badge>}
+                <div className="flex items-center gap-1.5">
+                  {a.lineup_slot != null && (
+                    <Badge size="sm" variant="success">
+                      Starting
+                    </Badge>
+                  )}
+                  {a.jersey_number && <Badge size="sm">#{a.jersey_number}</Badge>}
+                </div>
               </div>
             ))}
           </div>

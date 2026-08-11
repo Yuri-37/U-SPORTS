@@ -696,6 +696,136 @@ function drawScoreGrid(
   doc.y = y + 10
 }
 
+const PAGE_TOP = 50
+const PAGE_BOTTOM = 740
+
+/** Draws a bordered "Player | stat columns" table for the box score — replaces the
+ *  old single run-on line per player ("Name — PTS 24 · FGM 9 · ..."). Handles page
+ *  overflow by starting a fresh page and repeating the header row, since a full
+ *  15-player basketball roster's table can run past what's left on the page. */
+function drawStatsTable(
+  doc: PDFKit.PDFDocument,
+  columns: { key: string; label: string }[],
+  rows: { name: string; values: (string | number)[] }[],
+) {
+  const startX = 50
+  const tableWidth = 500
+  // Basketball's 14 columns need every spare point; other sports have room to spare.
+  const nameWidth = columns.length > 10 ? 100 : 150
+  const colWidth = (tableWidth - nameWidth) / columns.length
+  const fontSize = columns.length > 10 ? 6.5 : 8
+  const headerHeight = 24
+  const rowHeight = 16
+
+  const cell = (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    text: string,
+    bold: boolean,
+    fs: number,
+    align: 'left' | 'center' = 'center',
+  ) => {
+    doc.rect(x, y, w, h).stroke()
+    doc
+      .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(fs)
+      .text(text, x + 3, y + (h - fs) / 2, { width: w - 6, align })
+  }
+
+  const drawHeader = () => {
+    const y = doc.y
+    cell(startX, y, nameWidth, headerHeight, 'Player', true, 8, 'left')
+    columns.forEach((c, i) =>
+      cell(startX + nameWidth + i * colWidth, y, colWidth, headerHeight, c.label, true, fontSize),
+    )
+    doc.y = y + headerHeight
+  }
+
+  const ensureSpace = (height: number): boolean => {
+    if (doc.y + height > PAGE_BOTTOM) {
+      doc.addPage()
+      doc.y = PAGE_TOP
+      return true
+    }
+    return false
+  }
+
+  ensureSpace(headerHeight + rowHeight)
+  drawHeader()
+
+  for (const row of rows) {
+    if (ensureSpace(rowHeight)) drawHeader()
+    const y = doc.y
+    cell(startX, y, nameWidth, rowHeight, row.name, true, 7, 'left')
+    row.values.forEach((v, i) =>
+      cell(startX + nameWidth + i * colWidth, y, colWidth, rowHeight, String(v), false, fontSize),
+    )
+    doc.y = y + rowHeight
+  }
+
+  doc.y += 10
+}
+
+/**
+ * Blank signature lines to be filled in physically at the venue — pre-fills only
+ * the scorekeeper's printed name, since that's the one signer already on file
+ * (matches.scored_by). Basketball gets both teams' coach/representative lines
+ * (fouls and live scoring calls draw the most disputes); volleyball and table
+ * tennis get a single winning-team representative line, to keep the sheet quick
+ * to close out. There is no referee/official on file anywhere in the schema, so
+ * that line is always blank.
+ */
+function drawSignatureBlock(
+  doc: PDFKit.PDFDocument,
+  sport: Sport,
+  teamAName: string,
+  teamBName: string,
+  winnerName: string | null,
+  scorerName: string | null,
+) {
+  const rowsNeeded = sport === 'basketball' ? 2 : 1
+  const blockHeight = 60 + rowsNeeded * 55
+  if (doc.y + blockHeight > PAGE_BOTTOM) {
+    doc.addPage()
+    doc.y = PAGE_TOP
+  }
+
+  doc.moveDown(0.5)
+  doc.fontSize(14).font('Helvetica-Bold').text('Certification')
+  doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
+  doc.moveDown(2)
+
+  const lineWidth = 220
+  const drawLine = (x: number, y: number, role: string, secondary: string | null) => {
+    doc.moveTo(x, y).lineTo(x + lineWidth, y).stroke()
+    doc
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text(role, x, y + 6, { width: lineWidth, align: 'center' })
+    if (secondary) {
+      doc
+        .fontSize(8)
+        .font('Helvetica')
+        .text(secondary, x, y + 19, { width: lineWidth, align: 'center' })
+    }
+  }
+
+  let y = doc.y
+  drawLine(50, y, 'Scorekeeper', scorerName)
+  drawLine(330, y, 'Referee', null)
+  y += 55
+
+  if (sport === 'basketball') {
+    drawLine(50, y, 'Head Coach / Representative', teamAName)
+    drawLine(330, y, 'Head Coach / Representative', teamBName)
+  } else {
+    drawLine(50, y, 'Team Captain / Representative', winnerName ?? 'Winning team')
+  }
+  doc.y = y + 45
+}
+
 // Generate a match score sheet PDF (header, final score/winner, period-by-period, player box score)
 router.get(
   '/match/:matchId/pdf',
@@ -859,7 +989,7 @@ router.get(
     doc.y = bannerY + 50
     doc.moveDown()
 
-    // Player box score, one section per side
+    // Player box score, one table per side
     const columns = BOX_SCORE_COLUMNS[sport] ?? BOX_SCORE_COLUMNS.basketball
     for (const side of ['a', 'b'] as const) {
       const teamName = side === 'a' ? data.participantNames.a : data.participantNames.b
@@ -868,13 +998,25 @@ router.get(
       doc.fontSize(14).font('Helvetica-Bold').text(`${teamName} — Player Stats`)
       doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
       doc.moveDown(0.5)
-      rows.forEach((p) => {
-        const name = p.athlete?.profile?.full_name ?? `Athlete ${String(p.athlete_id).slice(0, 6)}`
-        const line = columns.map((c) => `${c.label} ${p.stats?.[c.key] ?? 0}`).join(' · ')
-        doc.fontSize(9).font('Helvetica').text(`${name} — ${line}`)
-      })
+      drawStatsTable(
+        doc,
+        columns,
+        rows.map((p) => ({
+          name: p.athlete?.profile?.full_name ?? `Athlete ${String(p.athlete_id).slice(0, 6)}`,
+          values: columns.map((c) => Number(p.stats?.[c.key] ?? 0)),
+        })),
+      )
       doc.moveDown()
     }
+
+    drawSignatureBlock(
+      doc,
+      sport,
+      data.participantNames.a,
+      data.participantNames.b,
+      winnerName,
+      data.scorerName,
+    )
 
     doc.end()
   },

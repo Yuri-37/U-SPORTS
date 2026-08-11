@@ -205,6 +205,12 @@ router.post(
 
     let activeLineup = (existingMatch as { active_lineup?: unknown } | null)
       ?.active_lineup as Record<string, string[]> | null
+    // Non-null when a team's lineup_slot count exceeded this match's active-slot
+    // cap and had to be truncated — should be unreachable now that PATCH
+    // /teams/:id/lineup validates the resulting count (see migration 062), but
+    // truncating rather than blocking keeps a live event from getting stuck if
+    // it somehow still happens; the organizer is told via this flag instead.
+    let lineupOvercap: { side: 'a' | 'b'; had: number; kept: number }[] | null = null
     if (!activeLineup) {
       const activeSlots = getActiveSlots(sport, ttFormat)
       const sides: Array<{ key: 'a' | 'b'; pid: string | null }> = [
@@ -222,11 +228,18 @@ router.post(
           .eq('team_id', pid)
           .not('lineup_slot', 'is', null)
           .order('lineup_slot', { ascending: true })
-          .limit(activeSlots)
 
-        activeLineup[key] = (
-          (members ?? []) as Array<{ athlete_id: string | null; lineup_slot: number | null }>
-        )
+        const all = (members ?? []) as Array<{
+          athlete_id: string | null
+          lineup_slot: number | null
+        }>
+        if (all.length > activeSlots) {
+          lineupOvercap ??= []
+          lineupOvercap.push({ side: key, had: all.length, kept: activeSlots })
+        }
+
+        activeLineup[key] = all
+          .slice(0, activeSlots)
           .filter((m) => m.athlete_id)
           .map((m) => m.athlete_id as string)
       }
@@ -253,7 +266,7 @@ router.post(
       details: { event_id: match.event_id },
     })
 
-    res.json({ success: true, activeLineup })
+    res.json({ success: true, activeLineup, lineupOvercap })
   },
 )
 

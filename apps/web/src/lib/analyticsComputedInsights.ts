@@ -37,7 +37,7 @@ export function buildSeasonAggregateInsights(
   const MIN_GP_TEAM = 1
 
   const playerHref = (athleteId: string) => `/guest/athletes/${athleteId}`
-  const teamHref = (teamId: string) => `/organizer/teams?teamId=${encodeURIComponent(teamId)}`
+  const teamHref = (teamId: string) => `/guest/teams/${teamId}`
 
   if (sport === 'basketball' && leaderboard.length > 0) {
     const qualifying = leaderboard.filter((p) => p.games_played >= MIN_GP_PLAYER)

@@ -29,7 +29,7 @@ import { STAT_KEYS } from '../../lib/matchStatKeys'
 function insightNavigationTarget(insight: Insight): string {
   return insight.entity_type === 'player'
     ? `/guest/athletes/${insight.entity_id}`
-    : `/organizer/teams?teamId=${encodeURIComponent(insight.entity_id)}`
+    : `/guest/teams/${insight.entity_id}`
 }
 
 const INSIGHT_FILTER_GROUPS: Record<string, string[]> = {

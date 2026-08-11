@@ -1,64 +1,21 @@
 import { Router } from 'express'
-import multer from 'multer'
-import { parse } from 'csv-parse/sync'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
+import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
 
 const router = Router()
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-})
+const upload = spreadsheetUpload
 
 const departmentEnum = z.enum(['SBMA', 'SECA', 'SASE', 'SHS'])
 const sportEnum = z.enum(['basketball', 'volleyball', 'table-tennis'])
-
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 // The school's real student email domain — live Outlook/Microsoft 365
 // mailboxes, not a placeholder. Used only when an imported row has no email
 // column value; a supplied email is always used as-is instead.
 const STUDENT_EMAIL_DOMAIN = 'students.nu-dasma.edu.ph'
-
-function isExcelUpload(file: Express.Multer.File) {
-  return file.mimetype === XLSX_MIME || /\.xlsx?$/i.test(file.originalname)
-}
-
-/**
- * Parse an uploaded .xlsx into the same `Record<string, unknown>[]` shape the
- * CSV path produces (row 1 = headers). Every cell is read as its formatted text
- * (`cell.text`) so Excel never coerces IDs like `2023-172117` or year labels
- * like `1st Year` into numbers/dates.
- */
-async function parseXlsx(buffer: Buffer): Promise<Record<string, unknown>[]> {
-  const wb = new ExcelJS.Workbook()
-  await wb.xlsx.load(buffer)
-  const ws = wb.worksheets[0]
-  if (!ws) return []
-
-  const headers: string[] = []
-  ws.getRow(1).eachCell({ includeEmpty: false }, (cell, colNumber) => {
-    headers[colNumber] = String(cell.text ?? '').trim()
-  })
-
-  const rows: Record<string, unknown>[] = []
-  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return
-    const record: Record<string, unknown> = {}
-    let hasValue = false
-    headers.forEach((header, colNumber) => {
-      if (!header) return
-      const text = row.getCell(colNumber).text?.trim() ?? ''
-      record[header] = text
-      if (text) hasValue = true
-    })
-    if (hasValue) rows.push(record)
-  })
-  return rows
-}
 
 const importRowSchema = z.object({
   full_name: z.string().trim().min(1),
@@ -123,15 +80,7 @@ router.post(
       let rawRows: Record<string, unknown>[] = Array.isArray(body.rows) ? body.rows : []
 
       if (req.file?.buffer) {
-        if (isExcelUpload(req.file)) {
-          rawRows = await parseXlsx(req.file.buffer)
-        } else {
-          rawRows = parse(req.file.buffer, {
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-          }) as Record<string, unknown>[]
-        }
+        rawRows = await parseUploadedRows(req.file)
       } else if (typeof body.rows === 'string') {
         rawRows = JSON.parse(body.rows) as Record<string, unknown>[]
       }
@@ -262,15 +211,7 @@ router.post(
       let rawRows: Record<string, unknown>[] = Array.isArray(body.rows) ? body.rows : []
 
       if (req.file?.buffer) {
-        if (isExcelUpload(req.file)) {
-          rawRows = await parseXlsx(req.file.buffer)
-        } else {
-          rawRows = parse(req.file.buffer, {
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-          }) as Record<string, unknown>[]
-        }
+        rawRows = await parseUploadedRows(req.file)
       } else if (typeof body.rows === 'string') {
         rawRows = JSON.parse(body.rows) as Record<string, unknown>[]
       }

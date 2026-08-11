@@ -1,8 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Link, useNavigate, useSearchParams } from 'react-router'
 
-import { Plus, Star, Pencil, Trash2, UserPlus, Search } from 'lucide-react'
+import {
+  Plus,
+  Star,
+  Pencil,
+  Trash2,
+  UserPlus,
+  Search,
+  Eye,
+  Upload,
+  Download,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react'
 
 import {
   Button,
@@ -14,6 +26,7 @@ import {
   Alert,
   Skeleton,
   Badge,
+  Table,
 } from '../../components/ui'
 
 import axios from 'axios'
@@ -44,6 +57,34 @@ function activeSlotsFor(sport: string) {
   if (sport === 'volleyball') return 6
   if (sport === 'table-tennis') return 2 // show max (doubles); actual per-event
   return 5
+}
+
+type TeamImportRow = {
+  row: number
+  valid: boolean
+  error?: string
+  warning?: string
+  team_name?: string
+  sport?: string
+  department?: string
+  student_id?: string
+  full_name?: string
+  lineup?: 'active' | 'bench'
+}
+
+type TeamImportGroup = {
+  team_name: string
+  sport: string
+  department: string | null
+  exists: boolean
+  team_id: string | null
+  will_create: boolean
+  existing_count: number
+  max_roster: number
+  to_add: number
+  active_requested: number
+  max_active: number
+  error?: string
 }
 
 export default function OrganizerTeams() {
@@ -121,6 +162,28 @@ export default function OrganizerTeams() {
   const [rosterBusy, setRosterBusy] = useState(false)
 
   const [removingMembershipId, setRemovingMembershipId] = useState<string | null>(null)
+
+  // Team roster import state (CSV or Excel) — mirrors the athlete import in Athletes.tsx
+  const [showTeamImport, setShowTeamImport] = useState(false)
+  const [teamImportFile, setTeamImportFile] = useState<File | null>(null)
+  const [teamImportSeasonId, setTeamImportSeasonId] = useState('')
+  const [teamImportCreateMissing, setTeamImportCreateMissing] = useState(true)
+  const [teamImporting, setTeamImporting] = useState(false)
+  const [teamImportDownloading, setTeamImportDownloading] = useState(false)
+  const [teamImportPreview, setTeamImportPreview] = useState<{
+    rows: TeamImportRow[]
+    teams: TeamImportGroup[]
+    validCount: number
+    invalidCount: number
+  } | null>(null)
+  const [teamImportPreviewing, setTeamImportPreviewing] = useState(false)
+  const [teamImportPreviewError, setTeamImportPreviewError] = useState('')
+  const [teamImportResult, setTeamImportResult] = useState<{
+    created_teams: { team_id: string; name: string; sport: string }[]
+    added: { row: number; team_name: string; student_id: string; lineup_slot: number | null }[]
+    errors: { row: number; error: string }[]
+  } | null>(null)
+  const teamImportFileRef = useRef<HTMLInputElement>(null)
 
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{
     membershipId: string
@@ -478,6 +541,97 @@ export default function OrganizerTeams() {
     }
   }
 
+  const handleDownloadTeamImportTemplate = async () => {
+    setTeamImportDownloading(true)
+    try {
+      const res = await api.get('/teams/import-template', { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data as Blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'teams-import-template.xlsx'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setTeamImportPreviewError('Could not download template. Is the API running?')
+    } finally {
+      setTeamImportDownloading(false)
+    }
+  }
+
+  const runTeamImportPreview = async (file: File) => {
+    if (!teamImportSeasonId) {
+      setTeamImportPreviewError('Select a season first, then choose your file.')
+      return
+    }
+    setTeamImportPreviewing(true)
+    setTeamImportPreview(null)
+    setTeamImportPreviewError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('season_id', teamImportSeasonId)
+      fd.append('create_missing_teams', String(teamImportCreateMissing))
+      const res = await api.post<{
+        rows: TeamImportRow[]
+        teams: TeamImportGroup[]
+        validCount: number
+        invalidCount: number
+      }>('/teams/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      setTeamImportPreview(res.data)
+    } catch (e: unknown) {
+      const msg =
+        axios.isAxiosError(e) && typeof e.response?.data?.error === 'string'
+          ? (e.response.data as { error: string }).error
+          : 'Could not preview this file.'
+      setTeamImportPreviewError(msg)
+    } finally {
+      setTeamImportPreviewing(false)
+    }
+  }
+
+  const resetTeamImportState = () => {
+    setTeamImportResult(null)
+    setTeamImportFile(null)
+    setTeamImportPreview(null)
+    setTeamImportPreviewError('')
+  }
+
+  const handleConfirmTeamImport = async () => {
+    if (!teamImportPreview) return
+    const validRows = teamImportPreview.rows.filter((r) => r.valid)
+    if (validRows.length === 0) return
+    setTeamImporting(true)
+    setTeamImportResult(null)
+    try {
+      const res = await api.post<{
+        created_teams: { team_id: string; name: string; sport: string }[]
+        added: { row: number; team_name: string; student_id: string; lineup_slot: number | null }[]
+        errors: { row: number; error: string }[]
+      }>('/teams/import', {
+        season_id: teamImportSeasonId,
+        create_missing_teams: teamImportCreateMissing,
+        rows: validRows.map((r) => ({
+          team_name: r.team_name,
+          sport: r.sport,
+          department: r.department,
+          student_id: r.student_id,
+          full_name: r.full_name,
+          lineup: r.lineup,
+        })),
+      })
+      setTeamImportResult(res.data)
+      if (res.data.added.length > 0 || res.data.created_teams.length > 0) fetchTeams()
+    } catch (e: unknown) {
+      const msg =
+        axios.isAxiosError(e) && typeof e.response?.data?.error === 'string'
+          ? (e.response.data as { error: string }).error
+          : 'Import failed'
+      setTeamImportResult({ created_teams: [], added: [], errors: [{ row: 0, error: msg }] })
+    } finally {
+      setTeamImporting(false)
+    }
+  }
+
   const handleUpdate = async () => {
     if (!editTeam) return
 
@@ -502,7 +656,7 @@ export default function OrganizerTeams() {
     try {
       const teamId = editTeam.id
 
-      await api.patch(`/teams/${teamId}`, {
+      const res = await api.patch(`/teams/${teamId}`, {
         name,
 
         sport: editForm.sport,
@@ -514,7 +668,19 @@ export default function OrganizerTeams() {
         captain_id: null,
       })
 
-      setEditTeam(null)
+      const lineupNormalized = Number(res.data?.lineup_normalized ?? 0)
+      if (lineupNormalized > 0) {
+        // Switching sport left the active lineup over the new sport's (smaller)
+        // cap, so the server auto-benched the overflow — keep the modal open so
+        // the organizer sees the updated Active/Bench lists, instead of closing
+        // as if nothing but the sport field changed.
+        setRosterSuccess(
+          `${lineupNormalized} player${lineupNormalized === 1 ? ' was' : 's were'} moved to the bench — ${editForm.sport} allows fewer active players.`,
+        )
+        await refreshEditTeam()
+      } else {
+        setEditTeam(null)
+      }
 
       await fetchTeams()
     } catch (e: unknown) {
@@ -984,7 +1150,7 @@ export default function OrganizerTeams() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Teams</h1>
 
@@ -1001,19 +1167,35 @@ export default function OrganizerTeams() {
           ) : null}
         </div>
 
-        <Button
-          icon={<Plus className="w-4 h-4" />}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Upload className="w-4 h-4" />}
+            disabled={!canCreateTeams}
+            onClick={() => {
+              resetTeamImportState()
+              setTeamImportSeasonId(seasons.find((s) => s.status === 'active')?.id ?? seasons[0]?.id ?? '')
+              setShowTeamImport(true)
+            }}
+          >
+            Import teams
+          </Button>
 
-          disabled={!canCreateTeams}
+          <Button
+            icon={<Plus className="w-4 h-4" />}
 
-          onClick={() => {
-            setError('')
+            disabled={!canCreateTeams}
 
-            setShowCreate(true)
-          }}
-        >
-          New Team
-        </Button>
+            onClick={() => {
+              setError('')
+
+              setShowCreate(true)
+            }}
+          >
+            New Team
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -1187,6 +1369,22 @@ export default function OrganizerTeams() {
 
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <div className="flex items-center gap-0.5">
+                            <Button
+                              type="button"
+
+                              size="sm"
+
+                              variant="ghost"
+
+                              title="View public team page"
+
+                              aria-label="View public team page"
+
+                              icon={<Eye className="w-3.5 h-3.5" />}
+
+                              onClick={() => window.open(`/guest/teams/${team.id}`, '_blank')}
+                            />
+
                             <Button
                               type="button"
 
@@ -1369,6 +1567,323 @@ export default function OrganizerTeams() {
           >
             Create Team
           </Button>
+        </div>
+      </Modal>
+
+      {/* Team roster import (CSV or Excel) — one row per player, team_name repeated */}
+      <Modal
+        open={showTeamImport}
+        onClose={() => {
+          if (!teamImporting) {
+            setShowTeamImport(false)
+            resetTeamImportState()
+          }
+        }}
+        title="Import teams from CSV or Excel"
+        size="lg"
+      >
+        <div className="space-y-5">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                What to include in your spreadsheet
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Download className="w-3.5 h-3.5" />}
+                loading={teamImportDownloading}
+                onClick={() => void handleDownloadTeamImportTemplate()}
+              >
+                Download template
+              </Button>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              One row per player. Repeat the same <code>team_name</code> on every row for that
+              team — one file can fill or create many teams at once.
+            </p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Team Name <span className="text-[var(--danger)]">*</span>
+                </p>
+                <p className="text-[var(--text-muted)]">Same on every row for that team</p>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Sport <span className="text-[var(--danger)]">*</span>
+                </p>
+                <p className="text-[var(--text-muted)]">basketball, volleyball, or table-tennis</p>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">Department</p>
+                <p className="text-[var(--text-muted)]">SBMA, SECA, SASE, or SHS</p>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Student ID <span className="text-[var(--danger)]">*</span>
+                </p>
+                <p className="text-[var(--text-muted)]">Must already exist under Athletes</p>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">Full Name</p>
+                <p className="text-[var(--text-muted)]">For your own verification only</p>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">Lineup</p>
+                <p className="text-[var(--text-muted)]">active or bench — blank defaults to bench</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-2">
+              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Athletes must
+              already be imported and active — this only fills rosters, it never creates athlete
+              accounts.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Select
+              label="Season"
+              value={teamImportSeasonId}
+              onChange={(e) => {
+                setTeamImportSeasonId(e.target.value)
+                resetTeamImportState()
+              }}
+              options={[
+                {
+                  value: '',
+                  label: seasons.length ? 'Select season...' : 'No seasons — create one in Super Admin',
+                },
+                ...seasons.map((s) => ({
+                  value: s.id,
+                  label: `${s.name}${s.status === 'draft' ? ' — draft' : s.status === 'active' ? ' — active' : ''}`,
+                })),
+              ]}
+            />
+            <div className="flex items-end pb-2.5">
+              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={teamImportCreateMissing}
+                  onChange={(e) => setTeamImportCreateMissing(e.target.checked)}
+                  className="rounded"
+                />
+                Create teams that don't exist yet
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-[var(--text-muted)]">CSV or Excel file</p>
+            <input
+              ref={teamImportFileRef}
+              type="file"
+              accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              aria-label="Choose CSV or Excel file to import"
+              className="hidden"
+              disabled={!teamImportSeasonId}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setTeamImportFile(file)
+                setTeamImportResult(null)
+                setTeamImportPreview(null)
+                setTeamImportPreviewError('')
+                if (file) void runTeamImportPreview(file)
+              }}
+            />
+            <div
+              className={`flex items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors ${
+                !teamImportSeasonId
+                  ? 'border-[var(--border-subtle)] opacity-50 cursor-not-allowed'
+                  : teamImportFile
+                    ? 'border-[var(--accent-default)]/50 bg-[var(--accent-default)]/5 cursor-pointer'
+                    : 'border-[var(--border-subtle)] hover:border-[var(--accent-default)]/40 cursor-pointer'
+              }`}
+              onClick={() => teamImportSeasonId && teamImportFileRef.current?.click()}
+            >
+              <Upload className="w-5 h-5 text-[var(--text-muted)] shrink-0" />
+              {teamImportFile ? (
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{teamImportFile.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {(teamImportFile.size / 1024).toFixed(1)} KB · click to change
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {teamImportSeasonId
+                      ? 'Click to choose a .csv or .xlsx file'
+                      : 'Select a season first'}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Max 5 MB</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {teamImportPreviewing && (
+            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Reading file…
+            </div>
+          )}
+
+          {teamImportPreviewError && !teamImportPreviewing && (
+            <Alert type="danger">{teamImportPreviewError}</Alert>
+          )}
+
+          {teamImportPreview && !teamImportPreviewing && !teamImportResult && (
+            <div className="space-y-3">
+              {teamImportPreview.teams.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Teams in this file
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {teamImportPreview.teams.map((g, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-2 text-xs rounded-lg bg-[var(--surface-elevated)] px-2.5 py-1.5"
+                      >
+                        <span className="truncate">
+                          <span className="font-medium">{g.team_name}</span>{' '}
+                          <span className="text-[var(--text-muted)]">({g.sport})</span>
+                        </span>
+                        {g.error ? (
+                          <Badge variant="danger" size="sm">
+                            {g.error}
+                          </Badge>
+                        ) : g.will_create ? (
+                          <Badge variant="success" size="sm">
+                            Create · {g.to_add} player{g.to_add !== 1 ? 's' : ''}
+                          </Badge>
+                        ) : (
+                          <Badge size="sm">
+                            +{g.to_add} to {g.existing_count}/{g.max_roster}
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  Preview — {teamImportPreview.rows.length} row
+                  {teamImportPreview.rows.length !== 1 ? 's' : ''} found
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="success" size="sm">
+                    {teamImportPreview.validCount} will import
+                  </Badge>
+                  {teamImportPreview.invalidCount > 0 && (
+                    <Badge variant="danger" size="sm">
+                      {teamImportPreview.invalidCount} will be skipped
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <Table
+                  columns={[
+                    { key: 'status', label: '', width: '70px' },
+                    { key: 'team_name', label: 'Team' },
+                    { key: 'sport', label: 'Sport' },
+                    { key: 'student_id', label: 'Student ID' },
+                    { key: 'full_name', label: 'Name' },
+                    { key: 'lineup', label: 'Lineup' },
+                  ]}
+                  data={teamImportPreview.rows.map((r) => ({
+                    status: r.valid ? (
+                      <Badge variant="success" size="sm">
+                        OK
+                      </Badge>
+                    ) : (
+                      <Badge variant="danger" size="sm" className="whitespace-normal text-left">
+                        {r.error}
+                      </Badge>
+                    ),
+                    team_name: r.team_name || '—',
+                    sport: r.sport || '—',
+                    student_id: r.student_id || '—',
+                    full_name: r.full_name || '—',
+                    lineup: r.warning ? (
+                      <span title={r.warning} className="text-[var(--warning)]">
+                        {r.lineup ?? '—'} ⚠
+                      </span>
+                    ) : (
+                      (r.lineup ?? '—')
+                    ),
+                  }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {teamImportResult && (
+            <div className="space-y-3">
+              {(teamImportResult.created_teams.length > 0 || teamImportResult.added.length > 0) && (
+                <Alert type="success">
+                  <span className="font-semibold">
+                    {teamImportResult.created_teams.length > 0
+                      ? `${teamImportResult.created_teams.length} team${teamImportResult.created_teams.length !== 1 ? 's' : ''} created, `
+                      : ''}
+                    {teamImportResult.added.length} player{teamImportResult.added.length !== 1 ? 's' : ''} added.
+                  </span>
+                </Alert>
+              )}
+              {teamImportResult.errors.length > 0 && (
+                <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                  <p className="text-xs font-semibold text-[var(--danger)] flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {teamImportResult.errors.length} row{teamImportResult.errors.length !== 1 ? 's' : ''}{' '}
+                    failed
+                  </p>
+                  {teamImportResult.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-[var(--text-secondary)]">
+                      {e.row > 0 ? (
+                        <span className="font-mono text-[var(--text-muted)]">Row {e.row}: </span>
+                      ) : null}
+                      {e.error}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              disabled={teamImporting}
+              onClick={() => {
+                setShowTeamImport(false)
+                resetTeamImportState()
+              }}
+            >
+              {teamImportResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!teamImportResult && teamImportPreview && (
+              <Button
+                loading={teamImporting}
+                disabled={teamImportPreviewing || teamImportPreview.validCount === 0}
+                icon={<Upload className="w-4 h-4" />}
+                onClick={() => void handleConfirmTeamImport()}
+              >
+                Confirm import ({teamImportPreview.validCount})
+              </Button>
+            )}
+            {teamImportResult &&
+              teamImportResult.errors.length > 0 &&
+              teamImportResult.added.length === 0 &&
+              teamImportResult.created_teams.length === 0 && (
+                <Button icon={<Upload className="w-4 h-4" />} onClick={resetTeamImportState}>
+                  Try again
+                </Button>
+              )}
+          </div>
         </div>
       </Modal>
 
