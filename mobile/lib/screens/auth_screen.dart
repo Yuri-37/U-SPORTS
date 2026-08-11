@@ -299,24 +299,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _showPassword = !_showPassword),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _showPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        size: 20,
-                        color: LayoutTokens.secondaryText(context),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () =>
+                          setState(() => _showPassword = !_showPassword),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _showPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 20,
+                            color: LayoutTokens.secondaryText(context),
+                          ),
+                          const SizedBox(width: 8),
+                          Text('Show password',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: LayoutTokens.secondaryText(context))),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text('Show password',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: LayoutTokens.secondaryText(context))),
-                    ],
-                  ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push('/auth/forgot-password'),
+                      child: Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: LayoutTokens.secondaryText(context)),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 22),
                 SizedBox(

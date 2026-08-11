@@ -46,6 +46,10 @@ export default function MatchReview() {
   >([])
   // Justification stored alongside the before/after diff in audit_logs.
   const [editReason, setEditReason] = useState('')
+  // Set when the server rejects a save because an edited value differs from
+  // what was actually logged live — the same signal the per-cell "live: X"
+  // hint already shows, just upgraded from advisory to a real confirm step.
+  const [statOverrideWarning, setStatOverrideWarning] = useState<string | null>(null)
 
   const loadReview = useCallback(async () => {
     if (!matchId) return
@@ -121,7 +125,7 @@ export default function MatchReview() {
     setSaveConfirmOpen(true)
   }
 
-  const handleConfirmedSave = async () => {
+  const handleConfirmedSave = async (override = false) => {
     if (editReason.trim().length < 3) {
       setError('Enter a reason for the correction before saving.')
       return
@@ -133,14 +137,38 @@ export default function MatchReview() {
       // roster member was PATCHed on every save, which created all-zero rows for
       // players who never appeared and inflated their games_played.
       const touched = new Set(pendingDiff.map((d) => d.athleteId))
+      const divergedMessages: string[] = []
       for (const athleteId of touched) {
-        await api.patch(`/scoring/${matchId}/player-stats/${athleteId}`, {
-          stats: editedStats[athleteId] ?? {},
-          reason: editReason.trim(),
-        })
+        try {
+          await api.patch(`/scoring/${matchId}/player-stats/${athleteId}`, {
+            stats: editedStats[athleteId] ?? {},
+            reason: editReason.trim(),
+            ...(override ? { confirmOverride: true } : {}),
+          })
+        } catch (e: unknown) {
+          const resp = (
+            e as { response?: { status?: number; data?: { error?: string; message?: string } } }
+          ).response
+          // A re-sent already-saved athlete is a safe no-op server-side, so on
+          // retry-with-override this loop just re-PATCHes everyone touched —
+          // no need to track which ones already succeeded on a prior pass.
+          if (!override && resp?.status === 409 && resp.data?.error === 'stat_diverged_from_live') {
+            const playerName =
+              playerStats.find((p) => p.athlete_id === athleteId)?.athlete?.profile?.full_name ??
+              'A player'
+            divergedMessages.push(`${playerName}: ${resp.data.message ?? 'differs from the live-tracked value.'}`)
+            continue
+          }
+          throw e
+        }
+      }
+      if (divergedMessages.length > 0) {
+        setStatOverrideWarning(divergedMessages.join(' '))
+        return
       }
       setSaveConfirmOpen(false)
       setEditReason('')
+      setStatOverrideWarning(null)
       await loadReview()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } }).response?.data?.error
@@ -416,7 +444,11 @@ export default function MatchReview() {
 
       <Modal
         open={saveConfirmOpen}
-        onClose={() => !saving && setSaveConfirmOpen(false)}
+        onClose={() => {
+          if (saving) return
+          setSaveConfirmOpen(false)
+          setStatOverrideWarning(null)
+        }}
         title="Confirm stat changes"
         size="md"
       >
@@ -461,17 +493,25 @@ export default function MatchReview() {
             This reason and the exact before/after values are recorded in the audit log. Season
             totals are recalculated as soon as you save.
           </p>
+          {statOverrideWarning && <Alert type="warning">{statOverrideWarning} Save anyway?</Alert>}
           <div className="flex gap-3 justify-end flex-wrap">
-            <Button variant="secondary" disabled={saving} onClick={() => setSaveConfirmOpen(false)}>
+            <Button
+              variant="secondary"
+              disabled={saving}
+              onClick={() => {
+                setSaveConfirmOpen(false)
+                setStatOverrideWarning(null)
+              }}
+            >
               Cancel
             </Button>
             <Button
               loading={saving}
               disabled={editReason.trim().length < 3}
-              onClick={() => void handleConfirmedSave()}
+              onClick={() => void handleConfirmedSave(!!statOverrideWarning)}
               icon={<Save className="w-4 h-4" />}
             >
-              Confirm Save
+              {statOverrideWarning ? 'Save anyway' : 'Confirm Save'}
             </Button>
           </div>
         </div>

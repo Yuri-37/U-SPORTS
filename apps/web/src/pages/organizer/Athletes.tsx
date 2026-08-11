@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Download, RefreshCw, Search, Upload, AlertCircle } from 'lucide-react'
+import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check } from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select } from '../../components/ui'
 import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
@@ -87,6 +87,16 @@ export default function OrganizerAthletes() {
     name: string
     nextInactive: boolean
   } | null>(null)
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState<{
+    id: string
+    name: string
+  } | null>(null)
+  const [resetPasswordBusy, setResetPasswordBusy] = useState(false)
+  const [resetPasswordResult, setResetPasswordResult] = useState<{
+    name: string
+    tempPassword: string
+  } | null>(null)
+  const [resetPasswordCopied, setResetPasswordCopied] = useState(false)
 
   // Roster import state (CSV or Excel)
   const [showImport, setShowImport] = useState(false)
@@ -239,6 +249,27 @@ export default function OrganizerAthletes() {
           ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
           : undefined
       setLoadMessage(msg ?? 'Could not update season status')
+    }
+  }
+
+  const confirmResetPassword = async () => {
+    if (!resetPasswordConfirm) return
+    setResetPasswordBusy(true)
+    setLoadMessage('')
+    try {
+      const { data } = await api.post<{ tempPassword: string }>(
+        `/athletes/${resetPasswordConfirm.id}/reset-password`,
+      )
+      setResetPasswordResult({ name: resetPasswordConfirm.name, tempPassword: data.tempPassword })
+      setResetPasswordConfirm(null)
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined
+      setLoadMessage(msg ?? 'Could not reset password')
+    } finally {
+      setResetPasswordBusy(false)
     }
   }
 
@@ -591,6 +622,15 @@ export default function OrganizerAthletes() {
               >
                 {a.season_status === 'active' ? 'Deactivate' : 'Reactivate'}
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setResetPasswordConfirm({ id: a.id, name: a.profile?.full_name ?? 'this athlete' })
+                }
+              >
+                Reset password
+              </Button>
             </div>
           ),
         }))}
@@ -705,6 +745,82 @@ export default function OrganizerAthletes() {
                 Cancel
               </Button>
               <Button onClick={() => void confirmSeasonToggle()}>Continue</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={resetPasswordConfirm !== null}
+        onClose={() => setResetPasswordConfirm(null)}
+        title="Reset password"
+        size="md"
+      >
+        {resetPasswordConfirm && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Generate a new temporary password for{' '}
+              <span className="font-semibold">{resetPasswordConfirm.name}</span>? Their current
+              password stops working immediately — you'll need to relay the new one to them
+              directly (there's no self-service reset yet).
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setResetPasswordConfirm(null)}
+                disabled={resetPasswordBusy}
+              >
+                Cancel
+              </Button>
+              <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword()}>
+                Generate new password
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={resetPasswordResult !== null}
+        onClose={() => {
+          setResetPasswordResult(null)
+          setResetPasswordCopied(false)
+        }}
+        title="Password reset"
+        size="md"
+      >
+        {resetPasswordResult && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              New temporary password for{' '}
+              <span className="font-semibold">{resetPasswordResult.name}</span>. This is shown
+              once — copy it now and relay it to them directly.
+            </p>
+            <div className="flex gap-2">
+              <Input readOnly value={resetPasswordResult.tempPassword} className="font-mono" />
+              <Button
+                variant="secondary"
+                icon={
+                  resetPasswordCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />
+                }
+                onClick={async () => {
+                  await navigator.clipboard.writeText(resetPasswordResult.tempPassword)
+                  setResetPasswordCopied(true)
+                }}
+              >
+                {resetPasswordCopied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setResetPasswordResult(null)
+                  setResetPasswordCopied(false)
+                }}
+              >
+                Done
+              </Button>
             </div>
           </div>
         )}
@@ -861,7 +977,7 @@ export default function OrganizerAthletes() {
             </div>
             <p className="text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-2">
               <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto login —
-              Email: <em>studentid@ursports.local</em> &nbsp;·&nbsp; Password:{' '}
+              Email: <em>studentid@students.nu-dasma.edu.ph</em> &nbsp;·&nbsp; Password:{' '}
               <em>UrSports-studentid-2026!</em>
             </p>
           </div>

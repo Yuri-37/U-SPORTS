@@ -850,7 +850,22 @@ router.post(
       })
     }
 
-    await supabase.from('scoring_actions').update({ undone: true }).eq('id', targetAction.id)
+    // Claim the row with a single conditional UPDATE rather than a plain
+    // write — `.eq('undone', false)` makes this one atomic statement, so two
+    // concurrent undo requests targeting the same action can't both succeed:
+    // whichever commits first flips the row, and the second's WHERE clause
+    // no longer matches it (0 rows affected), instead of both blindly
+    // decrementing the score.
+    const { data: claimed } = await supabase
+      .from('scoring_actions')
+      .update({ undone: true })
+      .eq('id', targetAction.id)
+      .eq('undone', false)
+      .select('id')
+      .maybeSingle()
+    if (!claimed) {
+      return res.status(409).json({ error: 'This action was already undone' })
+    }
 
     const sport = String(targetAction.sport ?? 'basketball')
     const effect = pointEffect(sport, String(targetAction.action_type ?? ''))
@@ -924,10 +939,14 @@ router.post(
   async (req: AuthRequest, res) => {
     const schema = z.object({
       winnerId: z.string().uuid(),
+      // Set once the organizer has confirmed past a score_mismatch/
+      // score_not_decided warning (forfeits/injury defaults are legitimate
+      // reasons the picked winner might not match the recorded score).
+      confirmOverride: z.boolean().optional(),
     })
 
     try {
-      const { winnerId } = schema.parse(req.body)
+      const { winnerId, confirmOverride } = schema.parse(req.body)
       const matchId = req.params.matchId as string
 
       const { data: match } = await supabase
@@ -952,6 +971,47 @@ router.post(
 
       const sport = await getMatchSport(matchId)
       if (await respondIfSportForbidden(req, res, sport)) return
+
+      // Cross-check the chosen winner against the recorded score — soft block
+      // only, since a forfeit or injury default legitimately picks a winner
+      // the score doesn't reflect. `computeMatchDecision` is the same
+      // read-only decision logic /state already uses for the live scoreboard.
+      if (!confirmOverride) {
+        const [eventInfo, scoresRes, locksRes] = await Promise.all([
+          getMatchEventInfo(matchId),
+          supabase.from('match_scores').select('*').eq('match_id', matchId),
+          supabase.from('match_period_locks').select('period').eq('match_id', matchId),
+        ])
+        const scores = (scoresRes.data ?? []) as Array<Record<string, unknown>>
+        const scoreRowA = scores.find((s) => s.participant_id === match.participant_a_id)
+        const scoreRowB = scores.find((s) => s.participant_id === match.participant_b_id)
+        const lockedPeriods = (locksRes.data ?? []).map((l) =>
+          Number((l as { period: number }).period),
+        )
+        const decision = computeMatchDecision(
+          sport ?? 'basketball',
+          scoreRowA,
+          scoreRowB,
+          lockedPeriods,
+          eventInfo?.bestOf ?? null,
+          match.participant_a_id,
+          match.participant_b_id,
+        )
+        if (!decision.decided) {
+          return res.status(409).json({
+            error: 'score_not_decided',
+            message: 'The recorded score has not reached a normal match completion point yet.',
+            decision,
+          })
+        }
+        if (decision.winnerParticipantId !== winnerId) {
+          return res.status(409).json({
+            error: 'score_mismatch',
+            message: 'The recorded score does not match the winner you selected.',
+            decision,
+          })
+        }
+      }
 
       // advanceWinner can throw (e.g. the next round already started with a
       // different team). Run it FIRST, while the match is still `live` — it
@@ -1734,6 +1794,47 @@ router.get(
   },
 )
 
+// Generous single-match ceilings, not real game-rule enforcement — just
+// enough to catch a fat-fingered edit (e.g. "500" for total_points) that
+// z.number().min(0) alone can't. Keys not listed here are left unbounded,
+// matching the route's existing permissive behavior for anything unknown.
+const STAT_MAX_BOUNDS: Record<string, Record<string, number>> = {
+  basketball: {
+    total_points: 150,
+    fg_made: 100,
+    fg_attempted: 100,
+    three_made: 100,
+    three_attempted: 100,
+    ft_made: 100,
+    ft_attempted: 100,
+    total_rebounds: 60,
+    off_rebounds: 60,
+    total_assists: 30,
+    total_steals: 30,
+    total_blocks: 30,
+    turnovers: 20,
+    fouls: 20,
+  },
+  volleyball: {
+    pts_scored: 80,
+    kills: 80,
+    attacks: 80,
+    aces: 40,
+    digs: 80,
+    blocks: 40,
+    assists: 80,
+    errors: 40,
+    serve_errors: 40,
+    reception_errors: 40,
+  },
+  'table-tennis': {
+    pts_scored: 80,
+    winners: 80,
+    aces: 80,
+    errors: 80,
+  },
+}
+
 // Update a player's game stats (for post-game editing)
 router.patch(
   '/:matchId/player-stats/:athleteId',
@@ -1746,10 +1847,14 @@ router.patch(
       // Why the record is being changed. Required so the audit trail explains
       // itself; the review UI collects it before saving.
       reason: z.string().trim().min(3).max(500),
+      // Set once the organizer has confirmed past a stat_diverged_from_live
+      // warning — a legitimate correction (e.g. a misattributed basket) will
+      // often genuinely differ from what was logged live.
+      confirmOverride: z.boolean().optional(),
     })
 
     try {
-      const { stats, reason } = schema.parse(req.body)
+      const { stats, reason, confirmOverride } = schema.parse(req.body)
 
       const { data: mrow } = await supabase
         .from('matches')
@@ -1777,6 +1882,35 @@ router.patch(
       // router already does. Without this a basketball-only organizer could
       // rewrite volleyball box scores.
       if (await respondIfSportForbidden(req, res, evt.sport)) return
+
+      // Hard reject implausible single-match values.
+      const bounds = STAT_MAX_BOUNDS[evt.sport] ?? {}
+      for (const [key, value] of Object.entries(stats)) {
+        const max = bounds[key]
+        if (max != null && value > max) {
+          return res.status(400).json({
+            error: `${key} of ${value} exceeds the plausible single-match maximum (${max})`,
+          })
+        }
+      }
+
+      // Soft block: this is the same "differs from what was actually logged
+      // live" signal MatchReview.tsx already shows per-cell as advisory-only
+      // (amber border + "live: X") — upgraded to a real confirm-before-save
+      // step here, since a genuine correction (e.g. a misattributed basket)
+      // is a legitimate reason to diverge from the live-tracked value.
+      if (!confirmOverride) {
+        const reviewData = await getMatchReviewData(matchId as string)
+        const live = reviewData?.liveStats?.[athleteId as string] ?? {}
+        const diverged = Object.keys(stats).filter((key) => Number(live[key] ?? 0) !== stats[key])
+        if (diverged.length > 0) {
+          return res.status(409).json({
+            error: 'stat_diverged_from_live',
+            message: `${diverged.join(', ')} ${diverged.length === 1 ? 'differs' : 'differ'} from what was recorded live for this player.`,
+            diverged,
+          })
+        }
+      }
 
       // An archived season is a closed book.
       if (evt.season_id) {

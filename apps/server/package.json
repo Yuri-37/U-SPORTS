@@ -9,7 +9,8 @@
     "seed:insights-demo": "tsx src/scripts/seedInsightsDemoPlayerGames.ts",
     "seed:insights-demo:player": "tsx src/scripts/seedInsightsDemoPlayerGames.ts --demo-player",
     "seed:mock-brackets": "tsx src/scripts/generateMockOfficialBrackets.ts",
-    "seed:showcase": "tsx src/scripts/seedShowcaseData.ts"
+    "seed:showcase": "tsx src/scripts/seedShowcaseData.ts",
+    "seed:basketball-cup": "tsx src/scripts/seedBasketballCup.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

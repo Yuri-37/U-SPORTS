@@ -10,9 +10,11 @@ import '../screens/auth_screen.dart';
 import '../screens/bracket_screen.dart';
 import '../screens/event_detail_screen.dart';
 import '../screens/events_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/notifications_screen.dart';
+import '../screens/reset_password_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/athlete_profile_screen.dart';
 import '../screens/sport_detail_screen.dart';
@@ -27,6 +29,9 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 bool _isGuestAllowedPath(String path) {
   if (path == '/' || path == '/auth/login') return true;
+  if (path == '/auth/forgot-password' || path == '/auth/reset-password') {
+    return true;
+  }
   if (path.startsWith('/leaderboards')) return true;
   if (path.startsWith('/events')) return true;
   if (path.startsWith('/athletes')) return true;
@@ -156,6 +161,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/notifications',
           builder: (ctx, _) => const NotificationsScreen()),
       GoRoute(path: '/auth/login', builder: (ctx, _) => const AuthScreen()),
+      GoRoute(
+        path: '/auth/forgot-password',
+        builder: (ctx, _) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/auth/reset-password',
+        builder: (ctx, _) => const ResetPasswordScreen(),
+      ),
       GoRoute(
         path: '/settings',
         builder: (ctx, _) => const SettingsScreen(shell: SettingsShell.guest),

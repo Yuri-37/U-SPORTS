@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { Router } from 'express'
 import multer from 'multer'
 import { z } from 'zod'
@@ -314,6 +315,39 @@ router.patch(
     })
 
     res.json(data)
+  },
+)
+
+// No self-service "forgot password" can deliver email until SMTP is
+// configured — this gives an admin a way to restore an organizer/coach's
+// access immediately, same trust model as setting their first password.
+router.post(
+  '/organizers/:id/reset-password',
+  requireAuth,
+  requireRole('Admin'),
+  async (req: AuthRequest, res) => {
+    const { data: organizer } = await supabase
+      .from('organizers')
+      .select('profile_id')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (!organizer) return res.status(404).json({ error: 'Organizer not found' })
+
+    const tempPassword = randomBytes(9).toString('base64url')
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      organizer.profile_id,
+      { password: tempPassword },
+    )
+    if (updateError) return res.status(400).json({ error: updateError.message })
+
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: 'organizer_password_reset',
+      entity_type: 'staff',
+      entity_id: req.params.id,
+    })
+
+    res.json({ tempPassword })
   },
 )
 

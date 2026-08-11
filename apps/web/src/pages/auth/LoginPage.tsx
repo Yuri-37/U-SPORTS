@@ -143,14 +143,22 @@ export default function LoginPage() {
                 icon={<Lock className="w-4 h-4" />}
                 required
               />
-              <button
-                type="button"
-                className="mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1"
-                onClick={() => setShowPass(!showPass)}
-              >
-                {showPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                {showPass ? 'Hide' : 'Show'} password
-              </button>
+              <div className="mt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1"
+                  onClick={() => setShowPass(!showPass)}
+                >
+                  {showPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {showPass ? 'Hide' : 'Show'} password
+                </button>
+                <a
+                  href="/auth/forgot-password"
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  Forgot password?
+                </a>
+              </div>
             </div>
             <Button
               type="submit"

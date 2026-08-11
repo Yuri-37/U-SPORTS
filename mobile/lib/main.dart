@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'config/env.dart';
@@ -61,6 +65,9 @@ class USportsApp extends ConsumerStatefulWidget {
 }
 
 class _USportsAppState extends ConsumerState<USportsApp> {
+  final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSub;
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +89,32 @@ class _USportsAppState extends ConsumerState<USportsApp> {
         ref.read(routerProvider).refresh();
       }
     });
+
+    // Password-reset email link (usports://reset-password#access_token=...) —
+    // covers both "app already running" and cold-start-from-terminated.
+    _linkSub = _appLinks.uriLinkStream.listen(_handlePasswordResetLink);
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handlePasswordResetLink(uri);
+    });
+  }
+
+  Future<void> _handlePasswordResetLink(Uri uri) async {
+    if (uri.scheme != 'usports' || uri.host != 'reset-password') return;
+    try {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    } catch (_) {
+      // Fall through regardless — ResetPasswordScreen shows its own
+      // invalid/expired message when there's no session to work with.
+    }
+    if (!mounted) return;
+    ref.read(routerProvider).refresh();
+    rootNavigatorKey.currentContext?.go('/auth/reset-password');
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
   }
 
   @override

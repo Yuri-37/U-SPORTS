@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, ToggleLeft, ToggleRight, Mail, Lock, Pencil } from 'lucide-react'
+import { Plus, ToggleLeft, ToggleRight, Mail, Lock, Pencil, Copy, Check } from 'lucide-react'
 import {
   Button,
   Modal,
@@ -187,6 +187,15 @@ export default function SuperAdminOrganizers() {
   const [toggleConfirm, setToggleConfirm] = useState<StaffWithProfile | null>(null)
   const [toggleBusy, setToggleBusy] = useState(false)
 
+  // Reset password
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState<StaffWithProfile | null>(null)
+  const [resetPasswordBusy, setResetPasswordBusy] = useState(false)
+  const [resetPasswordResult, setResetPasswordResult] = useState<{
+    name: string
+    tempPassword: string
+  } | null>(null)
+  const [resetPasswordCopied, setResetPasswordCopied] = useState(false)
+
   /**
    * Sports already claimed by a coach in `department`, as sport -> coach name.
    * `excludeId` skips the staff row being edited so their own current sports
@@ -327,6 +336,31 @@ export default function SuperAdminOrganizers() {
       setToggleConfirm(null)
     } finally {
       setToggleBusy(false)
+    }
+  }
+
+  const confirmResetPassword = async () => {
+    if (!resetPasswordConfirm) return
+    setResetPasswordBusy(true)
+    try {
+      const { data } = await api.post<{ tempPassword: string }>(
+        `/admin/organizers/${resetPasswordConfirm.id}/reset-password`,
+      )
+      setResetPasswordResult({
+        name: resetPasswordConfirm.profile?.full_name ?? 'this staff member',
+        tempPassword: data.tempPassword,
+      })
+      setResetPasswordConfirm(null)
+      setListError('')
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined
+      setListError(msg ?? 'Could not reset password')
+      setResetPasswordConfirm(null)
+    } finally {
+      setResetPasswordBusy(false)
     }
   }
 
@@ -481,6 +515,14 @@ export default function SuperAdminOrganizers() {
                 >
                   {o.is_active ? 'Deactivate' : 'Activate'}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={<Lock className="w-3.5 h-3.5" />}
+                  onClick={() => setResetPasswordConfirm(o)}
+                >
+                  Reset password
+                </Button>
               </div>
             ),
           }))}
@@ -582,6 +624,86 @@ export default function SuperAdminOrganizers() {
                 onClick={() => void confirmToggleActive()}
               >
                 {toggleConfirm.is_active ? 'Deactivate' : 'Activate'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reset password confirm */}
+      <Modal
+        open={resetPasswordConfirm !== null}
+        onClose={() => {
+          if (!resetPasswordBusy) setResetPasswordConfirm(null)
+        }}
+        title="Reset password"
+        size="md"
+      >
+        {resetPasswordConfirm && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Generate a new temporary password for{' '}
+              <span className="font-semibold">{resetPasswordConfirm.profile?.full_name}</span>?
+              Their current password stops working immediately — you'll need to relay the new one
+              to them directly (there's no self-service reset yet).
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setResetPasswordConfirm(null)}
+                disabled={resetPasswordBusy}
+              >
+                Cancel
+              </Button>
+              <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword()}>
+                Generate new password
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reset password result */}
+      <Modal
+        open={resetPasswordResult !== null}
+        onClose={() => {
+          setResetPasswordResult(null)
+          setResetPasswordCopied(false)
+        }}
+        title="Password reset"
+        size="md"
+      >
+        {resetPasswordResult && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              New temporary password for{' '}
+              <span className="font-semibold">{resetPasswordResult.name}</span>. This is shown
+              once — copy it now and relay it to them directly.
+            </p>
+            <div className="flex gap-2">
+              <Input readOnly value={resetPasswordResult.tempPassword} className="font-mono" />
+              <Button
+                variant="secondary"
+                icon={
+                  resetPasswordCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />
+                }
+                onClick={async () => {
+                  await navigator.clipboard.writeText(resetPasswordResult.tempPassword)
+                  setResetPasswordCopied(true)
+                }}
+              >
+                {resetPasswordCopied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setResetPasswordResult(null)
+                  setResetPasswordCopied(false)
+                }}
+              >
+                Done
               </Button>
             </div>
           </div>

@@ -201,6 +201,7 @@ export default function OrganizerScoring() {
   const [dismissedClockHandoff, setDismissedClockHandoff] = useState(false)
   const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [endMismatch, setEndMismatch] = useState<string | null>(null)
   const [endConfirm, setEndConfirm] = useState(false)
   const [clockEditing, setClockEditing] = useState(false)
   const [clockEditValue, setClockEditValue] = useState('')
@@ -228,6 +229,10 @@ export default function OrganizerScoring() {
   const [subModal, setSubModal] = useState<{ side: 'a' | 'b'; outId: string } | null>(null)
   const [subInId, setSubInId] = useState('')
   const [subBusy, setSubBusy] = useState(false)
+  // Guards handleAction/handleUndo against rapid double-taps firing two
+  // independent requests — unlike subBusy's single Confirm button, this
+  // gates many buttons at once (every point/stat/undo control).
+  const [actionBusy, setActionBusy] = useState(false)
 
   // Game-flow rule enforcement (warn, never block) — all derived server-side,
   // refreshed by loadState().
@@ -518,6 +523,8 @@ export default function OrganizerScoring() {
     value: number = 1,
     athleteId?: string,
   ) => {
+    if (actionBusy) return
+    setActionBusy(true)
     try {
       setError('')
       await api.post(`/scoring/${matchId}/action`, {
@@ -534,6 +541,8 @@ export default function OrganizerScoring() {
       setError(msg ?? 'Action failed')
       // A 409 means our period drifted from the server's — resync immediately.
       await loadState()
+    } finally {
+      setActionBusy(false)
     }
   }
 
@@ -614,24 +623,40 @@ export default function OrganizerScoring() {
   }
 
   const handleUndo = async (scoringParticipantId: string) => {
+    if (actionBusy) return
+    setActionBusy(true)
     try {
       await api.post(`/scoring/${matchId}/undo`, { scoringParticipantId })
       await loadState()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } }).response?.data?.error
       setError(msg ?? 'Undo failed')
+    } finally {
+      setActionBusy(false)
     }
   }
 
-  const handleEnd = async () => {
+  const handleEnd = async (override = false) => {
     if (!winnerId) return
     setEnding(true)
     try {
-      await api.post(`/scoring/${matchId}/end`, { winnerId })
+      await api.post(`/scoring/${matchId}/end`, {
+        winnerId,
+        ...(override ? { confirmOverride: true } : {}),
+      })
       navigate(`/organizer/match-review/${matchId}`)
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } }).response?.data?.error
-      setError(msg ?? 'Failed to end match')
+      const data = (e as { response?: { data?: { error?: string; message?: string } } }).response
+        ?.data
+      // score_mismatch/score_not_decided are a soft block, not a hard error —
+      // surface them as a second confirmation step instead of just an error
+      // message, since a forfeit/injury default is a legitimate reason the
+      // picked winner might not match the recorded score.
+      if (!override && (data?.error === 'score_mismatch' || data?.error === 'score_not_decided')) {
+        setEndMismatch(data.message ?? 'The recorded score does not match your selection.')
+      } else {
+        setError(data?.error ?? 'Failed to end match')
+      }
     } finally {
       setEnding(false)
     }
@@ -788,7 +813,7 @@ export default function OrganizerScoring() {
                   size="sm"
                   variant="secondary"
                   title={s.title}
-                  disabled={!selectedPlayer}
+                  disabled={!selectedPlayer || actionBusy}
                   onClick={() => doStat(s.key)}
                 >
                   {s.label} ({statFor(participantId, s.key)})
@@ -806,7 +831,7 @@ export default function OrganizerScoring() {
                   size="sm"
                   variant="secondary"
                   title={s.title}
-                  disabled={!selectedPlayer}
+                  disabled={!selectedPlayer || actionBusy}
                   onClick={() => doStat(s.key)}
                 >
                   {s.label} ({statFor(participantId, s.key)})
@@ -824,7 +849,7 @@ export default function OrganizerScoring() {
                 size="sm"
                 variant="secondary"
                 title={s.title}
-                disabled={!selectedPlayer}
+                disabled={!selectedPlayer || actionBusy}
                 onClick={() => doStat(s.key)}
               >
                 {s.label} ({statFor(participantId, s.key)})
@@ -841,7 +866,7 @@ export default function OrganizerScoring() {
                 size="sm"
                 variant="secondary"
                 title={s.title}
-                disabled={!selectedPlayer}
+                disabled={!selectedPlayer || actionBusy}
                 onClick={() => doStat(s.key)}
               >
                 {s.label} ({statFor(participantId, s.key)})
@@ -1072,21 +1097,21 @@ export default function OrganizerScoring() {
                 <div className="flex justify-center gap-2 flex-wrap">
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA}
+                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
                     onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA)}
                   >
                     +1
                   </Button>
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA}
+                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
                     onClick={() => handleAction(participantAId, 'point_2', 2, selectedPlayerA)}
                   >
                     +2
                   </Button>
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA}
+                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
                     onClick={() => handleAction(participantAId, 'point_3', 3, selectedPlayerA)}
                   >
                     +3
@@ -1094,7 +1119,7 @@ export default function OrganizerScoring() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() => handleUndo(participantAId)}
                   >
                     −1
@@ -1107,7 +1132,7 @@ export default function OrganizerScoring() {
                       (opponent error, net violation, referee award). */}
                   <Button
                     size="sm"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() =>
                       handleAction(participantAId, 'point_1', 1, selectedPlayerA || undefined)
                     }
@@ -1117,7 +1142,7 @@ export default function OrganizerScoring() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() => handleUndo(participantAId)}
                   >
                     −1
@@ -1179,21 +1204,21 @@ export default function OrganizerScoring() {
                 <div className="flex justify-center gap-2 flex-wrap">
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB}
+                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
                     onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB)}
                   >
                     +1
                   </Button>
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB}
+                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
                     onClick={() => handleAction(participantBId, 'point_2', 2, selectedPlayerB)}
                   >
                     +2
                   </Button>
                   <Button
                     size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB}
+                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
                     onClick={() => handleAction(participantBId, 'point_3', 3, selectedPlayerB)}
                   >
                     +3
@@ -1201,7 +1226,7 @@ export default function OrganizerScoring() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() => handleUndo(participantBId)}
                   >
                     −1
@@ -1212,7 +1237,7 @@ export default function OrganizerScoring() {
                 <div className="flex justify-center gap-2 flex-wrap">
                   <Button
                     size="sm"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() =>
                       handleAction(participantBId, 'point_1', 1, selectedPlayerB || undefined)
                     }
@@ -1222,7 +1247,7 @@ export default function OrganizerScoring() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={!isLockHolder}
+                    disabled={!isLockHolder || actionBusy}
                     onClick={() => handleUndo(participantBId)}
                   >
                     −1
@@ -1602,7 +1627,7 @@ export default function OrganizerScoring() {
             <Button
               size="sm"
               variant="secondary"
-              disabled={!isLockHolder}
+              disabled={!isLockHolder || actionBusy}
               onClick={() => void handleAction(participantAId, 'timeout')}
             >
               {nameA} timeout
@@ -1610,7 +1635,7 @@ export default function OrganizerScoring() {
             <Button
               size="sm"
               variant="secondary"
-              disabled={!isLockHolder}
+              disabled={!isLockHolder || actionBusy}
               onClick={() => void handleAction(participantBId, 'timeout')}
             >
               {nameB} timeout
@@ -1782,27 +1807,50 @@ export default function OrganizerScoring() {
         </Modal>
       )}
 
-      <Modal open={endConfirm} onClose={() => setEndConfirm(false)} title="End Match">
+      <Modal
+        open={endConfirm}
+        onClose={() => {
+          setEndConfirm(false)
+          setEndMismatch(null)
+        }}
+        title="End Match"
+      >
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-muted)]">
             Select the winner to officially end this match.
           </p>
+          <p className="text-sm font-medium text-center">{subTotalLine}</p>
           <Select
             label="Winner"
             value={winnerId}
-            onChange={(e) => setWinnerId(e.target.value)}
+            onChange={(e) => {
+              setWinnerId(e.target.value)
+              setEndMismatch(null)
+            }}
             options={[
               { value: '', label: 'Select winner...' },
               { value: participantAId, label: nameA },
               { value: participantBId, label: nameB },
             ]}
           />
+          {endMismatch && <Alert type="warning">{endMismatch} End anyway?</Alert>}
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setEndConfirm(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEndConfirm(false)
+                setEndMismatch(null)
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="danger" loading={ending} onClick={handleEnd} disabled={!winnerId}>
-              Confirm End Match
+            <Button
+              variant="danger"
+              loading={ending}
+              onClick={() => handleEnd(!!endMismatch)}
+              disabled={!winnerId}
+            >
+              {endMismatch ? 'End anyway' : 'Confirm End Match'}
             </Button>
           </div>
         </div>

@@ -9,11 +9,10 @@ import {
   Lightbulb,
   Loader2,
   RefreshCw,
-  Search,
   Trophy,
   TrendingUp,
 } from 'lucide-react'
-import { Card, TabBar, Select, Button, Badge, Skeleton, Input, Alert } from '../../components/ui'
+import { Card, TabBar, Select, Button, Badge, Skeleton, Alert } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
 import type { Insight, Season } from '../../types'
@@ -137,7 +136,6 @@ export default function OrganizerAnalytics() {
   const [sport, setSport] = useState('basketball')
   const [seasons, setSeasons] = useState<Season[]>([])
   const [seasonsLoading, setSeasonsLoading] = useState(true)
-  const [seasonListQuery, setSeasonListQuery] = useState('')
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null)
   const [insights, setInsights] = useState<Insight[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
@@ -180,16 +178,10 @@ export default function OrganizerAnalytics() {
     return active?.id ?? seasons[0]?.id ?? null
   }, [seasons, selectedSeasonId])
 
-  const seasonSelectOptions = useMemo(() => {
-    const q = seasonListQuery.trim().toLowerCase()
-    let list = q ? seasons.filter((s) => s.name.toLowerCase().includes(q)) : seasons
-    const selId = effectiveSeasonId
-    if (selId && !list.some((s) => s.id === selId)) {
-      const sel = seasons.find((s) => s.id === selId)
-      if (sel) list = [sel, ...list]
-    }
-    return list.map((s) => ({ value: s.id, label: formatSeasonSelectLabel(s) }))
-  }, [seasons, seasonListQuery, effectiveSeasonId])
+  const seasonSelectOptions = useMemo(
+    () => seasons.map((s) => ({ value: s.id, label: formatSeasonSelectLabel(s) })),
+    [seasons],
+  )
 
   useEffect(() => {
     if (!effectiveSeasonId) {
@@ -485,15 +477,6 @@ export default function OrganizerAnalytics() {
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end w-full lg:w-auto lg:max-w-3xl">
-          <Input
-            label="Find season"
-            placeholder="Filter season list…"
-            value={seasonListQuery}
-            onChange={(e) => setSeasonListQuery(e.target.value)}
-            icon={<Search className="w-4 h-4 text-[var(--text-muted)]" />}
-            className="min-w-[160px] flex-1 sm:flex-none sm:w-44"
-            disabled={seasonsLoading || seasons.length === 0}
-          />
           <Select
             label="Season"
             value={effectiveSeasonId ?? ''}

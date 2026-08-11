@@ -18,6 +18,11 @@ const sportEnum = z.enum(['basketball', 'volleyball', 'table-tennis'])
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
+// The school's real student email domain — live Outlook/Microsoft 365
+// mailboxes, not a placeholder. Used only when an imported row has no email
+// column value; a supplied email is always used as-is instead.
+const STUDENT_EMAIL_DOMAIN = 'students.nu-dasma.edu.ph'
+
 function isExcelUpload(file: Express.Multer.File) {
   return file.mimetype === XLSX_MIME || /\.xlsx?$/i.test(file.originalname)
 }
@@ -95,7 +100,7 @@ function generatedEmail(studentId: string) {
   return `${studentId
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')}@ursports.local`
+    .replace(/[^a-z0-9._-]+/g, '-')}@${STUDENT_EMAIL_DOMAIN}`
 }
 
 function generatedPassword(studentId: string) {

@@ -5,7 +5,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import PDFDocument from 'pdfkit'
-import { deriveEliminationPodium } from '../utils/eventPlacements'
+import { deriveFullEventStandings } from '../utils/eventPlacements'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
 import {
   aggregateInsightPlainText,
@@ -165,7 +165,7 @@ router.get(
       if (tab === 'teams') {
         const { data: raw, error } = await supabase
           .from('team_season_stats')
-          .select('wins, losses, team:teams(name, sport)')
+          .select('team_id, wins, losses, team:teams(name, sport)')
           .eq('season_id', seasonId)
           .order('wins', { ascending: false })
 
@@ -173,6 +173,23 @@ router.get(
 
         let list = raw ?? []
         if (sport) list = list.filter((ts: any) => ts.team?.sport === sport)
+
+        // Latest streak per team, if any — same `insights` table/shape the
+        // Insights export already reads, just not previously joined in here.
+        const { data: streakRows } = await supabase
+          .from('insights')
+          .select('entity_id, data, created_at')
+          .eq('season_id', seasonId)
+          .eq('entity_type', 'team')
+          .eq('insight_type', 'streak')
+          .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+          .order('created_at', { ascending: false })
+        const streakByTeam = new Map<string, number>()
+        for (const r of streakRows ?? []) {
+          if (streakByTeam.has(r.entity_id)) continue
+          const d = (r.data ?? {}) as Record<string, unknown>
+          if (typeof d.streak === 'number') streakByTeam.set(r.entity_id, d.streak)
+        }
 
         const rows = list.map((ts: any) => {
           const gp = (ts.wins ?? 0) + (ts.losses ?? 0)
@@ -184,6 +201,7 @@ router.get(
             losses: ts.losses ?? 0,
             games_decided: gp,
             win_pct: pct,
+            current_streak: streakByTeam.get(ts.team_id) ?? '',
           }
         })
 
@@ -197,7 +215,7 @@ router.get(
         sendCsv(
           res,
           `${filenamePrefix}-teams-${dateStamp}.csv`,
-          ['team_name', 'sport', 'wins', 'losses', 'games_decided', 'win_pct'],
+          ['team_name', 'sport', 'wins', 'losses', 'games_decided', 'win_pct', 'current_streak'],
           rows,
         )
         return
@@ -217,7 +235,7 @@ router.get(
       const { data: doneEv, error: evErr } = await evQuery
       if (evErr) return res.status(500).json({ error: evErr.message })
 
-      const rows: Record<string, unknown>[] = []
+      const rows: { event_name: string; rank: number; participant_id: string; role: string }[] = []
       const idsForLabels = new Set<string>()
 
       for (const ev of doneEv ?? []) {
@@ -228,31 +246,29 @@ router.get(
           )
           .eq('event_id', ev.id)
 
-        const placements = deriveEliminationPodium(
-          (br ?? []) as Parameters<typeof deriveEliminationPodium>[0],
+        const standings = deriveFullEventStandings(
+          (br ?? []) as Parameters<typeof deriveFullEventStandings>[0],
         )
-        if (!placements) continue
+        if (!standings) continue
 
-        const champ = placements.find((p) => p.rank === 1)
-        const runner = placements.find((p) => p.rank === 2)
-        if (champ) idsForLabels.add(champ.participantId)
-        if (runner) idsForLabels.add(runner.participantId)
-
-        rows.push({
-          event_name: ev.name ?? '',
-          champion_participant_id: champ?.participantId ?? '',
-          runner_up_participant_id: runner?.participantId ?? '',
-        })
+        for (const p of standings) {
+          idsForLabels.add(p.participantId)
+          rows.push({
+            event_name: ev.name ?? '',
+            rank: p.rank,
+            participant_id: p.participantId,
+            role: p.role,
+          })
+        }
       }
 
       const labelMap = await resolveParticipantLabelMap([...idsForLabels])
 
       const rowsNamed = rows.map((r) => ({
         event_name: r.event_name,
-        champion:
-          labelMap[String(r.champion_participant_id)] ?? String(r.champion_participant_id ?? ''),
-        runner_up:
-          labelMap[String(r.runner_up_participant_id)] ?? String(r.runner_up_participant_id ?? ''),
+        rank: r.rank,
+        participant_name: labelMap[r.participant_id] ?? r.participant_id,
+        role: r.role === 'runner_up' ? 'Runner-up' : titleCase(r.role),
       }))
 
       await writeAuditLog({
@@ -265,7 +281,7 @@ router.get(
       sendCsv(
         res,
         `${filenamePrefix}-event-results-${dateStamp}.csv`,
-        ['event_name', 'champion', 'runner_up'],
+        ['event_name', 'rank', 'participant_name', 'role'],
         rowsNamed,
       )
     } catch (e: unknown) {

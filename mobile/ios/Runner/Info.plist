@@ -26,6 +26,20 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- Password-reset deep link — the email link opens
+		     usports://reset-password#access_token=...&type=recovery,
+		     caught in main.dart via app_links. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>ph.edu.nu-dasma.usports.reset-password</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>usports</string>
+				</array>
+			</dict>
+		</array>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

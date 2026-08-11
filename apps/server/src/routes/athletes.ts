@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
@@ -203,6 +204,41 @@ router.get(
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename="athletes.csv"')
     res.send(csv)
+  },
+)
+
+// No self-service "forgot password" can deliver email until SMTP is
+// configured, and even then a student's inbox may be slow to check. This
+// gives an admin/coach/organizer a way to restore access immediately —
+// same trust model as setting the first password at account creation.
+router.post(
+  '/:id/reset-password',
+  requireAuth,
+  requireRole('Organizer', 'Admin', 'Coach'),
+  async (req: AuthRequest, res) => {
+    const { data: athlete, error } = await supabase
+      .from('athletes')
+      .select('sport, profile_id')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (error) return res.status(500).json({ error: error.message })
+    if (!athlete) return res.status(404).json({ error: 'Athlete not found' })
+    if (await respondIfSportForbidden(req, res, athlete.sport)) return
+
+    const tempPassword = randomBytes(9).toString('base64url')
+    const { error: updateError } = await supabase.auth.admin.updateUserById(athlete.profile_id, {
+      password: tempPassword,
+    })
+    if (updateError) return res.status(400).json({ error: updateError.message })
+
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: 'athlete_password_reset',
+      entity_type: 'athlete',
+      entity_id: req.params.id,
+    })
+
+    res.json({ tempPassword })
   },
 )
 
