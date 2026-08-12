@@ -42,7 +42,7 @@ type SeasonScheduleMatch = {
 }
 
 type StatDrilldown =
-  'games' | 'ppg' | 'rpg' | 'apg' | 'kills' | 'aces' | 'digs' | 'mw' | 'win_pct' | 'sets_won'
+  'games' | 'ppg' | 'rpg' | 'apg' | 'kills' | 'aces' | 'digs' | 'pts_scored' | 'winners'
 
 type UpcomingMatchRow = {
   id: string
@@ -793,9 +793,14 @@ export default function AthleteDashboard() {
             <Calendar className="w-4 h-4 text-[#0066FF]" />
             Upcoming games
           </h2>
-          <p className="text-xs text-[var(--text-muted)] mb-3">
-            Open an event for the full match schedule and bracket.
-          </p>
+          {/* Usage hints describe rows that aren't there yet when the section
+              is empty, so they'd just stack on top of the empty state's own
+              explanation. Same treatment as the mobile dashboard. */}
+          {upcomingMatches.length > 0 && (
+            <p className="text-xs text-[var(--text-muted)] mb-3">
+              Open an event for the full match schedule and bracket.
+            </p>
+          )}
           {loading ? (
             <div className="space-y-2">
               <Skeleton className="h-20" />
@@ -874,9 +879,11 @@ export default function AthleteDashboard() {
                 Full history →
               </button>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mb-3">
-              Completed bracket games. 🏆/🥈 badge means your team placed in that event.
-            </p>
+            {pastMatches.length > 0 && (
+              <p className="text-xs text-[var(--text-muted)] mb-3">
+                Completed bracket games. 🏆/🥈 badge means your team placed in that event.
+              </p>
+            )}
             {loading || finishesLoading ? (
               <Skeleton className="h-20" />
             ) : pastMatches.length === 0 ? (
@@ -952,9 +959,11 @@ export default function AthleteDashboard() {
             <Users className="w-4 h-4 text-[#0066FF]" />
             My team
           </h2>
-          <p className="text-xs text-[var(--text-muted)] mb-3">
-            Tap a team for the full roster and starting lineup vs bench.
-          </p>
+          {teamRoster.length > 0 && (
+            <p className="text-xs text-[var(--text-muted)] mb-3">
+              Tap a team for the full roster and starting lineup vs bench.
+            </p>
+          )}
           {loading ? (
             <div className="space-y-2">
               <Skeleton className="h-24" />
@@ -1251,23 +1260,27 @@ export default function AthleteDashboard() {
               )}
               {athlete.sport === 'table-tennis' && (
                 <>
+                  {/* Points/winners/aces come straight from logged scoring
+                      actions. "Matches Won" and "Win %" used to sit here
+                      reading `mw`/`win_pct`, which scoring never writes — they
+                      showed 0 for every player regardless of results. */}
                   <StatCard
-                    label="Matches Won"
-                    value={selectedSeasonStats.stats?.mw ?? 0}
-                    onClick={() => setStatDrilldown('mw')}
-                    interactiveHint="Tap for detail"
+                    label="Points"
+                    value={selectedSeasonStats.stats?.pts_scored ?? 0}
+                    onClick={() => setStatDrilldown('pts_scored')}
+                    interactiveHint="Tap for game log"
                   />
                   <StatCard
-                    label="Win %"
-                    value={`${selectedSeasonStats.stats?.win_pct ?? 0}%`}
-                    onClick={() => setStatDrilldown('win_pct')}
-                    interactiveHint="Tap for detail"
+                    label="Winners"
+                    value={selectedSeasonStats.stats?.winners ?? 0}
+                    onClick={() => setStatDrilldown('winners')}
+                    interactiveHint="Tap for game log"
                   />
                   <StatCard
-                    label="Sets Won"
-                    value={selectedSeasonStats.stats?.sets_won ?? 0}
-                    onClick={() => setStatDrilldown('sets_won')}
-                    interactiveHint="Tap for detail"
+                    label="Aces"
+                    value={selectedSeasonStats.stats?.aces ?? 0}
+                    onClick={() => setStatDrilldown('aces')}
+                    interactiveHint="Tap for game log"
                   />
                 </>
               )}
@@ -1301,13 +1314,11 @@ export default function AthleteDashboard() {
                       ? `Aces by game — ${seasonDetailTitle}`
                       : statDrilldown === 'digs'
                         ? `Digs by game — ${seasonDetailTitle}`
-                        : statDrilldown === 'mw'
-                          ? `Match wins — ${seasonDetailTitle}`
-                          : statDrilldown === 'win_pct'
-                            ? `Win percentage — ${seasonDetailTitle}`
-                            : statDrilldown === 'sets_won'
-                              ? `Sets won — ${seasonDetailTitle}`
-                              : 'Stats detail'
+                        : statDrilldown === 'pts_scored'
+                          ? `Points by game — ${seasonDetailTitle}`
+                          : statDrilldown === 'winners'
+                            ? `Winners by game — ${seasonDetailTitle}`
+                            : 'Stats detail'
         }
         size="lg"
       >
@@ -1485,102 +1496,17 @@ export default function AthleteDashboard() {
                               header: 'Digs',
                               pick: (s: Record<string, number>) => Math.round(s.digs ?? 0),
                             }
-                          : statDrilldown === 'sets_won'
+                          : statDrilldown === 'pts_scored'
                             ? {
-                                header: 'Sets won',
-                                pick: (s: Record<string, number>) => Math.round(s.sets_won ?? 0),
+                                header: 'PTS',
+                                pick: (s: Record<string, number>) => Math.round(s.pts_scored ?? 0),
                               }
-                            : null
-
-            if (statDrilldown === 'win_pct') {
-              const gp = selectedSeasonStats?.games_played ?? 0
-              const pct = selectedSeasonStats?.stats?.win_pct ?? 0
-              return (
-                <div className="space-y-3 text-sm">
-                  <p className="text-[var(--text-secondary)]">
-                    Win percentage is computed across your logged matches this season ({gp} games
-                    recorded in totals).
-                  </p>
-                  <p className="font-medium">{pct}%</p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Per-match scoring contributions (points scored) are listed below when available.
-                  </p>
-                  {matchesWithBoxScores.length === 0 ? (
-                    <p className="text-[var(--text-muted)]">No per-match stat rows yet.</p>
-                  ) : (
-                    <div className="overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
-                      <table className="w-full text-sm">
-                        <thead className="bg-[var(--surface-elevated)] text-left text-xs uppercase text-[var(--text-muted)]">
-                          <tr>
-                            <th className="px-3 py-2">Date</th>
-                            <th className="px-3 py-2">Event</th>
-                            <th className="px-3 py-2 text-right">Pts scored</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matchesWithBoxScores.map((m) => (
-                            <tr key={m.id} className="border-t border-[var(--border-subtle)]">
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {m.scheduled_at ? formatDateTime(m.scheduled_at) : '—'}
-                              </td>
-                              <td className="px-3 py-2">{m.event?.name ?? '—'}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {Math.round(seasonGamesLog.statsByMatchId[m.id]?.pts_scored ?? 0)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )
-            }
-
-            if (statDrilldown === 'mw') {
-              const mw = selectedSeasonStats?.stats?.mw ?? 0
-              return (
-                <div className="space-y-3 text-sm">
-                  <p className="text-[var(--text-secondary)]">
-                    Match wins count toward your season totals after competition results are
-                    finalized. Your organizer maintains the official record for standings.
-                  </p>
-                  <p className="font-medium">Matches won (season total): {mw}</p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Where scoring actions were logged for you, points scored per match are shown
-                    below as activity context.
-                  </p>
-                  {matchesWithBoxScores.length === 0 ? (
-                    <p className="text-[var(--text-muted)]">No per-match stat rows yet.</p>
-                  ) : (
-                    <div className="overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
-                      <table className="w-full text-sm">
-                        <thead className="bg-[var(--surface-elevated)] text-left text-xs uppercase text-[var(--text-muted)]">
-                          <tr>
-                            <th className="px-3 py-2">Date</th>
-                            <th className="px-3 py-2">Event</th>
-                            <th className="px-3 py-2 text-right">Pts scored</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matchesWithBoxScores.map((m) => (
-                            <tr key={m.id} className="border-t border-[var(--border-subtle)]">
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {m.scheduled_at ? formatDateTime(m.scheduled_at) : '—'}
-                              </td>
-                              <td className="px-3 py-2">{m.event?.name ?? '—'}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {Math.round(seasonGamesLog.statsByMatchId[m.id]?.pts_scored ?? 0)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )
-            }
+                            : statDrilldown === 'winners'
+                              ? {
+                                  header: 'Winners',
+                                  pick: (s: Record<string, number>) => Math.round(s.winners ?? 0),
+                                }
+                              : null
 
             if (!col) return null
 
@@ -1631,14 +1557,10 @@ export default function AthleteDashboard() {
                 <p className="text-xs text-[var(--text-muted)]">
                   Sum across listed games:{' '}
                   <span className="text-[var(--text-secondary)] font-medium">{total}</span>
-                  {denom > 0 &&
-                  statDrilldown !== 'sets_won' &&
-                  (statDrilldown === 'ppg' ||
-                    statDrilldown === 'rpg' ||
-                    statDrilldown === 'apg' ||
-                    statDrilldown === 'kills' ||
-                    statDrilldown === 'aces' ||
-                    statDrilldown === 'digs') ? (
+                  {/* Every remaining drilldown is a per-game counter, so a mean
+                      is meaningful for all of them. The old explicit allow-list
+                      existed to exclude 'sets_won', which no longer exists. */}
+                  {denom > 0 ? (
                     <> · Mean across these logged games: {(total / denom).toFixed(1)}</>
                   ) : null}
                 </p>

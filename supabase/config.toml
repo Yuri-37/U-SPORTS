@@ -27,8 +27,23 @@ sign_in_sign_ups = 100
 token_verifications = 100
 
 [auth]
+# NOTE: this block configures the LOCAL stack only (`supabase start`). The
+# hosted project is configured in the dashboard under
+# Authentication -> URL Configuration, and it must carry the same entries.
+#
+# Password reset sends redirectTo=<origin>/auth/reset-password (web) and
+# usports://reset-password (mobile). Supabase silently IGNORES a redirectTo
+# that is not on the allow-list and substitutes Site URL instead -- which is
+# why a reset link can arrive pointing at localhost even though the code asked
+# for the deployed URL. If reset links land on the wrong host, the allow-list
+# is what to check first.
 site_url = "http://localhost:5173"
-additional_redirect_urls = ["https://localhost:5173"]
+additional_redirect_urls = [
+  "https://localhost:5173",
+  "http://localhost:5173/auth/reset-password",
+  "https://usports-one.vercel.app/**",
+  "usports://reset-password",
+]
 jwt_expiry = 3600
 enable_signup = true
 

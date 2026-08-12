@@ -4,6 +4,7 @@ import { ArrowLeft, Search } from 'lucide-react'
 import { Card, TabBar, Button, Select, Input } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel } from '../../lib/utils'
+import { playerStatCells } from '../../lib/leaderboardStats'
 import type { Season } from '../../types'
 
 function formatSeasonSelectLabel(s: Season): string {
@@ -219,39 +220,14 @@ export default function GuestLeaderboards() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
                     Athlete
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                    GP
-                  </th>
-                  {sport === 'basketball' && (
-                    <>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        PPG
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        RPG
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        APG
-                      </th>
-                    </>
-                  )}
-                  {sport === 'volleyball' && (
-                    <>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        Kills
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        Aces
-                      </th>
-                    </>
-                  )}
-                  {sport === 'table-tennis' && (
-                    <>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        Win%
-                      </th>
-                    </>
-                  )}
+                  {playerStatCells(sport, null, 0).map((c) => (
+                    <th
+                      key={c.label}
+                      className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)] whitespace-nowrap"
+                    >
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -292,39 +268,14 @@ export default function GuestLeaderboards() {
                       <td className="px-4 py-3 font-medium">
                         {p.athlete?.profile?.full_name ?? '—'}
                       </td>
-                      <td className="px-4 py-3 text-center">{p.games_played}</td>
-                      {sport === 'basketball' && (
-                        <>
-                          <td className="px-4 py-3 text-center font-bold">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_points ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_assists ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                        </>
-                      )}
-                      {sport === 'volleyball' && (
-                        <>
-                          <td className="px-4 py-3 text-center font-bold">{p.stats?.kills ?? 0}</td>
-                          <td className="px-4 py-3 text-center">{p.stats?.aces ?? 0}</td>
-                        </>
-                      )}
-                      {sport === 'table-tennis' && (
-                        <>
-                          <td className="px-4 py-3 text-center font-bold">
-                            {p.stats?.win_pct ?? '0'}%
-                          </td>
-                        </>
-                      )}
+                      {playerStatCells(sport, p.stats, p.games_played).map((c) => (
+                        <td
+                          key={c.label}
+                          className={`px-4 py-3 text-center tabular-nums ${c.emphasis ? 'font-bold' : ''}`}
+                        >
+                          {c.value}
+                        </td>
+                      ))}
                     </tr>
                   ))
                 )}

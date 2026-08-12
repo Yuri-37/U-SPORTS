@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
+import { seasonStatHighlights } from '../../lib/leaderboardStats'
 
 export default function GuestAthleteProfile() {
   const navigate = useNavigate()
@@ -144,63 +145,19 @@ export default function GuestAthleteProfile() {
       {stats && (
         <Card>
           <h3 className="font-bold mb-4">Season Stats</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 text-center">
             <div>
-              <p className="text-2xl font-black font-[Barlow_Condensed]">{stats.games_played}</p>
+              <p className="text-2xl font-black font-[Barlow_Condensed] tabular-nums">
+                {stats.games_played}
+              </p>
               <p className="text-xs text-[var(--text-muted)]">GP</p>
             </div>
-            {athlete.sport === 'basketball' && (
-              <>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.games_played > 0
-                      ? ((stats.stats?.total_points ?? 0) / stats.games_played).toFixed(1)
-                      : '0.0'}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">PPG</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.games_played > 0
-                      ? ((stats.stats?.total_rebounds ?? 0) / stats.games_played).toFixed(1)
-                      : '0.0'}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">RPG</p>
-                </div>
-              </>
-            )}
-            {athlete.sport === 'volleyball' && (
-              <>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.stats?.kills ?? 0}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">Kills</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.stats?.aces ?? 0}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">Aces</p>
-                </div>
-              </>
-            )}
-            {athlete.sport === 'table-tennis' && (
-              <>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.stats?.mw ?? 0}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">Wins</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black font-[Barlow_Condensed]">
-                    {stats.stats?.win_pct ?? '0'}%
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">Win%</p>
-                </div>
-              </>
-            )}
+            {seasonStatHighlights(athlete.sport, stats.stats, stats.games_played).map((c) => (
+              <div key={c.label}>
+                <p className="text-2xl font-black font-[Barlow_Condensed] tabular-nums">{c.value}</p>
+                <p className="text-xs text-[var(--text-muted)]">{c.label}</p>
+              </div>
+            ))}
           </div>
         </Card>
       )}

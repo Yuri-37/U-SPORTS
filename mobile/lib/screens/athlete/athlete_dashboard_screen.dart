@@ -439,25 +439,23 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Season snapshot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 8),
+          const _SectionHeader('Season snapshot'),
           if (row != null)
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 StatChip(label: 'GP', value: '$gp'),
                 ...highlights.map((h) => StatChip(label: h.label, value: h.value)),
               ],
             )
           else
-            Text('No season stats yet — they appear once you play a game.',
-                style: TextStyle(color: LayoutTokens.mutedText(context))),
+            const _EmptyNote(icon: Icons.query_stats, text: 'Stats appear after your first game.'),
           const SizedBox(height: 24),
-          const Text('Upcoming & live', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 8),
+          const _SectionHeader('Upcoming & live'),
           if (_matches.isEmpty)
-            Text('No scheduled matches yet.', style: TextStyle(color: LayoutTokens.mutedText(context)))
+            const _EmptyNote(icon: Icons.event_available, text: 'No matches scheduled yet.')
           else
             ..._matches.map((m) {
               final ev = m['event'] as Map<String, dynamic>?;
@@ -484,13 +482,16 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
               );
             }),
           const SizedBox(height: 24),
-          const Text('Match history', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text('Completed bracket games. 🏆/🥈 means your team placed in that event.',
-              style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
-          const SizedBox(height: 8),
+          // The 🏆/🥈 note only means something once there are rows to carry a
+          // badge, so it stays hidden while the section is empty.
+          _SectionHeader(
+            'Match history',
+            subtitle: _pastMatches.isEmpty
+                ? null
+                : 'Completed bracket games. 🏆/🥈 means your team placed in that event.',
+          ),
           if (_pastMatches.isEmpty)
-            Text('No past games yet.', style: TextStyle(color: LayoutTokens.mutedText(context)))
+            const _EmptyNote(icon: Icons.history, text: 'No completed games yet.')
           else
             ..._pastMatches.map((m) {
               final ev = m['event'] as Map<String, dynamic>?;
@@ -519,14 +520,15 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
               );
             }),
           const SizedBox(height: 24),
-          const Text('My team', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text('Your squad and the coaching staff assigned to it.',
-              style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
-          const SizedBox(height: 8),
+          _SectionHeader(
+            'My team',
+            subtitle: _teams.isEmpty ? null : 'Your squad and the coaching staff assigned to it.',
+          ),
           if (_teams.isEmpty)
-            Text('No team assignment yet — your organizer will add you to a roster.',
-                style: TextStyle(color: LayoutTokens.mutedText(context)))
+            const _EmptyNote(
+              icon: Icons.groups_outlined,
+              text: 'An organizer will add you to a roster.',
+            )
           else
             ..._teams.map((g) => _TeamCard(group: g)),
         ],
@@ -545,6 +547,69 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
 
   String _opponentLabel(Map<String, dynamic> m) {
     return participantDisplayLabel(_labels, _opponentId(m), fallbackPrefix: 'Team');
+  }
+}
+
+/// Section title with an optional explanatory line. Callers pass `subtitle:
+/// null` while a section is empty, so the dashboard doesn't stack a caption
+/// explaining rows that aren't there on top of a message saying there are none.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title, {this.subtitle});
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Empty-section placeholder. Sitting in a bordered tile rather than as bare
+/// muted text keeps a dashboard full of not-yet-populated sections reading as
+/// structure instead of a wall of sentences.
+class _EmptyNote extends StatelessWidget {
+  const _EmptyNote({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: LayoutTokens.cardBackground(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: LayoutTokens.borderSubtle(context)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: LayoutTokens.mutedText(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 13, color: LayoutTokens.mutedText(context)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

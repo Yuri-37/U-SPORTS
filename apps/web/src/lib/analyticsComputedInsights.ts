@@ -21,7 +21,6 @@ export function buildSeasonAggregateInsights(
     athlete_id: string
     games_played: number
     stats?: Record<string, number> | null
-    kill_pct?: number | null
     athlete?: { profile?: { full_name?: string | null } | null } | null
   }[],
   teamStats: {
@@ -130,13 +129,19 @@ export function buildSeasonAggregateInsights(
         ],
       })
     }
+    // kill_pct is not a stored key — recompute_player_season_stats only sums
+    // raw counters — so derive it from kills/attacks the same way the
+    // leaderboard column does.
+    const killPct = (p: (typeof leaderboard)[number]) => {
+      const attacks = p.stats?.attacks ?? 0
+      if (attacks <= 0) return 0
+      return Math.round(((p.stats?.kills ?? 0) / attacks) * 100)
+    }
     const byEff = [...leaderboard]
-      .filter((p) => p.games_played >= MIN_GP_PLAYER && (p.stats?.kill_pct ?? p.kill_pct ?? 0) > 0)
-      .sort(
-        (a, b) => (b.stats?.kill_pct ?? b.kill_pct ?? 0) - (a.stats?.kill_pct ?? a.kill_pct ?? 0),
-      )[0]
+      .filter((p) => p.games_played >= MIN_GP_PLAYER && killPct(p) > 0)
+      .sort((a, b) => killPct(b) - killPct(a))[0]
     if (byEff) {
-      const pct = byEff.stats?.kill_pct ?? byEff.kill_pct ?? 0
+      const pct = killPct(byEff)
       const nm = byEff.athlete?.profile?.full_name ?? 'One hitter'
       out.push({
         id: 'vb-eff',
@@ -153,32 +158,49 @@ export function buildSeasonAggregateInsights(
   }
 
   if (sport === 'table-tennis' && leaderboard.length > 0) {
+    // Built on winners/errors/points, which scoring actually logs. This block
+    // previously ranked on `mw` and `win_pct` — neither is ever written, so
+    // both insights were unreachable and table tennis produced none at all.
     const qualifying = leaderboard.filter((p) => p.games_played >= MIN_GP_PLAYER)
     if (qualifying.length > 0) {
-      const byW = [...qualifying].sort((a, b) => (b.stats?.mw ?? 0) - (a.stats?.mw ?? 0))[0]
-      const nm = byW.athlete?.profile?.full_name ?? 'A competitor'
-      out.push({
-        id: 'tt-wins',
-        tone: 'positive',
-        parts: [
-          { type: 'link', value: nm, href: playerHref(byW.athlete_id) },
-          { type: 'text', value: ` leads in recorded match wins (${byW.stats?.mw ?? 0}).` },
-        ],
-      })
+      const byWinners = [...qualifying].sort(
+        (a, b) => (b.stats?.winners ?? 0) - (a.stats?.winners ?? 0),
+      )[0]
+      if ((byWinners.stats?.winners ?? 0) > 0) {
+        const nm = byWinners.athlete?.profile?.full_name ?? 'A competitor'
+        out.push({
+          id: 'tt-winners',
+          tone: 'positive',
+          parts: [
+            { type: 'link', value: nm, href: playerHref(byWinners.athlete_id) },
+            {
+              type: 'text',
+              value: ` leads in winners (${byWinners.stats?.winners ?? 0} across ${byWinners.games_played} GP).`,
+            },
+          ],
+        })
+      }
     }
-    const byPct = [...leaderboard]
-      .filter((p) => p.games_played >= MIN_GP_PLAYER && Number(p.stats?.win_pct ?? 0) > 0)
-      .sort((a, b) => Number(b.stats?.win_pct ?? 0) - Number(a.stats?.win_pct ?? 0))[0]
-    if (byPct) {
-      const nm = byPct.athlete?.profile?.full_name ?? 'One player'
+    // Winners-per-error: the cleanest available read on shot discipline.
+    const we = (p: (typeof leaderboard)[number]) => {
+      const errors = p.stats?.errors ?? 0
+      const winners = p.stats?.winners ?? 0
+      if (errors <= 0) return winners
+      return winners / errors
+    }
+    const byRatio = [...leaderboard]
+      .filter((p) => p.games_played >= MIN_GP_PLAYER && we(p) > 0)
+      .sort((a, b) => we(b) - we(a))[0]
+    if (byRatio) {
+      const nm = byRatio.athlete?.profile?.full_name ?? 'One player'
       out.push({
-        id: 'tt-pct',
+        id: 'tt-we',
         tone: 'positive',
         parts: [
-          { type: 'link', value: nm, href: playerHref(byPct.athlete_id) },
+          { type: 'link', value: nm, href: playerHref(byRatio.athlete_id) },
           {
             type: 'text',
-            value: ` owns the top win percentage (${byPct.stats?.win_pct ?? 0}% across ${byPct.games_played} GP).`,
+            value: ` has the best winners-to-errors ratio (${we(byRatio).toFixed(1)}).`,
           },
         ],
       })

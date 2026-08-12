@@ -11,11 +11,21 @@ import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 
 class _RosterEntry {
-  _RosterEntry({required this.athleteId, required this.name, required this.position, required this.jerseyNumber});
+  _RosterEntry({
+    required this.athleteId,
+    required this.name,
+    required this.position,
+    required this.jerseyNumber,
+    this.lineupSlot,
+  });
   final String athleteId;
   final String name;
   final String? position;
   final String? jerseyNumber;
+
+  /// Non-null for the starting lineup; null for bench. Drives the "Starting"
+  /// badge, matching the web team page.
+  final int? lineupSlot;
 }
 
 class _TeamDetailData {
@@ -30,6 +40,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
   final rows = await Supabase.instance.client
       .from('team_members')
       .select('''
+        lineup_slot,
         athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name)),
         team:teams(
           id, name, sport,
@@ -66,6 +77,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
         name: (prof?['full_name'] as String?) ?? 'Athlete',
         position: (ath['position'] as String?)?.trim(),
         jerseyNumber: ath['jersey_number']?.toString(),
+        lineupSlot: (row['lineup_slot'] as num?)?.toInt(),
       ));
     }
   }
@@ -214,9 +226,32 @@ class TeamDetailScreen extends ConsumerWidget {
                         child: ListTile(
                           title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           subtitle: (p.position != null && p.position!.isNotEmpty) ? Text(p.position!) : null,
-                          trailing: (p.jerseyNumber != null && p.jerseyNumber!.isNotEmpty)
-                              ? Text('#${p.jerseyNumber}', style: TextStyle(fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context)))
-                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (p.lineupSlot != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: LayoutTokens.success(context).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Starting',
+                                    style: TextStyle(
+                                      color: LayoutTokens.success(context),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              if (p.jerseyNumber != null && p.jerseyNumber!.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Text('#${p.jerseyNumber}',
+                                    style: TextStyle(fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context))),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

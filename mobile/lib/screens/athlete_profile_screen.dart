@@ -146,13 +146,28 @@ class AthleteProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 const Text('Team', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 8),
+                // Tappable through to the team page, matching the web athlete
+                // profile where the team entry is a link.
                 ...teams.map((t) {
                   final tSport = t['sport'] as String? ?? '';
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      '${sportEmoji(tSport)} ${t['name'] as String? ?? ''} · ${sportLabel(tSport)}',
-                      style: TextStyle(color: LayoutTokens.secondaryText(context)),
+                  final tId = t['id'] as String?;
+                  return InkWell(
+                    onTap: tId == null ? null : () => context.push('/teams/$tId'),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${sportEmoji(tSport)} ${t['name'] as String? ?? ''} · ${sportLabel(tSport)}',
+                              style: TextStyle(color: LayoutTokens.secondaryText(context)),
+                            ),
+                          ),
+                          if (tId != null)
+                            Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
+                        ],
+                      ),
                     ),
                   );
                 }),
@@ -164,6 +179,7 @@ class AthleteProfileScreen extends ConsumerWidget {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
+                  alignment: WrapAlignment.center,
                   children: [
                     StatChip(label: 'GP', value: '$gp'),
                     ...highlights.map((h) => StatChip(label: h.label, value: h.value)),

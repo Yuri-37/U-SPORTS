@@ -25,6 +25,7 @@ import {
 import { fetchParticipantLabels } from '../../lib/participantLabels'
 import { buildSeasonAggregateInsights } from '../../lib/analyticsComputedInsights'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
+import { playerStatCells } from '../../lib/leaderboardStats'
 
 function insightNavigationTarget(insight: Insight): string {
   return insight.entity_type === 'player'
@@ -463,7 +464,10 @@ export default function OrganizerAnalytics() {
             Aces: p.stats?.aces ?? 0,
           }
         : {
-            Wins: p.stats?.mw ?? 0,
+            // `mw` (match wins) is never written by scoring — charting it drew
+            // a row of zero-height bars for every table tennis player.
+            Winners: p.stats?.winners ?? 0,
+            Aces: p.stats?.aces ?? 0,
           }),
   }))
 
@@ -563,7 +567,7 @@ export default function OrganizerAnalytics() {
                   />
                   <Bar
                     dataKey={
-                      sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Kills' : 'Wins'
+                      sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Kills' : 'Winners'
                     }
                     fill="#0066FF"
                     radius={[4, 4, 0, 0]}
@@ -590,48 +594,14 @@ export default function OrganizerAnalytics() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
                       Athlete
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                      GP
-                    </th>
-                    {sport === 'basketball' && (
-                      <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          PPG
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          RPG
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          APG
-                        </th>
-                      </>
-                    )}
-                    {sport === 'volleyball' && (
-                      <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          Kills
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          Aces
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          Kill%
-                        </th>
-                      </>
-                    )}
-                    {sport === 'table-tennis' && (
-                      <>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          MP
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          W
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
-                          Win%
-                        </th>
-                      </>
-                    )}
+                    {playerStatCells(sport, null, 0).map((c) => (
+                      <th
+                        key={c.label}
+                        className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)] whitespace-nowrap"
+                      >
+                        {c.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -646,40 +616,14 @@ export default function OrganizerAnalytics() {
                       <td className="px-4 py-3 font-medium">
                         {p.athlete?.profile?.full_name ?? '—'}
                       </td>
-                      <td className="px-4 py-3 text-center">{p.games_played}</td>
-                      {sport === 'basketball' && (
-                        <>
-                          <td className="px-4 py-3 text-center font-bold">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_points ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_rebounds ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {p.games_played > 0
-                              ? ((p.stats?.total_assists ?? 0) / p.games_played).toFixed(1)
-                              : '0.0'}
-                          </td>
-                        </>
-                      )}
-                      {sport === 'volleyball' && (
-                        <>
-                          <td className="px-4 py-3 text-center font-bold">{p.stats?.kills ?? 0}</td>
-                          <td className="px-4 py-3 text-center">{p.stats?.aces ?? 0}</td>
-                          <td className="px-4 py-3 text-center">{p.stats?.kill_pct ?? '0'}%</td>
-                        </>
-                      )}
-                      {sport === 'table-tennis' && (
-                        <>
-                          <td className="px-4 py-3 text-center">{p.stats?.mp ?? 0}</td>
-                          <td className="px-4 py-3 text-center font-bold">{p.stats?.mw ?? 0}</td>
-                          <td className="px-4 py-3 text-center">{p.stats?.win_pct ?? '0'}%</td>
-                        </>
-                      )}
+                      {playerStatCells(sport, p.stats, p.games_played).map((c) => (
+                        <td
+                          key={c.label}
+                          className={`px-4 py-3 text-center tabular-nums ${c.emphasis ? 'font-bold' : ''}`}
+                        >
+                          {c.value}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                   {filteredLeaderboard.length === 0 && (
