@@ -75,6 +75,10 @@ const LAST = [
 ]
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+// SHS (Senior High) only runs Grade 11/Grade 12 -- there is no 3rd/4th year there.
+const SHS_YEAR_LEVELS = ['1st Year', '2nd Year']
+const yearLevelsFor = (department: string) =>
+  department === 'SHS' ? SHS_YEAR_LEVELS : YEAR_LEVELS
 
 // Deterministic pseudo-random so re-runs produce the same believable numbers.
 let seedState = 20260812
@@ -256,7 +260,10 @@ async function main() {
           sport: team.sport,
           position: setup.positions[i % setup.positions.length],
           jersey_number: String(i + 1),
-          year_level: YEAR_LEVELS[athleteIdx % YEAR_LEVELS.length],
+          year_level: (() => {
+            const pool = yearLevelsFor(team.department)
+            return pool[athleteIdx % pool.length]
+          })(),
           department: team.department,
           season_status: 'active',
         })

@@ -13,7 +13,8 @@
     "seed:basketball-cup": "tsx src/scripts/seedBasketballCup.ts",
     "inspect:data": "tsx src/scripts/inspectData.ts",
     "reset:seed": "tsx src/scripts/resetAndSeed.ts",
-    "make:import-files": "tsx src/scripts/makeImportFiles.ts"
+    "make:import-files": "tsx src/scripts/makeImportFiles.ts",
+    "fix:shs-years": "tsx src/scripts/fixShsYearLevels.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

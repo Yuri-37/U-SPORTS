@@ -46,6 +46,9 @@ const LAST = [
 ]
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+// SHS (Senior High) only runs Grade 11/Grade 12 -- there is no 3rd/4th year there.
+const SHS_YEARS = ['1st Year', '2nd Year']
+const yearsFor = (department: string) => (department === 'SHS' ? SHS_YEARS : YEARS)
 const COURSES = ['BSIT', 'BSCS', 'BSBA', 'BSA', 'BSN', 'BSCE', 'STEM', 'ABM']
 
 const XLSX_MIME_EXT = '.xlsx'
@@ -81,7 +84,7 @@ async function main() {
         studentId: `2024-${240100 + i}`,
         fullName: `${FIRST[i % FIRST.length]} ${LAST[(i * 5 + 2) % LAST.length]}`,
         lineup: p < t.active ? 'active' : 'bench',
-        yearLevel: YEARS[i % YEARS.length],
+        yearLevel: yearsFor(t.department)[p % yearsFor(t.department).length],
         course: COURSES[i % COURSES.length],
       })
       i++
