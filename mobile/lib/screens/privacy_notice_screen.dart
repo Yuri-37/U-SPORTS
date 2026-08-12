@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/push_notifications_service.dart';
-import '../services/router.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/privacy_notice_content.dart';
@@ -37,7 +36,13 @@ class _PrivacyNoticeScreenState extends ConsumerState<PrivacyNoticeScreen> {
     try {
       await ref.read(apiClientProvider).postJson('/auth/accept-privacy-notice');
       ref.invalidate(profileProvider);
-      ref.read(routerProvider).refresh();
+      // router.refresh() alone re-runs redirect() for the CURRENT location,
+      // which is still /privacy-notice — the gate only redirects users TO
+      // this screen (path != '/privacy-notice'), never away from it, so a
+      // refresh here is a no-op and the screen never advances. Navigate
+      // explicitly; redirect() re-evaluates for '/' with the now-invalidated
+      // (so freshly refetched) profile and lets the user through.
+      if (mounted) context.go('/');
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
