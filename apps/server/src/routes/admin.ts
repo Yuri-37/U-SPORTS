@@ -109,13 +109,19 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       email: z.string().trim().email(),
       full_name: z.string().min(1),
       role: z.enum(['Organizer', 'Coach']),
-      department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']),
+      // Only Coach is department-scoped (see findCoachSportConflict) —
+      // Organizers aren't, so this is optional/absent for them.
+      department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
       assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
       password: z.string().min(8, 'Password must be at least 8 characters').max(128),
     })
-    .refine((v) => v.role !== 'Coach' || v.assigned_sports.length <= 3, {
-      message: 'Coaches can be assigned up to 3 sports',
+    .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
+      message: 'Coaches must be assigned exactly one sport',
       path: ['assigned_sports'],
+    })
+    .refine((v) => v.role !== 'Coach' || Boolean(v.department), {
+      message: 'Department is required for coaches',
+      path: ['department'],
     })
 
   try {
@@ -123,12 +129,13 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     const email = parsed.email.trim().toLowerCase()
     const full_name = parsed.full_name.trim()
     const role = parsed.role
-    const department = parsed.department
+    const department = role === 'Coach' ? (parsed.department ?? null) : null
     const assigned_sports = parsed.assigned_sports
     const password = parsed.password
 
     // Check before createUser so a rejection can't leave an orphaned auth user.
-    if (role === 'Coach') {
+    // department is guaranteed non-null here by the schema's refine above.
+    if (role === 'Coach' && department) {
       const conflict = await findCoachSportConflict(department, assigned_sports)
       if (conflict) {
         return res.status(400).json({
@@ -203,16 +210,22 @@ router.patch(
     const schema = z
       .object({
         role: z.enum(['Organizer', 'Coach']),
-        department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']),
+        // Only Coach is department-scoped — see the POST /organizers note above.
+        department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
         assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
       })
-      .refine((v) => v.role !== 'Coach' || v.assigned_sports.length <= 3, {
-        message: 'Coaches can be assigned up to 3 sports',
+      .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
+        message: 'Coaches must be assigned exactly one sport',
         path: ['assigned_sports'],
+      })
+      .refine((v) => v.role !== 'Coach' || Boolean(v.department), {
+        message: 'Department is required for coaches',
+        path: ['department'],
       })
 
     try {
       const parsed = schema.parse(req.body)
+      const department = parsed.role === 'Coach' ? (parsed.department ?? null) : null
 
       const { data: org } = await supabase
         .from('organizers')
@@ -222,22 +235,23 @@ router.patch(
       if (!org) return res.status(404).json({ error: 'Staff member not found' })
 
       // Exclude this staff member so re-saving their own unchanged sports passes.
-      if (parsed.role === 'Coach') {
+      // department is guaranteed non-null here by the schema's refine above.
+      if (parsed.role === 'Coach' && department) {
         const conflict = await findCoachSportConflict(
-          parsed.department,
+          department,
           parsed.assigned_sports,
           org.profile_id,
         )
         if (conflict) {
           return res.status(400).json({
-            error: `${conflict.coachName} is already the ${sportLabel(conflict.sport)} coach for ${parsed.department}. Each sport can have only one coach per department.`,
+            error: `${conflict.coachName} is already the ${sportLabel(conflict.sport)} coach for ${department}. Each sport can have only one coach per department.`,
           })
         }
       }
 
       const { error: profileErr } = await supabase
         .from('profiles')
-        .update({ role: parsed.role, department: parsed.department })
+        .update({ role: parsed.role, department })
         .eq('id', org.profile_id)
       if (profileErr) throw new Error(profileErr.message)
 
@@ -256,7 +270,7 @@ router.patch(
         entity_id: req.params.id,
         details: {
           role: parsed.role,
-          department: parsed.department,
+          department,
           assigned_sports: parsed.assigned_sports,
         },
       })

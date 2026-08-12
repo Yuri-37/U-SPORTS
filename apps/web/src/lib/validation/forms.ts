@@ -22,14 +22,21 @@ export const createOrganizerFormSchema = z
     password: passwordZ,
     confirmPassword: z.string(),
     role: z.enum(STAFF_ROLES),
-    department: z.enum(DEPARTMENTS),
+    // Department only means anything for Coach (it's what scopes the
+    // one-coach-per-sport-per-department rule) — Organizers aren't
+    // department-scoped anywhere, so it's optional/absent for them.
+    department: z.enum(DEPARTMENTS).nullable().optional(),
     assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
-  .refine((d) => d.role !== 'Coach' || d.assigned_sports.length <= 3, {
-    message: 'Coaches can be assigned up to 3 sports',
+  .refine((d) => d.role !== 'Coach' || d.assigned_sports.length === 1, {
+    message: 'Coaches must be assigned exactly one sport',
     path: ['assigned_sports'],
+  })
+  .refine((d) => d.role !== 'Coach' || Boolean(d.department), {
+    message: 'Department is required for coaches',
+    path: ['department'],
   })

@@ -33,37 +33,40 @@ function SportCheckboxes({
   /** sport -> name of the coach already holding it in the selected department. */
   takenBy?: Record<string, string>
 }) {
+  // Each coach handles exactly one sport/department — a radio group enforces
+  // that at the input level instead of just capping a checkbox list.
+  const single = role === 'Coach'
   return (
     <div>
       <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1">
-        Assign sports
+        {single ? 'Assign sport' : 'Assign sports'}
       </label>
-      {role === 'Coach' && (
+      {single && (
         <p className="text-xs text-[var(--text-muted)] mb-2">
-          Coaches can be assigned up to 3 sports, and each sport can have only one coach per
-          department.
+          Each coach is assigned one sport, and each sport can have only one coach per department.
         </p>
       )}
       <div className="space-y-2">
         {SPORTS.map((s) => {
           const checked = sports.includes(s)
-          const atLimit = role === 'Coach' && sports.length >= 3 && !checked
           // Mirrors the server-side one-coach-per-sport-per-department rule so
           // the clash is visible before submitting rather than as a 400.
-          const takenByName = role === 'Coach' && !checked ? takenBy[s] : undefined
-          const disabled = atLimit || Boolean(takenByName)
+          const takenByName = single && !checked ? takenBy[s] : undefined
+          const disabled = Boolean(takenByName)
           return (
             <label
               key={s}
               className={`flex items-center gap-2 ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <input
-                type="checkbox"
+                type={single ? 'radio' : 'checkbox'}
+                name={single ? 'coach-sport' : undefined}
                 checked={checked}
                 disabled={disabled}
-                onChange={(e) =>
-                  onChange(e.target.checked ? [...sports, s] : sports.filter((x) => x !== s))
-                }
+                onChange={(e) => {
+                  if (single) onChange([s])
+                  else onChange(e.target.checked ? [...sports, s] : sports.filter((x) => x !== s))
+                }}
                 className="accent-[#0066FF]"
               />
               <span className="text-sm">
@@ -245,7 +248,7 @@ export default function SuperAdminOrganizers() {
       password: addPassword,
       confirmPassword: addConfirmPassword,
       role: addRole,
-      department: addDepartment,
+      department: addRole === 'Coach' ? addDepartment : null,
       assigned_sports: addSports,
     })
     if (!parsed.success) {
@@ -280,10 +283,14 @@ export default function SuperAdminOrganizers() {
   }
 
   const openEdit = (o: StaffWithProfile) => {
+    const role = (o.profile?.role as 'Organizer' | 'Coach') ?? 'Organizer'
     setEditTarget(o)
-    setEditRole((o.profile?.role as 'Organizer' | 'Coach') ?? 'Organizer')
+    setEditRole(role)
     setEditDepartment(o.profile?.department ?? 'SBMA')
-    setEditSports([...(o.assigned_sports ?? [])])
+    // A coach saved before the one-sport rule may still have up to 3 stored —
+    // trim to the first so the radio group opens with exactly one checked.
+    const sports = [...(o.assigned_sports ?? [])]
+    setEditSports(role === 'Coach' ? sports.slice(0, 1) : sports)
     setEditError('')
   }
 
@@ -293,8 +300,8 @@ export default function SuperAdminOrganizers() {
       setEditError('Assign at least one sport')
       return
     }
-    if (editRole === 'Coach' && editSports.length > 3) {
-      setEditError('Coaches can be assigned up to 3 sports')
+    if (editRole === 'Coach' && editSports.length !== 1) {
+      setEditError('Coaches must be assigned exactly one sport')
       return
     }
     setEditBusy(true)
@@ -302,7 +309,7 @@ export default function SuperAdminOrganizers() {
     try {
       await api.patch(`/admin/organizers/${editTarget.id}`, {
         role: editRole,
-        department: editDepartment,
+        department: editRole === 'Coach' ? editDepartment : null,
         assigned_sports: editSports,
       })
       setSuccess(`${editTarget.profile?.full_name} updated successfully.`)
@@ -545,28 +552,30 @@ export default function SuperAdminOrganizers() {
               <p className="text-xs text-[var(--text-muted)]">{editTarget.profile?.email}</p>
             </div>
             {editError && <Alert type="danger">{editError}</Alert>}
-            <div className="grid grid-cols-2 gap-3">
+            <div className={editRole === 'Coach' ? 'grid grid-cols-2 gap-3' : ''}>
               <Select
                 label="Role"
                 value={editRole}
                 onChange={(e) => {
                   const r = e.target.value as 'Organizer' | 'Coach'
                   setEditRole(r)
-                  if (r === 'Coach' && editSports.length > 3) setEditSports(editSports.slice(0, 3))
+                  if (r === 'Coach' && editSports.length > 1) setEditSports(editSports.slice(0, 1))
                 }}
                 options={STAFF_ROLES.map((r) => ({ value: r, label: r }))}
               />
-              <Select
-                label="Department"
-                value={editDepartment}
-                onChange={(e) => {
-                  const dept = e.target.value
-                  setEditDepartment(dept)
-                  const taken = takenSportsFor(dept, editTarget?.id)
-                  setEditSports((prev) => prev.filter((s) => !taken[s]))
-                }}
-                options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
-              />
+              {editRole === 'Coach' && (
+                <Select
+                  label="Department"
+                  value={editDepartment}
+                  onChange={(e) => {
+                    const dept = e.target.value
+                    setEditDepartment(dept)
+                    const taken = takenSportsFor(dept, editTarget?.id)
+                    setEditSports((prev) => prev.filter((s) => !taken[s]))
+                  }}
+                  options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+                />
+              )}
             </div>
             <SportCheckboxes
               role={editRole}
@@ -825,30 +834,32 @@ export default function SuperAdminOrganizers() {
             autoComplete="new-password"
             icon={<Lock className="w-4 h-4" />}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className={addRole === 'Coach' ? 'grid grid-cols-2 gap-3' : ''}>
             <Select
               label="Role"
               value={addRole}
               onChange={(e) => {
                 const r = e.target.value as 'Organizer' | 'Coach'
                 setAddRole(r)
-                if (r === 'Coach' && addSports.length > 3) setAddSports(addSports.slice(0, 3))
+                if (r === 'Coach' && addSports.length > 1) setAddSports(addSports.slice(0, 1))
               }}
               options={STAFF_ROLES.map((r) => ({ value: r, label: r }))}
             />
-            <Select
-              label="Department"
-              value={addDepartment}
-              onChange={(e) => {
-                const dept = e.target.value
-                setAddDepartment(dept)
-                // Sports free in the old department may be taken in the new one —
-                // drop those so a stale tick can't submit a known conflict.
-                const taken = takenSportsFor(dept)
-                setAddSports((prev) => prev.filter((s) => !taken[s]))
-              }}
-              options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
-            />
+            {addRole === 'Coach' && (
+              <Select
+                label="Department"
+                value={addDepartment}
+                onChange={(e) => {
+                  const dept = e.target.value
+                  setAddDepartment(dept)
+                  // Sports free in the old department may be taken in the new one —
+                  // drop those so a stale tick can't submit a known conflict.
+                  const taken = takenSportsFor(dept)
+                  setAddSports((prev) => prev.filter((s) => !taken[s]))
+                }}
+                options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+              />
+            )}
           </div>
           <SportCheckboxes
             role={addRole}
