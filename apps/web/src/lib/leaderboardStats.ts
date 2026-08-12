@@ -92,6 +92,67 @@ export function playerStatCells(
 }
 
 /**
+ * The stat a leaderboard ranks on — the same one `playerStatCells` marks with
+ * `emphasis`. Averages are per-game so a substitute with one huge night can't
+ * outrank a season-long starter on raw totals; counting stats stay totals.
+ */
+export function rankingValue(sport: string, stats: Stats, gamesPlayed: number): number {
+  const n = (k: string) => statNum(stats, k)
+  if (sport === 'basketball') {
+    return gamesPlayed > 0 ? n('total_points') / gamesPlayed : 0
+  }
+  if (sport === 'volleyball' || sport === 'table-tennis') {
+    return n('pts_scored')
+  }
+  return gamesPlayed
+}
+
+/**
+ * Sorts a leaderboard best-first. Ties break on games played, so between equal
+ * scorers the one who actually turned up more ranks higher, and finally on name
+ * to keep the order stable across reloads rather than left to the database.
+ */
+export function sortByRank<
+  T extends {
+    games_played: number
+    stats?: Record<string, number> | null
+    athlete?: { profile?: { full_name?: string | null } | null } | null
+  },
+>(rows: T[], sport: string): T[] {
+  return [...rows].sort((a, b) => {
+    const diff = rankingValue(sport, b.stats, b.games_played) - rankingValue(sport, a.stats, a.games_played)
+    if (diff !== 0) return diff
+    if (b.games_played !== a.games_played) return b.games_played - a.games_played
+    return (a.athlete?.profile?.full_name ?? '').localeCompare(b.athlete?.profile?.full_name ?? '')
+  })
+}
+
+/**
+ * Sorts team standings best-first: win percentage, then wins, then fewer
+ * losses, then name.
+ *
+ * The queries order by `wins` alone, which ties 2W-0L with 2W-3L and leaves
+ * the better team below the worse one depending on database order. Win
+ * percentage first is the standard standings rule and handles teams that have
+ * played an unequal number of games.
+ */
+export function sortTeamStandings<
+  T extends { wins: number; losses: number; team?: { name?: string | null } | null },
+>(rows: T[]): T[] {
+  const winPct = (t: T) => {
+    const played = t.wins + t.losses
+    return played > 0 ? t.wins / played : 0
+  }
+  return [...rows].sort((a, b) => {
+    const pctDiff = winPct(b) - winPct(a)
+    if (pctDiff !== 0) return pctDiff
+    if (b.wins !== a.wins) return b.wins - a.wins
+    if (a.losses !== b.losses) return a.losses - b.losses
+    return (a.team?.name ?? '').localeCompare(b.team?.name ?? '')
+  })
+}
+
+/**
  * Compact per-athlete season summary (profile stat cards), as opposed to the
  * full leaderboard row above.
  */

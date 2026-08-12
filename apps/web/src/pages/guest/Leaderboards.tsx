@@ -4,7 +4,7 @@ import { ArrowLeft, Search } from 'lucide-react'
 import { Card, TabBar, Button, Select, Input } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel } from '../../lib/utils'
-import { playerStatCells } from '../../lib/leaderboardStats'
+import { playerStatCells, sortByRank, sortTeamStandings } from '../../lib/leaderboardStats'
 import type { Season } from '../../types'
 
 function formatSeasonSelectLabel(s: Season): string {
@@ -71,11 +71,14 @@ export default function GuestLeaderboards() {
 
   const filteredLeaderboard = useMemo(() => {
     const q = athleteSearch.trim().toLowerCase()
-    if (!q) return leaderboard
-    return leaderboard.filter((p) =>
-      (p.athlete?.profile?.full_name ?? '').toLowerCase().includes(q),
-    )
-  }, [leaderboard, athleteSearch])
+    const rows = q
+      ? leaderboard.filter((p) => (p.athlete?.profile?.full_name ?? '').toLowerCase().includes(q))
+      : leaderboard
+    // The query can only order by a real column (games_played), which leaves
+    // everyone on equal GP in arbitrary database order — so the "#" column read
+    // as a rank while showing none. Rank on the sport's headline stat here.
+    return sortByRank(rows, sport)
+  }, [leaderboard, athleteSearch, sport])
 
   useEffect(() => {
     if (!effectiveSeasonId) {
@@ -294,9 +297,8 @@ export default function GuestLeaderboards() {
           ) : teamStandings.filter((ts) => !sport || ts.team?.sport === sport).length === 0 ? (
             <p className="text-center text-[var(--text-muted)] py-10">No team standings yet</p>
           ) : (
-            teamStandings
-              .filter((ts) => !sport || ts.team?.sport === sport)
-              .map((ts, i) => (
+            sortTeamStandings(teamStandings.filter((ts) => !sport || ts.team?.sport === sport)).map(
+              (ts, i) => (
                 <Card
                   key={ts.id}
                   className="flex items-center gap-4 cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
@@ -322,7 +324,8 @@ export default function GuestLeaderboards() {
                     </span>
                   </div>
                 </Card>
-              ))
+              ),
+            )
           )}
         </div>
       )}

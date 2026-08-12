@@ -231,7 +231,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                 return const Center(child: Text('No seasons available yet.'));
                               }
                               final q = _athleteSearch.trim().toLowerCase();
-                              final filtered = q.isEmpty
+                              final matching = q.isEmpty
                                   ? rows
                                   : rows.where((r) {
                                       final athlete = r['athlete'] as Map<String, dynamic>?;
@@ -239,6 +239,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                       final name = (prof?['full_name'] as String? ?? '').toLowerCase();
                                       return name.contains(q);
                                     }).toList();
+                              final filtered = sortByRank(matching, _sport);
                               if (filtered.isEmpty) {
                                 return Center(
                                   child: Text(
@@ -303,12 +304,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                         if (rows.isEmpty) {
                           return Center(child: Text('No team standings yet.', style: TextStyle(color: LayoutTokens.mutedText(context))));
                         }
+                        final standings = sortTeamStandings(rows);
                         return ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: rows.length,
+                          itemCount: standings.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (ctx, i) {
-                            final r = rows[i];
+                            final r = standings[i];
                             final team = r['team'] as Map<String, dynamic>?;
                             final teamId = team?['id'] as String?;
                             final name = team?['name'] as String? ?? 'Team';

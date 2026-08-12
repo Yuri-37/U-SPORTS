@@ -25,7 +25,7 @@ import {
 import { fetchParticipantLabels } from '../../lib/participantLabels'
 import { buildSeasonAggregateInsights } from '../../lib/analyticsComputedInsights'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
-import { playerStatCells } from '../../lib/leaderboardStats'
+import { playerStatCells, sortByRank, sortTeamStandings } from '../../lib/leaderboardStats'
 
 function insightNavigationTarget(insight: Insight): string {
   return insight.entity_type === 'player'
@@ -366,21 +366,27 @@ export default function OrganizerAnalytics() {
 
   const teamStatsForSport = useMemo(
     () =>
-      teamStats.filter((ts) => {
-        if (ts.team?.sport !== sport) return false
-        if (departmentFilter && (ts.team?.department ?? '') !== departmentFilter) return false
-        return true
-      }),
+      // Ranked by win percentage rather than the query's raw `wins`, which tied
+      // e.g. 2W-0L with 2W-3L and ordered them arbitrarily.
+      sortTeamStandings(
+        teamStats.filter((ts) => {
+          if (ts.team?.sport !== sport) return false
+          if (departmentFilter && (ts.team?.department ?? '') !== departmentFilter) return false
+          return true
+        }),
+      ),
     [teamStats, sport, departmentFilter],
   )
 
-  const filteredLeaderboard = useMemo(
-    () =>
-      departmentFilter
-        ? leaderboard.filter((p) => (p.athlete?.department ?? '') === departmentFilter)
-        : leaderboard,
-    [leaderboard, departmentFilter],
-  )
+  const filteredLeaderboard = useMemo(() => {
+    const rows = departmentFilter
+      ? leaderboard.filter((p) => (p.athlete?.department ?? '') === departmentFilter)
+      : leaderboard
+    // Ordered by the sport's headline stat rather than the query's
+    // games_played, which left equal-GP athletes in arbitrary order. This also
+    // decides the chart's "top 10", which was previously an arbitrary 10.
+    return sortByRank(rows, sport)
+  }, [leaderboard, departmentFilter, sport])
 
   // A blob: URL carries no HTTP headers of its own, so the server's Content-Disposition
   // is never seen here — whatever name we set below is the one the browser saves.

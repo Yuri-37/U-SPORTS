@@ -36,6 +36,75 @@ String ratio(num numerator, num denominator) {
   return (numerator / denominator).toStringAsFixed(1);
 }
 
+/// The stat a leaderboard ranks on -- the same one `playerStatCells` marks with
+/// `emphasis`. Averages are per-game so a substitute with one huge night can't
+/// outrank a season-long starter on raw totals; counting stats stay totals.
+num rankingValue(String sport, Map<String, dynamic>? stats, int gamesPlayed) {
+  if (sport == 'basketball') {
+    return gamesPlayed > 0 ? statNum(stats, 'total_points') / gamesPlayed : 0;
+  }
+  if (sport == 'volleyball' || sport == 'table-tennis') {
+    return statNum(stats, 'pts_scored');
+  }
+  return gamesPlayed;
+}
+
+/// Sorts leaderboard rows best-first, in place on a copy.
+///
+/// The Supabase query can only order by a real column (games_played), which
+/// leaves everyone on equal GP in arbitrary database order -- so the "#" column
+/// read as a rank while showing none. Ties break on games played, then name, so
+/// the order is stable across reloads.
+List<Map<String, dynamic>> sortByRank(List<Map<String, dynamic>> rows, String sport) {
+  String nameOf(Map<String, dynamic> r) {
+    final athlete = r['athlete'] as Map<String, dynamic>?;
+    final prof = athlete?['profile'] as Map<String, dynamic>?;
+    return (prof?['full_name'] as String?) ?? '';
+  }
+
+  int gpOf(Map<String, dynamic> r) => (r['games_played'] as num?)?.toInt() ?? 0;
+  Map<String, dynamic>? statsOf(Map<String, dynamic> r) => r['stats'] as Map<String, dynamic>?;
+
+  final out = [...rows];
+  out.sort((a, b) {
+    final diff = rankingValue(sport, statsOf(b), gpOf(b)) - rankingValue(sport, statsOf(a), gpOf(a));
+    if (diff != 0) return diff > 0 ? 1 : -1;
+    if (gpOf(b) != gpOf(a)) return gpOf(b) - gpOf(a);
+    return nameOf(a).compareTo(nameOf(b));
+  });
+  return out;
+}
+
+/// Sorts team standings best-first: win percentage, then wins, then fewer
+/// losses, then name.
+///
+/// The queries order by `wins` alone, which ties 2W-0L with 2W-3L and can leave
+/// the better team below the worse one. Win percentage first is the standard
+/// standings rule and handles teams that have played unequal numbers of games.
+List<Map<String, dynamic>> sortTeamStandings(List<Map<String, dynamic>> rows) {
+  int winsOf(Map<String, dynamic> r) => (r['wins'] as num?)?.toInt() ?? 0;
+  int lossesOf(Map<String, dynamic> r) => (r['losses'] as num?)?.toInt() ?? 0;
+  String nameOf(Map<String, dynamic> r) {
+    final team = r['team'] as Map<String, dynamic>?;
+    return (team?['name'] as String?) ?? '';
+  }
+
+  double pctOf(Map<String, dynamic> r) {
+    final played = winsOf(r) + lossesOf(r);
+    return played > 0 ? winsOf(r) / played : 0;
+  }
+
+  final out = [...rows];
+  out.sort((a, b) {
+    final pctDiff = pctOf(b) - pctOf(a);
+    if (pctDiff != 0) return pctDiff > 0 ? 1 : -1;
+    if (winsOf(b) != winsOf(a)) return winsOf(b) - winsOf(a);
+    if (lossesOf(a) != lossesOf(b)) return lossesOf(a) - lossesOf(b);
+    return nameOf(a).compareTo(nameOf(b));
+  });
+  return out;
+}
+
 List<LeaderboardStatCell> playerStatCells(String sport, Map<String, dynamic>? stats, int gamesPlayed) {
   final gp = gamesPlayed;
   num n(String k) => statNum(stats, k);

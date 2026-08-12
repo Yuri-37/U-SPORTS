@@ -141,12 +141,13 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                       if (rows.isEmpty) {
                         return Center(child: Text('No team standings yet.', style: TextStyle(color: LayoutTokens.mutedText(context))));
                       }
+                      final standings = sortTeamStandings(rows);
                       return ListView.separated(
                         padding: const EdgeInsets.all(16),
-                        itemCount: rows.length,
+                        itemCount: standings.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (ctx, i) {
-                          final r = rows[i];
+                          final r = standings[i];
                           final team = r['team'] as Map<String, dynamic>?;
                           final name = team?['name'] as String? ?? 'Team';
                           final w = (r['wins'] as num?)?.toInt() ?? 0;
@@ -195,7 +196,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                               const DataColumn(label: Text('Athlete')),
                               ...playerStatCells(widget.sport, null, 0).map((c) => DataColumn(label: Text(c.label))),
                             ],
-                            rows: rows.asMap().entries.map((entry) {
+                            rows: sortByRank(rows, widget.sport).asMap().entries.map((entry) {
                               final i = entry.key;
                               final r = entry.value;
                               final athlete = r['athlete'] as Map<String, dynamic>?;
