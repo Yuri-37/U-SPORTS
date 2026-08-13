@@ -4,7 +4,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { generateBracket, advanceWinner } from '../services/bracketGenerator'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
-import { respondIfSportForbidden } from '../utils/organizerSportAccess'
+import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
 
 const router = Router()
 
@@ -35,11 +35,17 @@ router.patch(
 
     const { data: evBr } = await supabase
       .from('events')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', match.event_id)
       .maybeSingle()
     if (!evBr) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, evBr.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: evBr.sport as string,
+        seasonId: evBr.season_id as string,
+      })
+    )
+      return
 
     if (match.status === 'live' || match.status === 'completed') {
       return res
@@ -127,11 +133,17 @@ router.post(
 
       const { data: event } = await supabase
         .from('events')
-        .select('format, sport')
+        .select('format, sport, season_id')
         .eq('id', req.params.eventId)
         .single()
       if (!event) return res.status(404).json({ error: 'Event not found' })
-      if (await respondIfSportForbidden(req, res, event.sport as string)) return
+      if (
+        await respondIfScopeForbidden(req, res, {
+          sport: event.sport as string,
+          seasonId: event.season_id as string,
+        })
+      )
+        return
 
       const result = await generateBracket(
         req.params.eventId as string,
@@ -191,11 +203,17 @@ router.post(
       if (!matchAdv) return res.status(404).json({ error: 'Match not found' })
       const { data: evAdv } = await supabase
         .from('events')
-        .select('sport')
+        .select('sport, season_id')
         .eq('id', matchAdv.event_id)
         .maybeSingle()
       if (!evAdv) return res.status(404).json({ error: 'Event not found' })
-      if (await respondIfSportForbidden(req, res, evAdv.sport as string)) return
+      if (
+        await respondIfScopeForbidden(req, res, {
+          sport: evAdv.sport as string,
+          seasonId: evAdv.season_id as string,
+        })
+      )
+        return
 
       await advanceWinner(matchId, winnerId)
       await writeAuditLog({

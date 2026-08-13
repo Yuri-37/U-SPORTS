@@ -6,7 +6,7 @@ import { writeAuditLog } from '../utils/writeAuditLog'
 import { advanceWinner } from '../services/bracketGenerator'
 import { computeInsightsForMatch } from '../services/computeInsights'
 import { getActiveSlots } from '../utils/sportConfig'
-import { respondIfSportForbidden } from '../utils/organizerSportAccess'
+import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
 import {
   getMatchReviewData,
   resolveParticipantDisplayName,
@@ -179,14 +179,20 @@ router.post(
 
     const { data: event } = await supabase
       .from('events')
-      .select('sport, table_tennis_format')
+      .select('sport, table_tennis_format, season_id')
       .eq('id', match.event_id)
       .single()
     const sport = event?.sport ?? 'basketball'
     const ttFormat =
       (event as { table_tennis_format?: string | null } | null)?.table_tennis_format ?? null
 
-    if (await respondIfSportForbidden(req, res, sport)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport,
+        seasonId: (event as { season_id?: string | null } | null)?.season_id,
+      })
+    )
+      return
 
     const scores = [match.participant_a_id, match.participant_b_id].filter(Boolean).map((pid) => ({
       match_id: req.params.matchId,
@@ -302,9 +308,9 @@ router.post(
       }
 
       // Authoritative sport — never from the request body.
-      const sport = await getMatchSport(matchId)
+      const { sport, seasonId } = await getMatchSportAndSeason(matchId)
       if (!sport) return res.status(404).json({ error: 'Event not found for this match' })
-      if (await respondIfSportForbidden(req, res, sport)) return
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
 
       // Authoritative period — server state, not the client's React variable.
       // A client-supplied period is only honoured when it matches, so a stale tab
@@ -453,9 +459,9 @@ router.patch(
         return res.status(403).json({ error: 'You do not have scoring lock for this match' })
       }
 
-      const sport = await getMatchSport(matchId)
+      const { sport, seasonId } = await getMatchSportAndSeason(matchId)
       if (!sport) return res.status(404).json({ error: 'Event not found for this match' })
-      if (await respondIfSportForbidden(req, res, sport)) return
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
       if (period > maxPeriodFor(sport)) {
         return res
           .status(400)
@@ -533,8 +539,8 @@ router.patch(
         })
       }
 
-      const sport = await getMatchSport(matchId)
-      if (await respondIfSportForbidden(req, res, sport)) return
+      const { sport, seasonId } = await getMatchSportAndSeason(matchId)
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
 
       await supabase
         .from('matches')
@@ -576,11 +582,11 @@ router.post(
       return res.status(400).json({ error: 'Match is already completed' })
     }
 
-    const sport = await getMatchSport(matchId)
+    const { sport, seasonId } = await getMatchSportAndSeason(matchId)
     if (sport !== 'basketball') {
       return res.status(400).json({ error: `${sport} has no game clock` })
     }
-    if (await respondIfSportForbidden(req, res, sport)) return
+    if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
 
     await supabase
       .from('matches')
@@ -632,8 +638,8 @@ router.patch(
         return res.status(400).json({ error: 'Server must be one of this match’s participants' })
       }
 
-      const sport = await getMatchSport(matchId)
-      if (await respondIfSportForbidden(req, res, sport)) return
+      const { sport, seasonId } = await getMatchSportAndSeason(matchId)
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
       if (sport !== 'volleyball' && sport !== 'table-tennis') {
         return res.status(400).json({ error: `${sport} has no serve to record` })
       }
@@ -682,9 +688,9 @@ router.post(
         return res.status(403).json({ error: 'You do not have scoring lock for this match' })
       }
 
-      const sport = await getMatchSport(matchId)
+      const { sport, seasonId } = await getMatchSportAndSeason(matchId)
       if (!sport) return res.status(404).json({ error: 'Event not found for this match' })
-      if (await respondIfSportForbidden(req, res, sport)) return
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
 
       const field = getScoreField(sport, period)
       if (!field)
@@ -813,8 +819,9 @@ router.post(
       return res.status(403).json({ error: 'You do not have scoring lock for this match' })
     }
 
-    const matchSport = await getMatchSport(matchId)
-    if (await respondIfSportForbidden(req, res, matchSport)) return
+    const { sport: matchSport, seasonId: matchSeasonId } = await getMatchSportAndSeason(matchId)
+    if (await respondIfScopeForbidden(req, res, { sport: matchSport, seasonId: matchSeasonId }))
+      return
 
     // Fetch enough candidates to find a genuinely scoreable action regardless of
     // whether a specific team was requested. Undo must never target a
@@ -982,8 +989,8 @@ router.post(
         return res.status(400).json({ error: 'Winner must be one of this match’s participants' })
       }
 
-      const sport = await getMatchSport(matchId)
-      if (await respondIfSportForbidden(req, res, sport)) return
+      const { sport, seasonId: matchSeasonId } = await getMatchSportAndSeason(matchId)
+      if (await respondIfScopeForbidden(req, res, { sport, seasonId: matchSeasonId })) return
 
       // Cross-check the chosen winner against the recorded score — soft block
       // only, since a forfeit or injury default legitimately picks a winner
@@ -1229,8 +1236,8 @@ router.post(
       return res.status(400).json({ error: 'Match is already completed' })
     }
 
-    const sport = await getMatchSport(matchId)
-    if (await respondIfSportForbidden(req, res, sport)) return
+    const { sport, seasonId } = await getMatchSportAndSeason(matchId)
+    if (await respondIfScopeForbidden(req, res, { sport, seasonId })) return
 
     await supabase
       .from('matches')
@@ -1310,20 +1317,23 @@ async function getLockedPeriods(matchId: string): Promise<number[]> {
   return (data ?? []).map((r) => Number((r as { period: number }).period))
 }
 
-/** Resolve the authoritative sport for a match from its event — never trust the client. */
-async function getMatchSport(matchId: string): Promise<string | null> {
+/** Resolve the authoritative sport and season for a match from its event —
+ *  never trust the client. */
+async function getMatchSportAndSeason(
+  matchId: string,
+): Promise<{ sport: string | null; seasonId: string | null }> {
   const { data: m } = await supabase
     .from('matches')
     .select('event_id')
     .eq('id', matchId)
     .maybeSingle()
-  if (!m?.event_id) return null
+  if (!m?.event_id) return { sport: null, seasonId: null }
   const { data: e } = await supabase
     .from('events')
-    .select('sport')
+    .select('sport, season_id')
     .eq('id', m.event_id)
     .maybeSingle()
-  return e?.sport ?? null
+  return { sport: e?.sport ?? null, seasonId: e?.season_id ?? null }
 }
 
 /** True when `athleteId` is actually eligible to record a stat for `participantId`.
@@ -1891,10 +1901,11 @@ router.patch(
         .maybeSingle()
       if (!evt?.sport) return res.status(404).json({ error: 'Event not found' })
 
-      // Confine an organizer to their assigned sports, as every other write
-      // router already does. Without this a basketball-only organizer could
-      // rewrite volleyball box scores.
-      if (await respondIfSportForbidden(req, res, evt.sport)) return
+      // Confine an organizer to their assigned sports and seasons, as every
+      // other write router already does. Without this a basketball-only
+      // organizer could rewrite volleyball box scores.
+      if (await respondIfScopeForbidden(req, res, { sport: evt.sport, seasonId: evt.season_id }))
+        return
 
       // Hard reject implausible single-match values.
       const bounds = STAT_MAX_BOUNDS[evt.sport] ?? {}
@@ -2042,7 +2053,8 @@ router.post(
         .eq('id', match.event_id)
         .single()
       if (!event) return res.status(404).json({ error: 'Event not found' })
-      if (await respondIfSportForbidden(req, res, event.sport)) return
+      if (await respondIfScopeForbidden(req, res, { sport: event.sport, seasonId: event.season_id }))
+        return
 
       const seasonId = event.season_id
 
@@ -2113,8 +2125,9 @@ router.patch(
       return res.status(403).json({ error: 'You do not have scoring lock for this match' })
     }
 
-    const lineupSport = await getMatchSport(matchId)
-    if (await respondIfSportForbidden(req, res, lineupSport)) return
+    const { sport: lineupSport, seasonId: lineupSeasonId } = await getMatchSportAndSeason(matchId)
+    if (await respondIfScopeForbidden(req, res, { sport: lineupSport, seasonId: lineupSeasonId }))
+      return
 
     const teamId = side === 'a' ? match.participant_a_id : match.participant_b_id
     if (!teamId) return res.status(400).json({ error: 'Participant not set' })
@@ -2156,13 +2169,12 @@ router.patch(
     // athlete_id: the in/out detail already lives in the audit log below; this
     // row only needs to be countable per team per set) so subsUsed/:matchId/state
     // can report it and the Phase B index can count it cheaply.
-    const sport = await getMatchSport(matchId)
-    if (sport) {
+    if (lineupSport) {
       await supabase.from('scoring_actions').insert({
         match_id: matchId,
         participant_id: teamId,
         athlete_id: null,
-        sport,
+        sport: lineupSport,
         action_type: 'substitution',
         value: 1,
         quarter_or_set: Number(match.current_period ?? 1),

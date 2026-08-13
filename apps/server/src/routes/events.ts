@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
-import { respondIfSportForbidden } from '../utils/organizerSportAccess'
+import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
+import { respondIfSportNotInSeason } from '../utils/seasonSports'
 import {
   insertNotificationsForProfiles,
   profileIdsForTeamRoster,
@@ -92,9 +93,19 @@ router.patch(
   requireRole('Organizer', 'Admin'),
   async (req: AuthRequest, res) => {
     const id = z.string().uuid().parse(req.params.id)
-    const { data: event } = await supabase.from('events').select('sport').eq('id', id).maybeSingle()
+    const { data: event } = await supabase
+      .from('events')
+      .select('sport, season_id')
+      .eq('id', id)
+      .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     const schema = z
       .object({
@@ -175,7 +186,9 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
 
   try {
     const body = schema.parse(req.body)
-    if (await respondIfSportForbidden(req, res, body.sport)) return
+    if (await respondIfScopeForbidden(req, res, { sport: body.sport, seasonId: body.season_id }))
+      return
+    if (await respondIfSportNotInSeason(res, body.season_id, body.sport)) return
 
     const { description: rawDescription, table_tennis_format, best_of, ...rest } = body
     const category = rest.category?.trim() || null
@@ -232,11 +245,17 @@ router.delete(
   async (req: AuthRequest, res) => {
     const { data: event } = await supabase
       .from('events')
-      .select('name, sport')
+      .select('name, sport, season_id')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     await writeAuditLog({
       actorId: req.user!.id,
@@ -262,11 +281,17 @@ router.patch(
     const { newStatus } = req.body
     const { data: event } = await supabase
       .from('events')
-      .select('status, sport')
+      .select('status, sport, season_id')
       .eq('id', req.params.id)
       .single()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     const allowed = VALID_TRANSITIONS[event.status] ?? []
     if (!allowed.includes(newStatus)) {
@@ -312,7 +337,13 @@ router.post(
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     const schema = z.object({
       participant_id: z.string().uuid(),
@@ -391,7 +422,13 @@ router.post(
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     const schema = z.object({
       participant_ids: z.array(z.string().uuid()).min(1).max(64),
@@ -471,11 +508,17 @@ router.delete(
   async (req: AuthRequest, res) => {
     const { data: event } = await supabase
       .from('events')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     await supabase
       .from('event_participants')
@@ -512,11 +555,17 @@ router.patch(
   async (req: AuthRequest, res) => {
     const { data: event } = await supabase
       .from('events')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!event) return res.status(404).json({ error: 'Event not found' })
-    if (await respondIfSportForbidden(req, res, event.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: event.sport as string,
+        seasonId: event.season_id as string,
+      })
+    )
+      return
 
     const schema = z
       .object({

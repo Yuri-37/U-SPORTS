@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
-import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
-import type { Season } from '../../types'
-import { formatDate, formatEnumLabel } from '../../lib/utils'
+import type { Season, Sport } from '../../types'
+import { formatDate, formatEnumLabel, getSportLabel } from '../../lib/utils'
 import { validateSeasonDates, todayManila } from '../../lib/validation/seasonDates'
+import { fetchActiveSportsFromConfig } from '../../hooks/useOrganizerSportScope'
 
 const STATUS_BADGE: Record<string, 'default' | 'info' | 'success' | 'warning'> = {
   draft: 'default',
@@ -14,15 +14,125 @@ const STATUS_BADGE: Record<string, 'default' | 'info' | 'success' | 'warning'> =
   archived: 'default',
 }
 
+type StaffOption = { organizer_id: string; full_name: string; role: string }
+
+/** Sport checkboxes with a "Select all" toggle — the professor's diagram drew
+ *  this explicitly next to the per-season sport list. */
+function SportCheckboxes({
+  options,
+  selected,
+  onChange,
+}: {
+  options: Sport[]
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  const allSelected = options.length > 0 && options.every((s) => selected.includes(s))
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-sm font-medium text-[var(--text-secondary)]">Sports</label>
+        <button
+          type="button"
+          className="text-xs text-[#0066FF] hover:underline"
+          onClick={() => onChange(allSelected ? [] : options)}
+        >
+          {allSelected ? 'Clear all' : 'Select all'}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((s) => (
+          <label
+            key={s}
+            className="flex items-center gap-2 text-sm rounded-lg border border-[var(--border-subtle)] px-3 py-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              className="size-4 rounded border-[var(--border-subtle)] accent-[#0066FF]"
+              checked={selected.includes(s)}
+              onChange={() =>
+                onChange(selected.includes(s) ? selected.filter((x) => x !== s) : [...selected, s])
+              }
+            />
+            {getSportLabel(s)}
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Which Organizers/Coaches are in charge of this season — the professor's
+ *  diagram put this on the Admin side, "before simula ng season". */
+function StaffCheckboxes({
+  options,
+  selected,
+  onChange,
+}: {
+  options: StaffOption[]
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  if (options.length === 0) {
+    return <p className="text-xs text-[var(--text-muted)]">No staff accounts exist yet.</p>
+  }
+  return (
+    <div>
+      <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">
+        Staff in charge
+      </label>
+      <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-lg border border-[var(--border-subtle)] p-2">
+        {options.map((o) => (
+          <label
+            key={o.organizer_id}
+            className="flex items-center gap-2 text-sm px-2 py-1.5 rounded-lg hover:bg-[var(--surface-elevated)] cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              className="size-4 rounded border-[var(--border-subtle)] accent-[#0066FF]"
+              checked={selected.includes(o.organizer_id)}
+              onChange={() =>
+                onChange(
+                  selected.includes(o.organizer_id)
+                    ? selected.filter((x) => x !== o.organizer_id)
+                    : [...selected, o.organizer_id],
+                )
+              }
+            />
+            <span className="flex-1">{o.full_name}</span>
+            <Badge size="sm" variant="default">
+              {o.role}
+            </Badge>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SuperAdminSeasons() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
+  const [sportOptions, setSportOptions] = useState<Sport[]>([])
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ name: '', start_date: '', end_date: '' })
+  const [form, setForm] = useState({
+    name: '',
+    start_date: '',
+    end_date: '',
+    sports: [] as string[],
+    staff_ids: [] as string[],
+  })
   const [error, setError] = useState('')
   const [editSeason, setEditSeason] = useState<Season | null>(null)
-  const [editForm, setEditForm] = useState({ name: '', start_date: '', end_date: '' })
+  const [editForm, setEditForm] = useState({
+    name: '',
+    start_date: '',
+    end_date: '',
+    sports: [] as string[],
+    staff_ids: [] as string[],
+  })
   const [editing, setEditing] = useState(false)
   const [editError, setEditError] = useState('')
   const [transitionConfirm, setTransitionConfirm] = useState<{
@@ -37,16 +147,29 @@ export default function SuperAdminSeasons() {
   const [deleteError, setDeleteError] = useState('')
 
   const fetch = () =>
-    supabase
-      .from('seasons')
-      .select('*')
-      .order('created_at', { ascending: false })
+    api
+      .get<Season[]>('/admin/seasons')
       .then(({ data }) => {
         setSeasons(data ?? [])
         setLoading(false)
       })
+      .catch(() => setLoading(false))
+
   useEffect(() => {
     fetch()
+    fetchActiveSportsFromConfig().then(setSportOptions)
+    api
+      .get<{ id: string; profile?: { full_name?: string; role?: string } }[]>('/admin/organizers')
+      .then(({ data }) => {
+        setStaffOptions(
+          (data ?? []).map((o) => ({
+            organizer_id: o.id,
+            full_name: o.profile?.full_name ?? 'Staff',
+            role: o.profile?.role ?? '',
+          })),
+        )
+      })
+      .catch(() => setStaffOptions([]))
   }, [])
 
   const handleCreate = async () => {
@@ -56,10 +179,21 @@ export default function SuperAdminSeasons() {
       setError(check.error)
       return
     }
+    if (form.sports.length === 0) {
+      setError('Select at least one sport.')
+      return
+    }
     setCreating(true)
     try {
-      await api.post('/admin/seasons', form)
+      // Omit staff_ids entirely when nothing is checked, rather than sending
+      // `[]` — the server's "default to every current organizer" fallback
+      // only fires on a genuinely absent field (`??`), not an empty array,
+      // so sending `[]` would silently assign nobody instead of everyone.
+      const { staff_ids, ...rest } = form
+      const payload = staff_ids.length > 0 ? form : rest
+      await api.post('/admin/seasons', payload)
       setShowCreate(false)
+      setForm({ name: '', start_date: '', end_date: '', sports: [], staff_ids: [] })
       fetch()
     } catch (e: any) {
       setError(e.response?.data?.error ?? 'Failed')
@@ -71,7 +205,13 @@ export default function SuperAdminSeasons() {
   const openEdit = (s: Season) => {
     setEditError('')
     setEditSeason(s)
-    setEditForm({ name: s.name, start_date: s.start_date ?? '', end_date: s.end_date ?? '' })
+    setEditForm({
+      name: s.name,
+      start_date: s.start_date ?? '',
+      end_date: s.end_date ?? '',
+      sports: s.sports ?? [],
+      staff_ids: (s.staff ?? []).map((st) => st.organizer_id),
+    })
   }
 
   const handleEditSave = async () => {
@@ -83,6 +223,10 @@ export default function SuperAdminSeasons() {
     })
     if (!check.ok) {
       setEditError(check.error)
+      return
+    }
+    if (editForm.sports.length === 0) {
+      setEditError('A season must carry at least one sport.')
       return
     }
     setEditing(true)
@@ -186,11 +330,23 @@ export default function SuperAdminSeasons() {
       ) : (
         <div className="space-y-3">
           {seasons.map((s) => (
-            <Card key={s.id} className="flex items-center justify-between">
+            <Card key={s.id} className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <p className="font-bold">{s.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {formatDate(s.start_date)} — {formatDate(s.end_date)}
+                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {(s.sports ?? []).map((sport) => (
+                    <Badge key={sport} size="sm" variant="default">
+                      {getSportLabel(sport as Sport)}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  {(s.staff ?? []).length === 0
+                    ? 'No staff assigned yet'
+                    : `${(s.staff ?? []).length} staff assigned`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -372,6 +528,19 @@ export default function SuperAdminSeasons() {
               onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
             />
           </div>
+          <SportCheckboxes
+            options={sportOptions}
+            selected={form.sports}
+            onChange={(sports) => setForm((f) => ({ ...f, sports }))}
+          />
+          <StaffCheckboxes
+            options={staffOptions}
+            selected={form.staff_ids}
+            onChange={(staff_ids) => setForm((f) => ({ ...f, staff_ids }))}
+          />
+          <p className="text-xs text-[var(--text-muted)]">
+            Leave staff unselected to assign every current Organizer/Coach by default.
+          </p>
           <Button className="w-full" loading={creating} onClick={handleCreate}>
             Create Season
           </Button>
@@ -414,6 +583,16 @@ export default function SuperAdminSeasons() {
                 onChange={(e) => setEditForm((f) => ({ ...f, end_date: e.target.value }))}
               />
             </div>
+            <SportCheckboxes
+              options={sportOptions}
+              selected={editForm.sports}
+              onChange={(sports) => setEditForm((f) => ({ ...f, sports }))}
+            />
+            <StaffCheckboxes
+              options={staffOptions}
+              selected={editForm.staff_ids}
+              onChange={(staff_ids) => setEditForm((f) => ({ ...f, staff_ids }))}
+            />
             <Button className="w-full" loading={editing} onClick={handleEditSave}>
               Save Changes
             </Button>

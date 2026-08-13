@@ -77,14 +77,28 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
     setForm((f) => ({ ...f, season_id: seasons[0]!.id }))
   }, [open, seasons, form.season_id])
 
+  // Sport depends on season (a season only carries some sports), so the
+  // dropdown is the organizer's own sports intersected with the CHOSEN
+  // season's sports. Undefined `sports` (still loading, or a season fetched
+  // outside this list) reads as "no restriction" rather than "empty".
+  const selectedSeason = seasons.find((s) => s.id === form.season_id)
+  const seasonSportSet = selectedSeason?.sports ? new Set(selectedSeason.sports) : null
+  const sportOptionsForSeason = seasonSportSet
+    ? sportOptionsForForms.filter((o) => seasonSportSet.has(o.value))
+    : sportOptionsForForms
+
   useEffect(() => {
-    if (!open || sportOptionsForForms.length === 0) return
+    if (!open || sportOptionsForSeason.length === 0) return
     setForm((f) =>
-      sportOptionsForForms.some((o) => o.value === f.sport)
+      sportOptionsForSeason.some((o) => o.value === f.sport)
         ? f
-        : { ...f, sport: sportOptionsForForms[0]!.value },
+        : { ...f, sport: sportOptionsForSeason[0]!.value, category: '' },
     )
-  }, [open, sportOptionsForForms])
+    // sportOptionsForSeason is derived fresh each render from seasons/form.season_id/
+    // sportOptionsForForms — depending on those directly avoids re-running this
+    // effect on every render from a new array reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, form.season_id, seasons, sportOptionsForForms])
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
@@ -135,11 +149,40 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         />
         <Select
+          label="Season"
+          value={form.season_id}
+          onChange={(e) => setForm((f) => ({ ...f, season_id: e.target.value }))}
+          options={[
+            {
+              value: '',
+              label: seasons.length ? 'Select season...' : 'No seasons — Super Admin → Seasons',
+            },
+            ...seasons.map((s) => ({
+              value: s.id,
+              label: `${s.name}${s.status === 'draft' ? ' — draft' : s.status === 'active' ? ' — active' : ''}`,
+            })),
+          ]}
+        />
+        {seasons.length === 0 && (
+          <p className="text-xs text-[var(--text-muted)] -mt-2">
+            Create seasons as Super Admin. Draft seasons work for testing.
+          </p>
+        )}
+        {/* Sport depends on the season chosen above — a season only carries
+            some sports, so this list narrows once a season is selected. */}
+        <Select
           label="Sport"
           value={form.sport}
           onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value, category: '' }))}
-          options={sportOptionsForForms.map((o) => ({ value: o.value, label: o.label }))}
+          options={sportOptionsForSeason.map((o) => ({ value: o.value, label: o.label }))}
+          disabled={!form.season_id}
         />
+        {form.season_id && sportOptionsForSeason.length === 0 && (
+          <p className="text-xs text-[var(--danger)] -mt-2">
+            This season has no sports you're assigned to. Ask a Super Admin to add one under
+            Seasons.
+          </p>
+        )}
         {form.sport === 'table-tennis' && (
           <div className="space-y-1">
             <p className="text-sm font-medium text-[var(--text-secondary)]">Table Tennis Format</p>
@@ -188,26 +231,6 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           </p>
         )}
         <Select
-          label="Season"
-          value={form.season_id}
-          onChange={(e) => setForm((f) => ({ ...f, season_id: e.target.value }))}
-          options={[
-            {
-              value: '',
-              label: seasons.length ? 'Select season...' : 'No seasons — Super Admin → Seasons',
-            },
-            ...seasons.map((s) => ({
-              value: s.id,
-              label: `${s.name}${s.status === 'draft' ? ' — draft' : s.status === 'active' ? ' — active' : ''}`,
-            })),
-          ]}
-        />
-        {seasons.length === 0 && (
-          <p className="text-xs text-[var(--text-muted)] -mt-2">
-            Create seasons as Super Admin. Draft seasons work for testing.
-          </p>
-        )}
-        <Select
           label="Category (optional)"
           value={form.category}
           onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
@@ -223,7 +246,7 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
         <Button
           className="w-full"
           loading={creating}
-          disabled={!seasons.length || !canCreateEvents}
+          disabled={!seasons.length || !canCreateEvents || sportOptionsForSeason.length === 0}
           onClick={handleCreate}
         >
           Create Event

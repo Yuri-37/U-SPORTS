@@ -31,6 +31,7 @@ const OrganizerEvents = React.lazy(() => import('./pages/organizer/Events'))
 const OrganizerEventDetail = React.lazy(() => import('./pages/organizer/EventDetail'))
 const OrganizerAthletes = React.lazy(() => import('./pages/organizer/Athletes'))
 const OrganizerTeams = React.lazy(() => import('./pages/organizer/Teams'))
+const OrganizerSeasons = React.lazy(() => import('./pages/organizer/Seasons'))
 const OrganizerScoring = React.lazy(() => import('./pages/organizer/Scoring'))
 const MatchReview = React.lazy(() => import('./pages/organizer/MatchReview'))
 const ScoreSheet = React.lazy(() => import('./pages/organizer/ScoreSheet'))
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
 
           { path: 'organizer/athletes', element: <OrganizerAthletes /> },
           { path: 'organizer/teams', element: <OrganizerTeams /> },
+          { path: 'organizer/seasons', element: <OrganizerSeasons /> },
           { path: 'organizer/scoring/:matchId', element: <OrganizerScoring /> },
           { path: 'organizer/match-review/:matchId', element: <MatchReview /> },
           { path: 'organizer/match-review/:matchId/score-sheet', element: <ScoreSheet /> },

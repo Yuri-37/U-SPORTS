@@ -90,6 +90,8 @@ export interface Organizer {
   permissions: Record<string, boolean>
   is_active: boolean
   profile?: Profile
+  /** Present on GET /admin/organizers. */
+  season_staff?: { season_id: string }[]
 }
 
 export interface Athlete {
@@ -123,6 +125,9 @@ export interface Season {
   start_date: string
   end_date: string
   created_at: string
+  /** Present on GET /admin/seasons; absent on the plain `seasons` table select. */
+  sports?: string[]
+  staff?: { organizer_id: string; full_name: string; role: string }[]
 }
 
 export interface Event {

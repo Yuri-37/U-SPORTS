@@ -12,6 +12,7 @@ import {
   uploadInstitutionLogoBuffer,
 } from '../utils/institutionLogoStorage'
 import { validateSeasonDates } from '../utils/seasonDates'
+import { fetchActiveSportSlugs, type AppSport } from '../utils/organizerSportAccess'
 
 const router = Router()
 
@@ -50,7 +51,7 @@ router.get('/organizers', requireAuth, requireRole('Admin'), async (_req, res) =
   const { data, error } = await supabase
     .from('organizers')
     .select(
-      '*, profile:profiles!organizers_profile_id_fkey(id, full_name, email, avatar_url, role, department)',
+      '*, profile:profiles!organizers_profile_id_fkey(id, full_name, email, avatar_url, role, department), season_staff(season_id)',
     )
     .order('created_at', { ascending: false })
 
@@ -115,6 +116,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
       assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
       password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+      season_ids: z.array(z.string().uuid()).optional(),
     })
     .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
       message: 'Coaches must be assigned exactly one sport',
@@ -173,20 +175,45 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     })
     if (profileError) throw new Error(profileError.message)
 
-    const { error: organizerError } = await supabase.from('organizers').upsert({
-      profile_id: authData.user.id,
-      assigned_sports,
-      is_active: true,
-      invited_by: req.user!.id,
-    })
+    const { data: newOrganizer, error: organizerError } = await supabase
+      .from('organizers')
+      .upsert({
+        profile_id: authData.user.id,
+        assigned_sports,
+        is_active: true,
+        invited_by: req.user!.id,
+      })
+      .select('id')
+      .single()
     if (organizerError) throw new Error(organizerError.message)
+
+    // A brand-new staff account with zero season_staff rows is locked out of
+    // every season until a Super Admin assigns them — a support ticket
+    // waiting to happen. Default to every currently draft/active season
+    // rather than leaving them with nothing to configure.
+    const seasonIds =
+      parsed.season_ids ??
+      (
+        await supabase.from('seasons').select('id').in('status', ['draft', 'active'])
+      ).data?.map((s) => s.id as string) ??
+      []
+    if (seasonIds.length > 0) {
+      const { error: seasonStaffErr } = await supabase.from('season_staff').insert(
+        seasonIds.map((season_id) => ({
+          season_id,
+          organizer_id: newOrganizer.id,
+          assigned_by: req.user!.id,
+        })),
+      )
+      if (seasonStaffErr) throw new Error(seasonStaffErr.message)
+    }
 
     const { error: auditError } = await supabase.from('audit_logs').insert({
       actor_id: req.user!.id,
       action: 'staff_created',
       entity_type: 'staff',
       entity_id: authData.user.id,
-      details: { email, role, department, assigned_sports },
+      details: { email, role, department, assigned_sports, season_count: seasonIds.length },
     })
     if (auditError) throw new Error(auditError.message)
 
@@ -214,6 +241,7 @@ router.patch(
         // Only Coach is department-scoped — see the POST /organizers note above.
         department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
         assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
+        season_ids: z.array(z.string().uuid()).optional(),
       })
       .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
         message: 'Coaches must be assigned exactly one sport',
@@ -264,6 +292,38 @@ router.patch(
         .single()
       if (orgErr) throw new Error(orgErr.message)
 
+      // Only touch season_staff when the caller actually sent season_ids —
+      // same optional-diff convention as PATCH /admin/seasons/:id's sports
+      // and staff_ids, so a request that only changes assigned_sports doesn't
+      // silently wipe this person's existing season assignments.
+      if (parsed.season_ids !== undefined) {
+        const { data: currentRows } = await supabase
+          .from('season_staff')
+          .select('season_id')
+          .eq('organizer_id', req.params.id)
+        const current = new Set((currentRows ?? []).map((r) => r.season_id as string))
+        const next = new Set(parsed.season_ids)
+        const toAdd = parsed.season_ids.filter((id) => !current.has(id))
+        const toRemove = [...current].filter((id) => !next.has(id))
+
+        if (toRemove.length > 0) {
+          await supabase
+            .from('season_staff')
+            .delete()
+            .eq('organizer_id', req.params.id)
+            .in('season_id', toRemove)
+        }
+        if (toAdd.length > 0) {
+          await supabase.from('season_staff').insert(
+            toAdd.map((season_id) => ({
+              season_id,
+              organizer_id: req.params.id,
+              assigned_by: req.user!.id,
+            })),
+          )
+        }
+      }
+
       await supabase.from('audit_logs').insert({
         actor_id: req.user!.id,
         action: 'staff_updated',
@@ -273,6 +333,7 @@ router.patch(
           role: parsed.role,
           department,
           assigned_sports: parsed.assigned_sports,
+          season_count: parsed.season_ids?.length,
         },
       })
 
@@ -438,16 +499,67 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
 })
 
 // Season management
+// GET /admin/seasons — seasons enriched with their sports and assigned staff,
+// for the Seasons page and the Organizers staff picker. Plain reads, so no
+// role gate beyond auth.
+router.get('/seasons', requireAuth, async (_req: AuthRequest, res) => {
+  const [{ data: seasons, error }, { data: sportsRows }, { data: staffRows }] = await Promise.all([
+    supabase.from('seasons').select('*').order('created_at', { ascending: false }),
+    supabase.from('season_sports').select('season_id, sport'),
+    supabase
+      .from('season_staff')
+      .select('season_id, organizer_id, organizer:organizers(profile_id, profile:profiles!organizers_profile_id_fkey(full_name, role))'),
+  ])
+  if (error) return res.status(500).json({ error: error.message })
+
+  const sportsBySeasonId = new Map<string, string[]>()
+  for (const r of sportsRows ?? []) {
+    const list = sportsBySeasonId.get(r.season_id as string) ?? []
+    list.push(r.sport as string)
+    sportsBySeasonId.set(r.season_id as string, list)
+  }
+  const staffBySeasonId = new Map<string, { organizer_id: string; full_name: string; role: string }[]>()
+  for (const r of (staffRows ?? []) as {
+    season_id: string
+    organizer_id: string
+    organizer?: { profile?: { full_name?: string; role?: string } | null } | null
+  }[]) {
+    const list = staffBySeasonId.get(r.season_id) ?? []
+    list.push({
+      organizer_id: r.organizer_id,
+      full_name: r.organizer?.profile?.full_name ?? 'Staff',
+      role: r.organizer?.profile?.role ?? '',
+    })
+    staffBySeasonId.set(r.season_id, list)
+  }
+
+  res.json(
+    (seasons ?? []).map((s) => ({
+      ...s,
+      sports: sportsBySeasonId.get(s.id as string) ?? [],
+      staff: staffBySeasonId.get(s.id as string) ?? [],
+    })),
+  )
+})
+
 router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z.object({
     name: z.string().min(1),
     start_date: z.string(),
     end_date: z.string(),
+    sports: z.array(z.string()).min(1, 'Select at least one sport'),
+    staff_ids: z.array(z.string().uuid()).optional(),
   })
   try {
-    const body = schema.parse(req.body)
+    const { sports, staff_ids, ...body } = schema.parse(req.body)
     const dateCheck = validateSeasonDates(body, { mode: 'create' })
     if (!dateCheck.ok) return res.status(400).json({ error: dateCheck.error })
+
+    const activeSports = await fetchActiveSportSlugs()
+    const unknownSports = sports.filter((s) => !activeSports.includes(s as AppSport))
+    if (unknownSports.length > 0) {
+      return res.status(400).json({ error: `Unknown or inactive sport(s): ${unknownSports.join(', ')}` })
+    }
 
     const { data, error } = await supabase
       .from('seasons')
@@ -455,14 +567,41 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
       .select()
       .single()
     if (error) throw new Error(error.message)
+
+    const { error: sportsErr } = await supabase
+      .from('season_sports')
+      .insert(sports.map((sport) => ({ season_id: data.id, sport })))
+    if (sportsErr) {
+      // A season with no sports is unusable in every Event/Team form — worse
+      // than no season at all, so don't leave one behind on partial failure.
+      await supabase.from('seasons').delete().eq('id', data.id)
+      throw new Error(sportsErr.message)
+    }
+
+    // A season with no assigned staff locks out every non-Admin the moment
+    // they try to touch it. Default to every currently-active organizer
+    // (mirrors the rollout backfill's own "assign everyone" answer) rather
+    // than shipping a season nobody but Admins can configure.
+    const staffIds =
+      staff_ids ?? (await supabase.from('organizers').select('id')).data?.map((o) => o.id as string) ?? []
+    if (staffIds.length > 0) {
+      const { error: staffErr } = await supabase
+        .from('season_staff')
+        .insert(staffIds.map((organizer_id) => ({ season_id: data.id, organizer_id, assigned_by: req.user!.id })))
+      if (staffErr) {
+        await supabase.from('seasons').delete().eq('id', data.id)
+        throw new Error(staffErr.message)
+      }
+    }
+
     await writeAuditLog({
       actorId: req.user!.id,
       action: 'season_created',
       entityType: 'season',
       entityId: data.id,
-      details: { name: body.name },
+      details: { name: body.name, sports, staff_count: staffIds.length },
     })
-    res.status(201).json(data)
+    res.status(201).json({ ...data, sports, staff_ids: staffIds })
   } catch (err: unknown) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Create season failed' })
   }
@@ -476,12 +615,20 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
       name: z.string().min(1).optional(),
       start_date: z.string().optional(),
       end_date: z.string().optional(),
+      sports: z.array(z.string()).optional(),
+      staff_ids: z.array(z.string().uuid()).optional(),
     })
-    .refine((v) => v.name !== undefined || v.start_date !== undefined || v.end_date !== undefined, {
-      message: 'No fields to update',
-    })
+    .refine(
+      (v) =>
+        v.name !== undefined ||
+        v.start_date !== undefined ||
+        v.end_date !== undefined ||
+        v.sports !== undefined ||
+        v.staff_ids !== undefined,
+      { message: 'No fields to update' },
+    )
   try {
-    const body = schema.parse(req.body)
+    const { sports, staff_ids, ...body } = schema.parse(req.body)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('seasons')
@@ -503,25 +650,114 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
     })
     if (!dateCheck.ok) return res.status(400).json({ error: dateCheck.error })
 
+    if (sports !== undefined) {
+      const activeSports = await fetchActiveSportSlugs()
+      const unknownSports = sports.filter((s) => !activeSports.includes(s as AppSport))
+      if (unknownSports.length > 0) {
+        return res
+          .status(400)
+          .json({ error: `Unknown or inactive sport(s): ${unknownSports.join(', ')}` })
+      }
+      if (sports.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'A season must carry at least one sport. Remove the season instead.' })
+      }
+
+      const { data: currentRows } = await supabase
+        .from('season_sports')
+        .select('sport')
+        .eq('season_id', req.params.id)
+      const current = new Set((currentRows ?? []).map((r) => r.sport as string))
+      const next = new Set(sports)
+      const toAdd = sports.filter((s) => !current.has(s))
+      const toRemove = [...current].filter((s) => !next.has(s))
+
+      if (toRemove.length > 0) {
+        const [{ count: teamCount }, { count: eventCount }] = await Promise.all([
+          supabase
+            .from('teams')
+            .select('*', { count: 'exact', head: true })
+            .eq('season_id', req.params.id)
+            .in('sport', toRemove),
+          supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true })
+            .eq('season_id', req.params.id)
+            .in('sport', toRemove),
+        ])
+        if ((teamCount ?? 0) > 0 || (eventCount ?? 0) > 0) {
+          return res.status(400).json({
+            error: `${teamCount ?? 0} team(s) and ${eventCount ?? 0} event(s) in this season use ${toRemove.join(', ')}. Delete them before removing the sport.`,
+          })
+        }
+      }
+
+      if (toRemove.length > 0) {
+        await supabase
+          .from('season_sports')
+          .delete()
+          .eq('season_id', req.params.id)
+          .in('sport', toRemove)
+      }
+      if (toAdd.length > 0) {
+        await supabase
+          .from('season_sports')
+          .insert(toAdd.map((sport) => ({ season_id: req.params.id, sport })))
+      }
+    }
+
+    if (staff_ids !== undefined) {
+      const { data: currentStaffRows } = await supabase
+        .from('season_staff')
+        .select('organizer_id')
+        .eq('season_id', req.params.id)
+      const current = new Set((currentStaffRows ?? []).map((r) => r.organizer_id as string))
+      const next = new Set(staff_ids)
+      const toAdd = staff_ids.filter((id) => !current.has(id))
+      const toRemove = [...current].filter((id) => !next.has(id))
+
+      if (toRemove.length > 0) {
+        await supabase
+          .from('season_staff')
+          .delete()
+          .eq('season_id', req.params.id)
+          .in('organizer_id', toRemove)
+      }
+      if (toAdd.length > 0) {
+        await supabase.from('season_staff').insert(
+          toAdd.map((organizer_id) => ({
+            season_id: req.params.id,
+            organizer_id,
+            assigned_by: req.user!.id,
+          })),
+        )
+      }
+    }
+
     const patch: Record<string, unknown> = {}
     if (body.name !== undefined) patch.name = body.name
     if (body.start_date !== undefined) patch.start_date = body.start_date
     if (body.end_date !== undefined) patch.end_date = body.end_date
 
-    const { data, error } = await supabase
-      .from('seasons')
-      .update(patch)
-      .eq('id', req.params.id)
-      .select()
-      .single()
-    if (error) throw new Error(error.message)
+    const data =
+      Object.keys(patch).length > 0
+        ? (
+            await supabase
+              .from('seasons')
+              .update(patch)
+              .eq('id', req.params.id)
+              .select()
+              .single()
+          ).data
+        : (await supabase.from('seasons').select().eq('id', req.params.id).single()).data
 
     await writeAuditLog({
       actorId: req.user!.id,
       action: 'season_updated',
       entityType: 'season',
       entityId: req.params.id,
-      details: patch,
+      details: { ...patch, sports, staff_count: staff_ids?.length },
     })
     res.json(data)
   } catch (err: unknown) {

@@ -5,10 +5,12 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import {
-  respondIfSportForbidden,
+  respondIfScopeForbidden,
   fetchActiveSportSlugs,
   organizerMayConfigureSport,
 } from '../utils/organizerSportAccess'
+import { respondIfSeasonForbidden } from '../utils/organizerSeasonAccess'
+import { respondIfSportNotInSeason, fetchSeasonSportSlugs } from '../utils/seasonSports'
 import { insertNotificationsForProfiles } from '../utils/athleteNotifications'
 import { getMaxRoster, getMaxActiveSlots } from '../utils/sportConfig'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
@@ -278,10 +280,14 @@ async function buildTeamImportPlan(
 
   // Sport permission — computed once per distinct sport in the file, not per row,
   // so a forbidden sport becomes a row-level error rather than a whole-request 403.
+  // Season membership (data validity, not permission) computed the same way: the
+  // season is one value for the whole file, but which of its sports are actually
+  // enabled varies, so a mismatch is still surfaced per affected row.
   const distinctSports = [...new Set(stillValid.map(({ data }) => data.sport))]
-  const [{ data: org }, activeSports] = await Promise.all([
+  const [{ data: org }, activeSports, seasonSports] = await Promise.all([
     supabase.from('organizers').select('assigned_sports').eq('profile_id', req.user!.id).maybeSingle(),
     fetchActiveSportSlugs(),
+    fetchSeasonSportSlugs(seasonId),
   ])
   const assignedSports = (org?.assigned_sports as string[] | null) ?? []
   const forbiddenSports = new Set(
@@ -289,10 +295,20 @@ async function buildTeamImportPlan(
       (s) => !organizerMayConfigureSport(req.user!.role, assignedSports, activeSports, s),
     ),
   )
+  const seasonSportSet = new Set<string>(seasonSports)
+  const sportsNotInSeason = new Set(distinctSports.filter((s) => !seasonSportSet.has(s)))
 
   for (const { idx, data } of stillValid) {
     if (forbiddenSports.has(data.sport)) {
       rows[idx] = { ...rows[idx], valid: false, error: `You are not assigned to ${data.sport}.` }
+      continue
+    }
+    if (sportsNotInSeason.has(data.sport)) {
+      rows[idx] = {
+        ...rows[idx],
+        valid: false,
+        error: `${data.sport} is not part of the selected season.`,
+      }
       continue
     }
     const athlete = athleteByKey.get(`${data.sport}::${data.student_id}`)
@@ -541,6 +557,9 @@ router.post(
       if (rawRows.length === 0) {
         return res.status(400).json({ error: 'Upload a CSV or Excel file, or provide rows.' })
       }
+      // Writes nothing, but mirror the season-access gate anyway so a
+      // preview never promises rows that the actual /import will refuse.
+      if (await respondIfSeasonForbidden(req, res, body.season_id)) return
 
       const createMissingTeams = toBool(body.create_missing_teams, true)
       const { rows, groups } = await buildTeamImportPlan(req, rawRows, body.season_id, createMissingTeams)
@@ -576,6 +595,9 @@ router.post(
         .eq('id', body.season_id)
         .maybeSingle()
       if (!season) return res.status(400).json({ error: 'Select a valid season.' })
+      // Season is one value for the whole file, so the access check happens
+      // once here rather than per row/group.
+      if (await respondIfSeasonForbidden(req, res, body.season_id)) return
 
       const createMissingTeams = toBool(body.create_missing_teams, true)
       const { rows, groups } = await buildTeamImportPlan(req, rawRows, body.season_id, createMissingTeams)
@@ -598,7 +620,10 @@ router.post(
 
         let teamId = g.team_id
         if (!teamId) {
-          if (await respondIfSportForbidden(req, res, g.sport)) return
+          // No sport/season re-check needed here: buildTeamImportPlan already
+          // marked rows with a forbidden sport or a sport not in this season
+          // invalid before `groups` was built, so every group reaching this
+          // point has already passed both checks.
           const { data: newTeam, error: createErr } = await supabase
             .from('teams')
             .insert({
@@ -755,7 +780,9 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
 
   try {
     const body = parsed.data
-    if (await respondIfSportForbidden(req, res, body.sport)) return
+    if (await respondIfScopeForbidden(req, res, { sport: body.sport, seasonId: body.season_id }))
+      return
+    if (await respondIfSportNotInSeason(res, body.season_id, body.sport)) return
 
     const { data, error } = await supabase
       .from('teams')
@@ -805,19 +832,37 @@ router.patch(
 
     const { data: existingTeam } = await supabase
       .from('teams')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', teamId.data)
       .maybeSingle()
     if (!existingTeam) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, existingTeam.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: existingTeam.sport as string,
+        seasonId: existingTeam.season_id as string,
+      })
+    )
+      return
 
     const updates: Record<string, unknown> = {}
     const body = parsed.data
+
+    // Moving a team between seasons (or sports) requires rights in the
+    // TARGET pair too, not just the one it's currently in -- checked once
+    // up front rather than per-field, since either field alone changes the
+    // effective pair.
+    if (body.sport !== undefined || body.season_id !== undefined) {
+      const targetSport = body.sport ?? (existingTeam.sport as string)
+      const targetSeasonId = body.season_id ?? (existingTeam.season_id as string)
+      if (await respondIfScopeForbidden(req, res, { sport: targetSport, seasonId: targetSeasonId }))
+        return
+      if (await respondIfSportNotInSeason(res, targetSeasonId, targetSport)) return
+    }
+
     if (body.name !== undefined) updates.name = body.name.trim()
 
     let sportChanging = false
     if (body.sport !== undefined) {
-      if (await respondIfSportForbidden(req, res, body.sport)) return
       if (body.sport !== existingTeam.sport) {
         // Changing sport with an existing roster used to be unvalidated — a team
         // could switch sports with players registered for the OLD sport still
@@ -910,11 +955,17 @@ router.delete(
 
     const { data: team } = await supabase
       .from('teams')
-      .select('name, sport')
+      .select('name, sport, season_id')
       .eq('id', idParsed.data)
       .maybeSingle()
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const { count, error: cErr } = await supabase
       .from('event_participants')
@@ -957,7 +1008,13 @@ router.post(
       .maybeSingle()
     if (teamErr) return res.status(500).json({ error: teamErr.message })
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const { data: athlete, error: athleteErr } = await supabase
       .from('athletes')
@@ -1009,11 +1066,17 @@ router.delete(
 
     const { data: team } = await supabase
       .from('teams')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', teamId)
       .maybeSingle()
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const { data: row } = await supabase
       .from('team_members')
@@ -1050,11 +1113,17 @@ router.post(
 
     const { data: team } = await supabase
       .from('teams')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', teamId)
       .maybeSingle()
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const ids = parsed.data.membership_ids
     const { data: rows, error } = await supabase
@@ -1092,12 +1161,18 @@ router.post(
   async (req: AuthRequest, res) => {
     const { data: team, error: teamErr } = await supabase
       .from('teams')
-      .select('sport, department')
+      .select('sport, department, season_id')
       .eq('id', req.params.id)
       .maybeSingle()
     if (teamErr) return res.status(500).json({ error: teamErr.message })
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const { data: staff } = await supabase
       .from('organizers')
@@ -1150,11 +1225,17 @@ router.delete(
   async (req: AuthRequest, res) => {
     const { data: team } = await supabase
       .from('teams')
-      .select('sport')
+      .select('sport, season_id')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const { data: staff } = await supabase
       .from('organizers')
@@ -1188,12 +1269,18 @@ router.patch(
     const teamId = z.string().uuid().parse(req.params.id)
     const { data: team, error: teamErr } = await supabase
       .from('teams')
-      .select('id, sport, name')
+      .select('id, sport, name, season_id')
       .eq('id', teamId)
       .maybeSingle()
     if (teamErr) return res.status(500).json({ error: teamErr.message })
     if (!team) return res.status(404).json({ error: 'Team not found' })
-    if (await respondIfSportForbidden(req, res, team.sport as string)) return
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
 
     const parsed = z
       .object({

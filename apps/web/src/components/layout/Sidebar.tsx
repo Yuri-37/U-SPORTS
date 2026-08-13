@@ -40,6 +40,7 @@ const superAdminNav = [
 const organizerNav = [
   { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
+  { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
   { to: '/organizer/athletes', label: 'Athletes', icon: UserCheck },
   { to: '/organizer/events', label: 'Events', icon: Trophy },
   { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
@@ -51,6 +52,7 @@ const organizerNav = [
 const coachNav = [
   { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
+  { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
   { to: '/organizer/athletes', label: 'Athletes', icon: UserCheck },
   { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
   { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },

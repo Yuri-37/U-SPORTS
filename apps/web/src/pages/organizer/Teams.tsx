@@ -285,15 +285,32 @@ export default function OrganizerTeams() {
     return () => window.clearTimeout(t)
   }, [highlightTeamId, teams])
 
+  // The organizer's own sports intersected with the CHOSEN season's sports.
+  // Undefined `sports` (season fetched without the embed, or still loading)
+  // reads as "no restriction" rather than "empty".
+  const createSeasonSports = seasons.find((s) => s.id === form.season_id)?.sports
+  const createSportOptions = createSeasonSports
+    ? sportOptionsForForms.filter((o) => createSeasonSports.includes(o.value))
+    : sportOptionsForForms
+
+  const editSeasonSports = seasons.find((s) => s.id === editForm.season_id)?.sports
+  const editSportOptions = editSeasonSports
+    ? sportOptionsForForms.filter((o) => editSeasonSports.includes(o.value))
+    : sportOptionsForForms
+
   useEffect(() => {
-    if (!showCreate || sportOptionsForForms.length === 0) return
+    if (!showCreate || createSportOptions.length === 0) return
 
     setForm((f) =>
-      sportOptionsForForms.some((o) => o.value === f.sport)
+      createSportOptions.some((o) => o.value === f.sport)
         ? f
-        : { ...f, sport: sportOptionsForForms[0]!.value },
+        : { ...f, sport: createSportOptions[0]!.value },
     )
-  }, [showCreate, sportOptionsForForms])
+    // createSportOptions is derived fresh each render from seasons/form.season_id
+    // /sportOptionsForForms — depend on those directly so this doesn't re-run
+    // on every render from a new array reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreate, form.season_id, seasons, sportOptionsForForms])
 
   useEffect(() => {
     if (!showCreate || seasons.length === 0) return
@@ -1568,27 +1585,6 @@ export default function OrganizerTeams() {
           />
 
           <Select
-            label="Sport"
-            value={form.sport}
-            onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))}
-
-            options={sportOptionsForForms}
-          />
-
-          <Select
-            label="Department"
-            value={form.department}
-            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-            options={[
-              { value: '', label: 'No department' },
-              { value: 'SBMA', label: 'SBMA' },
-              { value: 'SECA', label: 'SECA' },
-              { value: 'SASE', label: 'SASE' },
-              { value: 'SHS', label: 'SHS' },
-            ]}
-          />
-
-          <Select
             label="Season"
             value={form.season_id}
             onChange={(e) => setForm((f) => ({ ...f, season_id: e.target.value }))}
@@ -1609,11 +1605,39 @@ export default function OrganizerTeams() {
             ]}
           />
 
+          {/* Sport depends on the season above — a season only carries some sports. */}
+          <Select
+            label="Sport"
+            value={form.sport}
+            onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))}
+            options={createSportOptions}
+            disabled={!form.season_id}
+          />
+          {form.season_id && createSportOptions.length === 0 && (
+            <p className="text-xs text-[var(--danger)] -mt-2">
+              This season has no sports you're assigned to. Ask a Super Admin to add one under
+              Seasons.
+            </p>
+          )}
+
+          <Select
+            label="Department"
+            value={form.department}
+            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+            options={[
+              { value: '', label: 'No department' },
+              { value: 'SBMA', label: 'SBMA' },
+              { value: 'SECA', label: 'SECA' },
+              { value: 'SASE', label: 'SASE' },
+              { value: 'SHS', label: 'SHS' },
+            ]}
+          />
+
           <Button
             type="button"
             className="w-full"
             loading={creating}
-            disabled={!seasons.length || !canCreateTeams}
+            disabled={!seasons.length || !canCreateTeams || createSportOptions.length === 0}
             onClick={() => void handleCreate()}
           >
             Create Team
@@ -1977,16 +2001,6 @@ export default function OrganizerTeams() {
               />
 
               <Select
-                label="Sport"
-
-                value={editForm.sport}
-
-                onChange={(e) => setEditForm((f) => ({ ...f, sport: e.target.value }))}
-
-                options={sportOptionsForForms}
-              />
-
-              <Select
                 label="Season"
 
                 value={editForm.season_id}
@@ -1998,6 +2012,17 @@ export default function OrganizerTeams() {
 
                   label: `${s.name}${s.status === 'draft' ? ' — draft' : s.status === 'active' ? ' — active' : s.status === 'completed' ? ' — completed' : s.status === 'archived' ? ' — archived' : ''}`,
                 }))}
+              />
+
+              {/* Sport depends on the season above — a season only carries some sports. */}
+              <Select
+                label="Sport"
+
+                value={editForm.sport}
+
+                onChange={(e) => setEditForm((f) => ({ ...f, sport: e.target.value }))}
+
+                options={editSportOptions}
               />
 
               <Select

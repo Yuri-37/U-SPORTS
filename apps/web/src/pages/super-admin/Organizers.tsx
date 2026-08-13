@@ -83,6 +83,57 @@ function SportCheckboxes({
   )
 }
 
+type SeasonOption = { id: string; name: string; status: string }
+
+/** Which seasons this staff member is in charge of — the professor's diagram
+ *  drew this at season-creation time, but it's equally an attribute of the
+ *  staff member, so it's editable from either side of the same season_staff
+ *  relationship. */
+function SeasonCheckboxes({
+  options,
+  selected,
+  onChange,
+}: {
+  options: SeasonOption[]
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  if (options.length === 0) {
+    return <p className="text-xs text-[var(--text-muted)]">No seasons exist yet.</p>
+  }
+  return (
+    <div>
+      <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">
+        Seasons in charge of
+      </label>
+      <p className="text-xs text-[var(--text-muted)] mb-2">
+        Leave unselected to default to every current draft/active season.
+      </p>
+      <div className="space-y-1.5">
+        {options.map((s) => (
+          <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-[var(--border-subtle)] accent-[#0066FF]"
+              checked={selected.includes(s.id)}
+              onChange={() =>
+                onChange(
+                  selected.includes(s.id)
+                    ? selected.filter((x) => x !== s.id)
+                    : [...selected, s.id],
+                )
+              }
+            />
+            <span>
+              {s.name} <span className="text-[var(--text-muted)]">— {s.status}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SuperAdminOrganizers() {
   const [staff, setStaff] = useState<StaffWithProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -175,6 +226,7 @@ export default function SuperAdminOrganizers() {
   const [addRole, setAddRole] = useState<'Organizer' | 'Coach'>('Organizer')
   const [addDepartment, setAddDepartment] = useState<string>('SBMA')
   const [addSports, setAddSports] = useState<string[]>([])
+  const [addSeasonIds, setAddSeasonIds] = useState<string[]>([])
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
 
@@ -183,8 +235,18 @@ export default function SuperAdminOrganizers() {
   const [editRole, setEditRole] = useState<'Organizer' | 'Coach'>('Organizer')
   const [editDepartment, setEditDepartment] = useState<string>('SBMA')
   const [editSports, setEditSports] = useState<string[]>([])
+  const [editSeasonIds, setEditSeasonIds] = useState<string[]>([])
   const [editBusy, setEditBusy] = useState(false)
   const [editError, setEditError] = useState('')
+
+  // Seasons, for the "in charge of" picker on both forms.
+  const [seasonOptions, setSeasonOptions] = useState<SeasonOption[]>([])
+  useEffect(() => {
+    api
+      .get<SeasonOption[]>('/admin/seasons')
+      .then(({ data }) => setSeasonOptions(data ?? []))
+      .catch(() => setSeasonOptions([]))
+  }, [])
 
   // Toggle active
   const [toggleConfirm, setToggleConfirm] = useState<StaffWithProfile | null>(null)
@@ -237,6 +299,7 @@ export default function SuperAdminOrganizers() {
     setAddRole('Organizer')
     setAddDepartment('SBMA')
     setAddSports([])
+    setAddSeasonIds([])
   }
 
   const handleAddStaff = async () => {
@@ -264,6 +327,10 @@ export default function SuperAdminOrganizers() {
         role: parsed.data.role,
         department: parsed.data.department,
         assigned_sports: parsed.data.assigned_sports,
+        // Omit entirely when nothing is checked so the server's own default
+        // (every current draft/active season) applies — sending `[]` would
+        // otherwise assign this brand-new account to nothing at all.
+        ...(addSeasonIds.length > 0 ? { season_ids: addSeasonIds } : {}),
       })
       setSuccess(
         `${parsed.data.role} account created for ${parsed.data.email}. Share the sign-in page and password with them securely.`,
@@ -291,6 +358,7 @@ export default function SuperAdminOrganizers() {
     // trim to the first so the radio group opens with exactly one checked.
     const sports = [...(o.assigned_sports ?? [])]
     setEditSports(role === 'Coach' ? sports.slice(0, 1) : sports)
+    setEditSeasonIds((o.season_staff ?? []).map((r) => r.season_id))
     setEditError('')
   }
 
@@ -311,6 +379,10 @@ export default function SuperAdminOrganizers() {
         role: editRole,
         department: editRole === 'Coach' ? editDepartment : null,
         assigned_sports: editSports,
+        // Edit always sends the explicit set (even []) — unlike create,
+        // there's no "leave it and get a default" convenience here; this is
+        // an intentional set-or-unset action on an existing account.
+        season_ids: editSeasonIds,
       })
       setSuccess(`${editTarget.profile?.full_name} updated successfully.`)
       setEditTarget(null)
@@ -582,6 +654,11 @@ export default function SuperAdminOrganizers() {
               sports={editSports}
               onChange={setEditSports}
               takenBy={takenSportsFor(editDepartment, editTarget?.id)}
+            />
+            <SeasonCheckboxes
+              options={seasonOptions}
+              selected={editSeasonIds}
+              onChange={setEditSeasonIds}
             />
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" onClick={() => setEditTarget(null)} disabled={editBusy}>
@@ -866,6 +943,11 @@ export default function SuperAdminOrganizers() {
             sports={addSports}
             onChange={setAddSports}
             takenBy={takenSportsFor(addDepartment)}
+          />
+          <SeasonCheckboxes
+            options={seasonOptions}
+            selected={addSeasonIds}
+            onChange={setAddSeasonIds}
           />
           <Button className="w-full" loading={adding} onClick={handleAddStaff}>
             Create account
