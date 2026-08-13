@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Play, Check, Archive, Trash2 } from 'lucide-react'
+import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
 import type { Season } from '../../types'
 import { formatDate, formatEnumLabel } from '../../lib/utils'
+import { validateSeasonDates, todayManila } from '../../lib/validation/seasonDates'
 
 const STATUS_BADGE: Record<string, 'default' | 'info' | 'success' | 'warning'> = {
   draft: 'default',
@@ -20,6 +21,10 @@ export default function SuperAdminSeasons() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ name: '', start_date: '', end_date: '' })
   const [error, setError] = useState('')
+  const [editSeason, setEditSeason] = useState<Season | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', start_date: '', end_date: '' })
+  const [editing, setEditing] = useState(false)
+  const [editError, setEditError] = useState('')
   const [transitionConfirm, setTransitionConfirm] = useState<{
     id: string
     name: string
@@ -45,8 +50,13 @@ export default function SuperAdminSeasons() {
   }, [])
 
   const handleCreate = async () => {
-    setCreating(true)
     setError('')
+    const check = validateSeasonDates(form, { mode: 'create' })
+    if (!check.ok) {
+      setError(check.error)
+      return
+    }
+    setCreating(true)
     try {
       await api.post('/admin/seasons', form)
       setShowCreate(false)
@@ -55,6 +65,39 @@ export default function SuperAdminSeasons() {
       setError(e.response?.data?.error ?? 'Failed')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const openEdit = (s: Season) => {
+    setEditError('')
+    setEditSeason(s)
+    setEditForm({ name: s.name, start_date: s.start_date ?? '', end_date: s.end_date ?? '' })
+  }
+
+  const handleEditSave = async () => {
+    if (!editSeason) return
+    setEditError('')
+    const check = validateSeasonDates(editForm, {
+      mode: 'edit',
+      storedStartDate: editSeason.start_date,
+    })
+    if (!check.ok) {
+      setEditError(check.error)
+      return
+    }
+    setEditing(true)
+    try {
+      await api.patch(`/admin/seasons/${editSeason.id}`, editForm)
+      setEditSeason(null)
+      fetch()
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined
+      setEditError(msg ?? 'Failed')
+    } finally {
+      setEditing(false)
     }
   }
 
@@ -153,6 +196,14 @@ export default function SuperAdminSeasons() {
               <div className="flex items-center gap-3">
                 <Badge variant={STATUS_BADGE[s.status]}>{formatEnumLabel(s.status)}</Badge>
                 <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={<Pencil className="w-3 h-3" />}
+                    onClick={() => openEdit(s)}
+                  >
+                    Edit
+                  </Button>
                   {s.status === 'draft' && (
                     <Button
                       size="sm"
@@ -309,12 +360,14 @@ export default function SuperAdminSeasons() {
             <Input
               label="Start Date"
               type="date"
+              min={todayManila()}
               value={form.start_date}
               onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
             />
             <Input
               label="End Date"
               type="date"
+              min={form.start_date || todayManila()}
               value={form.end_date}
               onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
             />
@@ -323,6 +376,49 @@ export default function SuperAdminSeasons() {
             Create Season
           </Button>
         </div>
+      </Modal>
+
+      <Modal open={editSeason !== null} onClose={() => setEditSeason(null)} title="Edit Season">
+        {editError && (
+          <Alert type="danger" className="mb-4">
+            {editError}
+          </Alert>
+        )}
+        {editSeason && (
+          <div className="space-y-4">
+            <Input
+              label="Season Name"
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Start Date"
+                type="date"
+                // Omit `min` once the season has already started — a live
+                // season's historical start date must stay re-selectable,
+                // only future-dated seasons are pinned to "today or later".
+                min={
+                  editSeason.start_date && editSeason.start_date < todayManila()
+                    ? undefined
+                    : todayManila()
+                }
+                value={editForm.start_date}
+                onChange={(e) => setEditForm((f) => ({ ...f, start_date: e.target.value }))}
+              />
+              <Input
+                label="End Date"
+                type="date"
+                min={editForm.start_date || undefined}
+                value={editForm.end_date}
+                onChange={(e) => setEditForm((f) => ({ ...f, end_date: e.target.value }))}
+              />
+            </div>
+            <Button className="w-full" loading={editing} onClick={handleEditSave}>
+              Save Changes
+            </Button>
+          </div>
+        )}
       </Modal>
     </div>
   )

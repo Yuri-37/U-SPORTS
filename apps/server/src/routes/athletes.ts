@@ -127,6 +127,38 @@ router.patch(
         return res.status(400).json({ error: 'No roster fields to update' })
       }
 
+      // jersey_number lives on athletes (one value per athlete), not
+      // team_members — so "unique within a team" has to be checked against
+      // whichever teams this athlete currently belongs to. No such check
+      // existed before, so two players on one team could both wear #12.
+      if (patch.jersey_number != null) {
+        const { data: memberships } = await supabase
+          .from('team_members')
+          .select('team_id')
+          .eq('athlete_id', req.params.id)
+        const teamIds = [...new Set((memberships ?? []).map((m) => m.team_id as string))]
+
+        if (teamIds.length > 0) {
+          const { data: teammates } = await supabase
+            .from('team_members')
+            .select('athlete_id, athlete:athletes(jersey_number)')
+            .in('team_id', teamIds)
+            .neq('athlete_id', req.params.id)
+
+          const taken = (teammates ?? []).some((t) => {
+            const raw = (t as { athlete?: { jersey_number?: string | null } | { jersey_number?: string | null }[] })
+              .athlete
+            const a = Array.isArray(raw) ? raw[0] : raw
+            return a?.jersey_number === patch.jersey_number
+          })
+          if (taken) {
+            return res.status(409).json({
+              error: `Jersey #${patch.jersey_number as string} is already taken on this team.`,
+            })
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('athletes')
         .update(patch)

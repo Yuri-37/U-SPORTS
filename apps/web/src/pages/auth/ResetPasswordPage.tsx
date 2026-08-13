@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
             <img
               src={institution.logo_url}
               alt=""
-              className="w-16 h-16 mx-auto mb-3 rounded-full object-cover border border-[var(--border-subtle)]"
+              className="max-h-16 w-auto max-w-[12rem] mx-auto mb-3 object-contain object-center"
             />
           ) : null}
           <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>

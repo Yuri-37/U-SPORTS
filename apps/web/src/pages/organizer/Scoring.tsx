@@ -1063,217 +1063,234 @@ export default function OrganizerScoring() {
 
       <p className="text-xs text-[var(--text-muted)] text-center">{subTotalLine}</p>
 
-      <div className="grid grid-cols-2 gap-4">
+      {/*
+        Team cards stack vertically (not side-by-side) so each score stays
+        horizontally adjacent to the buttons that change it, rather than score
+        sitting on top of a tall, separately-scrolled control stack. Within
+        each card: score + period strip in a fixed-width left column, isLive
+        controls in the remaining right column, sharing the card's inherited
+        text-center. Below `sm`, the row collapses back to a single centered
+        column (courtside tablets in portrait) via flex-col.
+      */}
+      <div className="space-y-4">
         {/* HOME team card */}
         <Card className="text-center" elevated>
-          <p className="text-xs text-[var(--text-muted)] mb-1">HOME</p>
-          <p className="text-lg font-semibold mb-1 truncate px-1">{nameA}</p>
-          <div className="min-h-[20px] mb-1">
-            {sport === 'basketball' && basketballInfo?.bonus.a && (
-              <span title={`${basketballInfo.teamFouls.a ?? 0} team fouls this quarter`}>
-                <Badge variant="danger" size="sm">
-                  BONUS
-                </Badge>
-              </span>
+          <div className={isLive ? 'flex flex-col sm:flex-row sm:items-start gap-4' : ''}>
+            <div className={isLive ? 'sm:w-44 shrink-0' : ''}>
+              <p className="text-xs text-[var(--text-muted)] mb-1">HOME</p>
+              <p className="text-lg font-semibold mb-1 truncate px-1">{nameA}</p>
+              <div className="min-h-[20px] mb-1">
+                {sport === 'basketball' && basketballInfo?.bonus.a && (
+                  <span title={`${basketballInfo.teamFouls.a ?? 0} team fouls this quarter`}>
+                    <Badge variant="danger" size="sm">
+                      BONUS
+                    </Badge>
+                  </span>
+                )}
+              </div>
+              <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
+                {getMainDisplay(scoreA)}
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                {periodValuesFor(scoreA, sport).map((p, i) => (
+                  <div
+                    key={p.label}
+                    className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
+                  >
+                    <p className="font-bold flex items-center justify-center gap-0.5">
+                      {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
+                      {p.label}
+                    </p>
+                    <p>{p.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {isLive && (
+              <div className="flex-1 min-w-0 space-y-2 sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+                {sport === 'basketball' && (
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerA || actionBusy}
+                      onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA)}
+                    >
+                      +1
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerA || actionBusy}
+                      onClick={() => handleAction(participantAId, 'point_2', 2, selectedPlayerA)}
+                    >
+                      +2
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerA || actionBusy}
+                      onClick={() => handleAction(participantAId, 'point_3', 3, selectedPlayerA)}
+                    >
+                      +3
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() => handleUndo(participantAId)}
+                    >
+                      −1
+                    </Button>
+                  </div>
+                )}
+                {sport !== 'basketball' && (
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    {/* Generic point, for a rally won without a specific stat
+                        (opponent error, net violation, referee award). */}
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() =>
+                        handleAction(participantAId, 'point_1', 1, selectedPlayerA || undefined)
+                      }
+                    >
+                      +1
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() => handleUndo(participantAId)}
+                    >
+                      −1
+                    </Button>
+                  </div>
+                )}
+                {sport === 'basketball' && !selectedPlayerA && (
+                  <p className="text-xs text-[var(--text-muted)] text-center">
+                    Select a player first.
+                  </p>
+                )}
+                {renderStatButtons(
+                  participantAId,
+                  'a',
+                  selectedPlayerA,
+                  setSelectedPlayerA,
+                  membersA,
+                  activeLineupA,
+                )}
+              </div>
             )}
           </div>
-          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
-            {getMainDisplay(scoreA)}
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] mb-4">
-            {periodValuesFor(scoreA, sport).map((p, i) => (
-              <div
-                key={p.label}
-                className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
-              >
-                <p className="font-bold flex items-center justify-center gap-0.5">
-                  {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
-                  {p.label}
-                </p>
-                <p>{p.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {isLive && (
-            <div className="space-y-2">
-              {sport === 'basketball' && (
-                <div className="flex justify-center gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
-                    onClick={() => handleAction(participantAId, 'point_1', 1, selectedPlayerA)}
-                  >
-                    +1
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
-                    onClick={() => handleAction(participantAId, 'point_2', 2, selectedPlayerA)}
-                  >
-                    +2
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerA || actionBusy}
-                    onClick={() => handleAction(participantAId, 'point_3', 3, selectedPlayerA)}
-                  >
-                    +3
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() => handleUndo(participantAId)}
-                  >
-                    −1
-                  </Button>
-                </div>
-              )}
-              {sport !== 'basketball' && (
-                <div className="flex justify-center gap-2 flex-wrap">
-                  {/* Generic point, for a rally won without a specific stat
-                      (opponent error, net violation, referee award). */}
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() =>
-                      handleAction(participantAId, 'point_1', 1, selectedPlayerA || undefined)
-                    }
-                  >
-                    +1
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() => handleUndo(participantAId)}
-                  >
-                    −1
-                  </Button>
-                </div>
-              )}
-              {sport === 'basketball' && !selectedPlayerA && (
-                <p className="text-xs text-[var(--text-muted)] text-center">
-                  Select a player first.
-                </p>
-              )}
-              {renderStatButtons(
-                participantAId,
-                'a',
-                selectedPlayerA,
-                setSelectedPlayerA,
-                membersA,
-                activeLineupA,
-              )}
-            </div>
-          )}
         </Card>
 
         {/* AWAY team card */}
         <Card className="text-center" elevated>
-          <p className="text-xs text-[var(--text-muted)] mb-1">AWAY</p>
-          <p className="text-lg font-semibold mb-1 truncate px-1">{nameB}</p>
-          <div className="min-h-[20px] mb-1">
-            {sport === 'basketball' && basketballInfo?.bonus.b && (
-              <span title={`${basketballInfo.teamFouls.b ?? 0} team fouls this quarter`}>
-                <Badge variant="danger" size="sm">
-                  BONUS
-                </Badge>
-              </span>
+          <div className={isLive ? 'flex flex-col sm:flex-row sm:items-start gap-4' : ''}>
+            <div className={isLive ? 'sm:w-44 shrink-0' : ''}>
+              <p className="text-xs text-[var(--text-muted)] mb-1">AWAY</p>
+              <p className="text-lg font-semibold mb-1 truncate px-1">{nameB}</p>
+              <div className="min-h-[20px] mb-1">
+                {sport === 'basketball' && basketballInfo?.bonus.b && (
+                  <span title={`${basketballInfo.teamFouls.b ?? 0} team fouls this quarter`}>
+                    <Badge variant="danger" size="sm">
+                      BONUS
+                    </Badge>
+                  </span>
+                )}
+              </div>
+              <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
+                {getMainDisplay(scoreB)}
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                {periodValuesFor(scoreB, sport).map((p, i) => (
+                  <div
+                    key={p.label}
+                    className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
+                  >
+                    <p className="font-bold flex items-center justify-center gap-0.5">
+                      {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
+                      {p.label}
+                    </p>
+                    <p>{p.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {isLive && (
+              <div className="flex-1 min-w-0 space-y-2 sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+                {sport === 'basketball' && (
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerB || actionBusy}
+                      onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB)}
+                    >
+                      +1
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerB || actionBusy}
+                      onClick={() => handleAction(participantBId, 'point_2', 2, selectedPlayerB)}
+                    >
+                      +2
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || !selectedPlayerB || actionBusy}
+                      onClick={() => handleAction(participantBId, 'point_3', 3, selectedPlayerB)}
+                    >
+                      +3
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() => handleUndo(participantBId)}
+                    >
+                      −1
+                    </Button>
+                  </div>
+                )}
+                {sport !== 'basketball' && (
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() =>
+                        handleAction(participantBId, 'point_1', 1, selectedPlayerB || undefined)
+                      }
+                    >
+                      +1
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!isLockHolder || actionBusy}
+                      onClick={() => handleUndo(participantBId)}
+                    >
+                      −1
+                    </Button>
+                  </div>
+                )}
+                {sport === 'basketball' && !selectedPlayerB && (
+                  <p className="text-xs text-[var(--text-muted)] text-center">
+                    Select a player first.
+                  </p>
+                )}
+                {renderStatButtons(
+                  participantBId,
+                  'b',
+                  selectedPlayerB,
+                  setSelectedPlayerB,
+                  membersB,
+                  activeLineupB,
+                )}
+              </div>
             )}
           </div>
-          <p className="text-6xl font-black font-[Barlow_Condensed] text-[var(--text-primary)] mb-4">
-            {getMainDisplay(scoreB)}
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] mb-4">
-            {periodValuesFor(scoreB, sport).map((p, i) => (
-              <div
-                key={p.label}
-                className={cn('min-w-8', lockedPeriods.includes(i + 1) && 'opacity-60')}
-              >
-                <p className="font-bold flex items-center justify-center gap-0.5">
-                  {lockedPeriods.includes(i + 1) && <Lock className="w-2.5 h-2.5" />}
-                  {p.label}
-                </p>
-                <p>{p.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {isLive && (
-            <div className="space-y-2">
-              {sport === 'basketball' && (
-                <div className="flex justify-center gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
-                    onClick={() => handleAction(participantBId, 'point_1', 1, selectedPlayerB)}
-                  >
-                    +1
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
-                    onClick={() => handleAction(participantBId, 'point_2', 2, selectedPlayerB)}
-                  >
-                    +2
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || !selectedPlayerB || actionBusy}
-                    onClick={() => handleAction(participantBId, 'point_3', 3, selectedPlayerB)}
-                  >
-                    +3
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() => handleUndo(participantBId)}
-                  >
-                    −1
-                  </Button>
-                </div>
-              )}
-              {sport !== 'basketball' && (
-                <div className="flex justify-center gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() =>
-                      handleAction(participantBId, 'point_1', 1, selectedPlayerB || undefined)
-                    }
-                  >
-                    +1
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!isLockHolder || actionBusy}
-                    onClick={() => handleUndo(participantBId)}
-                  >
-                    −1
-                  </Button>
-                </div>
-              )}
-              {sport === 'basketball' && !selectedPlayerB && (
-                <p className="text-xs text-[var(--text-muted)] text-center">
-                  Select a player first.
-                </p>
-              )}
-              {renderStatButtons(
-                participantBId,
-                'b',
-                selectedPlayerB,
-                setSelectedPlayerB,
-                membersB,
-                activeLineupB,
-              )}
-            </div>
-          )}
         </Card>
       </div>
 

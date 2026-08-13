@@ -156,7 +156,7 @@ export default function SuperAdminSettings() {
             <div className="flex flex-wrap items-center gap-4">
               <div className="w-20 h-20 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] overflow-hidden flex items-center justify-center shrink-0">
                 {form.logo_url ? (
-                  <img src={form.logo_url} alt="" className="w-full h-full object-cover" />
+                  <img src={form.logo_url} alt="" className="w-full h-full object-contain" />
                 ) : (
                   <Palette className="w-8 h-8 text-[var(--text-muted)] opacity-40" aria-hidden />
                 )}

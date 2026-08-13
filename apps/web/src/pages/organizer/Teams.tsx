@@ -88,7 +88,7 @@ type TeamImportGroup = {
 }
 
 export default function OrganizerTeams() {
-  const { organizer } = useAuthStore()
+  const { organizer, profile } = useAuthStore()
 
   const { canConfigureSport, sportOptionsForForms, hasFullSportAccess, assignedSports } =
     useOrganizerSportScope()
@@ -200,6 +200,14 @@ export default function OrganizerTeams() {
   const [rosterSuccess, setRosterSuccess] = useState('')
 
   const [savingLineupId, setSavingLineupId] = useState<string | null>(null)
+
+  const [savingJerseyId, setSavingJerseyId] = useState<string | null>(null)
+
+  // Keyed by athlete_id, not membership id — jersey_number lives on the
+  // athlete row, one value regardless of which team roster it's edited from.
+  // Local drafts so typing doesn't fire a PATCH per keystroke; committed
+  // onBlur/Enter.
+  const [jerseyDrafts, setJerseyDrafts] = useState<Record<string, string>>({})
 
   const [selectedRosterMemberIds, setSelectedRosterMemberIds] = useState<string[]>([])
 
@@ -781,6 +789,33 @@ export default function OrganizerTeams() {
     }
   }
 
+  const handleSetJersey = async (athleteId: string, rawValue: string) => {
+    const value = rawValue.trim()
+    setSavingJerseyId(athleteId)
+    try {
+      await api.patch(`/athletes/${athleteId}/roster-details`, {
+        jersey_number: value === '' ? null : value,
+      })
+      setJerseyDrafts((d) => {
+        const next = { ...d }
+        delete next[athleteId]
+        return next
+      })
+      await refreshEditTeam()
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e)) {
+        const d = e.response?.data
+        const apiErr =
+          d && typeof d === 'object' && 'error' in d ? String((d as { error: string }).error) : null
+        setEditError(apiErr ?? 'Could not update jersey number')
+      } else {
+        setEditError('Could not update jersey number')
+      }
+    } finally {
+      setSavingJerseyId(null)
+    }
+  }
+
   const assignSelfAsCoach = async (teamId: string) => {
     setCoachBusy(true)
 
@@ -1337,6 +1372,17 @@ export default function OrganizerTeams() {
 
                 const canCfg = canConfigureSport(team.sport)
 
+                // Mirrors the server-side department check in POST /teams/:id/coach —
+                // only blocks JOINING a mismatched team, never leaving one, so a coach
+                // who ended up on the wrong team (e.g. before this check existed) can
+                // still self-remove.
+                const deptMismatch =
+                  !isCoach &&
+                  profile?.role === 'Coach' &&
+                  !!profile.department &&
+                  !!team.department &&
+                  profile.department !== team.department
+
                 return (
                   <div
                     key={team.id}
@@ -1429,9 +1475,14 @@ export default function OrganizerTeams() {
                           <Button
                             size="sm"
                             variant={isCoach ? 'success' : 'secondary'}
-                            disabled={!canCfg || coachBusy}
+                            disabled={!canCfg || coachBusy || deptMismatch}
                             loading={coachBusy}
                             icon={<Star className="w-3 h-3" />}
+                            title={
+                              deptMismatch
+                                ? `You are a ${profile?.department} coach and cannot coach a ${team.department} team.`
+                                : undefined
+                            }
                             onClick={() => handleSelfCoachCardClick(team.id, team.name, isCoach)}
                           >
                             {isCoach ? 'Coaching' : 'Coach'}
@@ -2077,6 +2128,31 @@ export default function OrganizerTeams() {
                                 {m.lineup_slot}
                               </span>
                               <span className="flex-1 truncate font-medium">{memberLabel(m)}</span>
+                              {m.athlete_id ? (
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className="w-12 shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] px-1.5 py-1 text-center text-xs font-mono"
+                                  placeholder="##"
+                                  maxLength={3}
+                                  value={jerseyDrafts[m.athlete_id] ?? m.athlete?.jersey_number ?? ''}
+                                  disabled={savingJerseyId === m.athlete_id}
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/\D/g, '').slice(0, 3)
+                                    setJerseyDrafts((d) => ({ ...d, [m.athlete_id]: v }))
+                                  }}
+                                  onBlur={(e) => {
+                                    const v = e.target.value.replace(/\D/g, '').slice(0, 3)
+                                    if (v !== (m.athlete?.jersey_number ?? ''))
+                                      void handleSetJersey(m.athlete_id, v)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                  }}
+                                  title="Jersey number"
+                                  aria-label={`Jersey number for ${memberLabel(m)}`}
+                                />
+                              ) : null}
                               <Button
                                 type="button"
                                 size="sm"
@@ -2130,6 +2206,31 @@ export default function OrganizerTeams() {
                                   <Badge size="sm" variant="info">
                                     Tryout
                                   </Badge>
+                                ) : null}
+                                {m.athlete_id ? (
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    className="w-12 shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] px-1.5 py-1 text-center text-xs font-mono"
+                                    placeholder="##"
+                                    maxLength={3}
+                                    value={jerseyDrafts[m.athlete_id] ?? m.athlete?.jersey_number ?? ''}
+                                    disabled={savingJerseyId === m.athlete_id}
+                                    onChange={(e) => {
+                                      const v = e.target.value.replace(/\D/g, '').slice(0, 3)
+                                      setJerseyDrafts((d) => ({ ...d, [m.athlete_id]: v }))
+                                    }}
+                                    onBlur={(e) => {
+                                      const v = e.target.value.replace(/\D/g, '').slice(0, 3)
+                                      if (v !== (m.athlete?.jersey_number ?? ''))
+                                        void handleSetJersey(m.athlete_id, v)
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                    }}
+                                    title="Jersey number"
+                                    aria-label={`Jersey number for ${memberLabel(m)}`}
+                                  />
                                 ) : null}
                                 <Button
                                   type="button"

@@ -54,9 +54,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (logoUrl != null && logoUrl.trim().isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
+              // A fixed 48x48 square forced BoxFit.contain to shrink a wide
+              // (non-square) logo down to fit that width, rendering it tiny.
+              // Widen the box so contain has room to keep the logo readable.
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: CachedNetworkImage(imageUrl: logoUrl.trim(), height: 48, width: 48, fit: BoxFit.contain),
+                child: CachedNetworkImage(imageUrl: logoUrl.trim(), height: 48, width: 160, fit: BoxFit.contain),
               ),
             ),
           Text(

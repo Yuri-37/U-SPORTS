@@ -75,7 +75,7 @@ export default function LoginPage() {
             <img
               src={institution.logo_url}
               alt="Logo"
-              className="w-32 h-32 mx-auto mb-6 rounded-full"
+              className="max-h-32 w-auto max-w-[16rem] mx-auto mb-6 object-contain object-center"
             />
           ) : (
             <div
@@ -107,7 +107,7 @@ export default function LoginPage() {
               <img
                 src={institution.logo_url}
                 alt=""
-                className="w-16 h-16 mx-auto mb-3 rounded-full object-cover border border-[var(--border-subtle)]"
+                className="max-h-16 w-auto max-w-[12rem] mx-auto mb-3 object-contain object-center"
               />
             ) : null}
             <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>

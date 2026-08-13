@@ -32,6 +32,8 @@ const teamSelectEmbedded = `*,
       profile_id,
       student_id,
       sport,
+      jersey_number,
+      position,
       profile:profiles!athletes_profile_id_fkey(full_name, avatar_url)
     )
   )`
@@ -1090,7 +1092,7 @@ router.post(
   async (req: AuthRequest, res) => {
     const { data: team, error: teamErr } = await supabase
       .from('teams')
-      .select('sport')
+      .select('sport, department')
       .eq('id', req.params.id)
       .maybeSingle()
     if (teamErr) return res.status(500).json({ error: teamErr.message })
@@ -1099,10 +1101,28 @@ router.post(
 
     const { data: staff } = await supabase
       .from('organizers')
-      .select('id')
+      .select('id, profile:profiles!organizers_profile_id_fkey(department)')
       .eq('profile_id', req.user!.id)
       .maybeSingle()
     if (!staff) return res.status(404).json({ error: 'Staff profile not found' })
+
+    // Coaches are department-scoped (see findCoachSportConflict in admin.ts, which
+    // enforces one-coach-per-sport-per-department at account creation) but this
+    // endpoint never checked the TEAM side of that boundary — a coach could self
+    // -assign to a same-sport team in a different department entirely. A team
+    // with no department set (nullable, migration 038) accepts any coach.
+    if (req.user!.role === 'Coach') {
+      const staffProfile = (
+        staff as unknown as { profile?: { department?: string | null } | null }
+      ).profile
+      const coachDept = staffProfile?.department ?? null
+      const teamDept = (team as { department?: string | null }).department ?? null
+      if (coachDept && teamDept && coachDept !== teamDept) {
+        return res.status(403).json({
+          error: `You are a ${coachDept} coach and cannot coach a ${teamDept} team.`,
+        })
+      }
+    }
 
     const { data, error } = await supabase
       .from('team_coaches')

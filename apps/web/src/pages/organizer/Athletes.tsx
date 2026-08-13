@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check } from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select } from '../../components/ui'
 import api from '../../lib/api'
-import { supabase } from '../../lib/supabase'
 import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
@@ -63,14 +62,6 @@ export default function OrganizerAthletes() {
   const [athletes, setAthletes] = useState<AthleteWithProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [seasonFilter, setSeasonFilter] = useState<'active' | 'inactive'>('active')
-  const [selected, setSelected] = useState<AthleteWithProfile | null>(null)
-  const [rosterModalOpen, setRosterModalOpen] = useState(false)
-  const [sportPositions, setSportPositions] = useState<string[]>([])
-  const [rosterPosition, setRosterPosition] = useState('')
-  const [rosterJersey, setRosterJersey] = useState('')
-  const [rosterSaving, setRosterSaving] = useState(false)
-  const [rosterError, setRosterError] = useState('')
-  const [rosterSaveSuccess, setRosterSaveSuccess] = useState(false)
   const [listSearch, setListSearch] = useState('')
   const [sportFilter, setSportFilter] = useState<Sport | ''>('')
   const [departmentFilter, setDepartmentFilter] = useState('')
@@ -134,39 +125,6 @@ export default function OrganizerAthletes() {
     setSelectedIds(new Set())
   }, [seasonFilter])
 
-  useEffect(() => {
-    if (!selected || !rosterModalOpen) return
-    setRosterPosition(selected.position?.trim() ?? '')
-    setRosterJersey(selected.jersey_number ?? '')
-    setRosterError('')
-    void supabase
-      .from('sports_config')
-      .select('positions')
-      .eq('slug', selected.sport)
-      .maybeSingle()
-      .then(({ data }) => {
-        const raw = data?.positions as unknown
-        let opts: string[] = []
-        if (Array.isArray(raw)) {
-          opts = raw.filter((x): x is string => typeof x === 'string')
-        } else if (typeof raw === 'string') {
-          try {
-            const parsed = JSON.parse(raw) as unknown
-            if (Array.isArray(parsed))
-              opts = parsed.filter((x): x is string => typeof x === 'string')
-          } catch {
-            /* ignore malformed JSON */
-          }
-        }
-        setSportPositions(opts)
-      })
-  }, [selected, rosterModalOpen])
-
-  useEffect(() => {
-    if (!rosterSaveSuccess) return
-    const t = window.setTimeout(() => setRosterSaveSuccess(false), 4000)
-    return () => window.clearTimeout(t)
-  }, [rosterSaveSuccess])
 
   const filteredAthletes = useMemo(() => {
     const q = listSearch.trim().toLowerCase()
@@ -270,41 +228,6 @@ export default function OrganizerAthletes() {
       setLoadMessage(msg ?? 'Could not reset password')
     } finally {
       setResetPasswordBusy(false)
-    }
-  }
-
-  const saveRosterDetails = async () => {
-    if (!selected) return
-    setRosterSaving(true)
-    setRosterError('')
-    setRosterSaveSuccess(false)
-    try {
-      const hasPositionPicker = sportPositions.length > 0
-      const payload: { position?: string; jersey_number?: string | null } = {
-        jersey_number: rosterJersey.trim() ? rosterJersey.trim() : null,
-      }
-      if (hasPositionPicker) payload.position = rosterPosition.trim()
-      await api.patch(`/athletes/${selected.id}/roster-details`, payload)
-      setAthletes((prev) =>
-        prev.map((x) =>
-          x.id === selected.id
-            ? {
-                ...x,
-                ...(hasPositionPicker ? { position: rosterPosition.trim() } : {}),
-                jersey_number: rosterJersey.trim() || null,
-              }
-            : x,
-        ),
-      )
-      setRosterSaveSuccess(true)
-    } catch (e: unknown) {
-      const msg =
-        e && typeof e === 'object' && 'response' in e
-          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
-          : undefined
-      setRosterError(msg ?? 'Could not save roster')
-    } finally {
-      setRosterSaving(false)
     }
   }
 
@@ -602,16 +525,6 @@ export default function OrganizerAthletes() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  setSelected(a)
-                  setRosterModalOpen(true)
-                }}
-              >
-                Roster
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
                 onClick={() =>
                   setSeasonToggleConfirm({
                     id: a.id,
@@ -820,87 +733,6 @@ export default function OrganizerAthletes() {
                 }}
               >
                 Done
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        open={!!selected && rosterModalOpen}
-        onClose={() => {
-          setSelected(null)
-          setRosterModalOpen(false)
-          setRosterError('')
-          setRosterSaveSuccess(false)
-        }}
-        title="Athlete roster"
-        size="lg"
-      >
-        {selected && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-[var(--text-muted)] text-xs">Athlete</p>
-                <p className="font-medium">{selected.profile?.full_name}</p>
-              </div>
-              <div>
-                <p className="text-[var(--text-muted)] text-xs">Email</p>
-                <p>{selected.profile?.email}</p>
-              </div>
-              <div>
-                <p className="text-[var(--text-muted)] text-xs">Student ID</p>
-                <p>{selected.student_id}</p>
-              </div>
-              <div>
-                <p className="text-[var(--text-muted)] text-xs">Sport / position</p>
-                <p>
-                  {getSportLabel(selected.sport as any)} ·{' '}
-                  {selected.position?.trim() ? selected.position : 'Not set'}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-3">
-              <p className="text-sm font-semibold">Roster assignment</p>
-              <p className="text-xs text-[var(--text-muted)]">
-                {sportPositions.length > 0
-                  ? 'Position and jersey number are set by the organizer and appear on the athlete profile.'
-                  : 'Jersey number is set by the organizer and appears on the athlete profile. This sport has no fixed position list.'}
-              </p>
-              {rosterError && (
-                <Alert type="danger" onDismiss={() => setRosterError('')}>
-                  {rosterError}
-                </Alert>
-              )}
-              {rosterSaveSuccess && (
-                <Alert type="success" onDismiss={() => setRosterSaveSuccess(false)}>
-                  Roster saved. The athlete will see the updates on their profile.
-                </Alert>
-              )}
-              {sportPositions.length > 0 ? (
-                <Select
-                  label="Position"
-                  value={rosterPosition}
-                  onChange={(e) => setRosterPosition(e.target.value)}
-                  options={[
-                    { value: '', label: 'Not set' },
-                    ...sportPositions.map((p) => ({ value: p, label: p })),
-                    ...(rosterPosition && !sportPositions.includes(rosterPosition)
-                      ? [{ value: rosterPosition, label: rosterPosition }]
-                      : []),
-                  ]}
-                />
-              ) : null}
-              <Input
-                label="Jersey number"
-                value={rosterJersey}
-                onChange={(e) => setRosterJersey(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                placeholder="e.g. 12"
-                maxLength={3}
-              />
-              <Button loading={rosterSaving} onClick={() => void saveRosterDetails()}>
-                Save roster
               </Button>
             </div>
           </div>

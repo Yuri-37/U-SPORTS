@@ -11,6 +11,7 @@ import {
   INSTITUTION_LOGO_MAX_BYTES,
   uploadInstitutionLogoBuffer,
 } from '../utils/institutionLogoStorage'
+import { validateSeasonDates } from '../utils/seasonDates'
 
 const router = Router()
 
@@ -445,6 +446,9 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
   })
   try {
     const body = schema.parse(req.body)
+    const dateCheck = validateSeasonDates(body, { mode: 'create' })
+    if (!dateCheck.ok) return res.status(400).json({ error: dateCheck.error })
+
     const { data, error } = await supabase
       .from('seasons')
       .insert({ ...body, status: 'draft', created_by: req.user!.id })
@@ -461,6 +465,70 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
     res.status(201).json(data)
   } catch (err: unknown) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Create season failed' })
+  }
+})
+
+// Name and dates can never be corrected after creation otherwise — status
+// transitions (below) and delete were the only season endpoints that existed.
+router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
+  const schema = z
+    .object({
+      name: z.string().min(1).optional(),
+      start_date: z.string().optional(),
+      end_date: z.string().optional(),
+    })
+    .refine((v) => v.name !== undefined || v.start_date !== undefined || v.end_date !== undefined, {
+      message: 'No fields to update',
+    })
+  try {
+    const body = schema.parse(req.body)
+
+    const { data: existing, error: fetchErr } = await supabase
+      .from('seasons')
+      .select('start_date, end_date')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (fetchErr) throw new Error(fetchErr.message)
+    if (!existing) return res.status(404).json({ error: 'Season not found' })
+
+    // Merge over the stored row so a request that only patches one date field
+    // is still validated against the other's stored value.
+    const merged = {
+      start_date: body.start_date ?? existing.start_date,
+      end_date: body.end_date ?? existing.end_date,
+    }
+    const dateCheck = validateSeasonDates(merged, {
+      mode: 'edit',
+      storedStartDate: existing.start_date,
+    })
+    if (!dateCheck.ok) return res.status(400).json({ error: dateCheck.error })
+
+    const patch: Record<string, unknown> = {}
+    if (body.name !== undefined) patch.name = body.name
+    if (body.start_date !== undefined) patch.start_date = body.start_date
+    if (body.end_date !== undefined) patch.end_date = body.end_date
+
+    const { data, error } = await supabase
+      .from('seasons')
+      .update(patch)
+      .eq('id', req.params.id)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+
+    await writeAuditLog({
+      actorId: req.user!.id,
+      action: 'season_updated',
+      entityType: 'season',
+      entityId: req.params.id,
+      details: patch,
+    })
+    res.json(data)
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
+    }
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Update season failed' })
   }
 })
 

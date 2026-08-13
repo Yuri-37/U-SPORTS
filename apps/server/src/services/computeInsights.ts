@@ -266,6 +266,15 @@ async function computePlayerInsights(matchId: string, seasonId: string): Promise
     const gp = seasonStats!.games_played
     const keyStats = KEY_STATS[sport] ?? []
 
+    // Pick the single most dramatic stat rather than writing one upsert per
+    // stat in the loop below. All of them target the same unique key
+    // (entity_type, entity_id, sport, season_id, insight_type) — upserting
+    // inside the loop meant only the LAST-iterated stat's verdict ever
+    // survived (total_steals for basketball, blocks for volleyball, winners
+    // for table tennis), so an athlete trending +40% in points got no
+    // insight at all if their steals happened to be flat.
+    let best: { statKey: string; delta: number; rolling3Avg: number; seasonAvg: number } | null =
+      null
     for (const statKey of keyStats) {
       const seasonAvg = (agg[statKey] ?? 0) / gp
       if (seasonAvg === 0) continue
@@ -275,47 +284,51 @@ async function computePlayerInsights(matchId: string, seasonId: string): Promise
         last3.length
 
       const delta = (rolling3Avg - seasonAvg) / seasonAvg
-
-      if (Math.abs(delta) >= INSIGHT_THRESHOLD) {
-        const direction = delta > 0 ? 'trending_up' : 'trending_down'
-        const label = STAT_LABELS[statKey] ?? statKey
-        const pct = Math.abs(Math.round(delta * 100))
-        const name = await fetchAthleteName(athlete_id)
-        const direction_text = delta > 0 ? 'trending +' : 'down '
-        const insight_text =
-          `${name} is ${direction_text}${pct}% in ${label} over the last ${last3.length} games` +
-          ` — averaging ${rolling3Avg.toFixed(1)} per game vs a ${seasonAvg.toFixed(1)} season average.`
-
-        await upsertInsight({
-          entity_type: 'player',
-          entity_id: athlete_id,
-          sport,
-          season_id: seasonId,
-          insight_text,
-          insight_type: direction,
-          data: {
-            stat_key: statKey,
-            season_avg: seasonAvg,
-            rolling_avg: rolling3Avg,
-            delta_pct: pct,
-            match_id: matchId,
-          },
-        })
-
-        // The opposite trend can no longer be true.
-        await clearInsight(
-          'player',
-          athlete_id,
-          sport,
-          seasonId,
-          direction === 'trending_up' ? 'trending_down' : 'trending_up',
-        )
-      } else {
-        // The player is back within the threshold — drop any stale trend claim
-        // rather than leaving it to expire on its own a week later.
-        await clearInsight('player', athlete_id, sport, seasonId, 'trending_up')
-        await clearInsight('player', athlete_id, sport, seasonId, 'trending_down')
+      if (!best || Math.abs(delta) > Math.abs(best.delta)) {
+        best = { statKey, delta, rolling3Avg, seasonAvg }
       }
+    }
+
+    if (best && Math.abs(best.delta) >= INSIGHT_THRESHOLD) {
+      const { statKey, delta, rolling3Avg, seasonAvg } = best
+      const direction = delta > 0 ? 'trending_up' : 'trending_down'
+      const label = STAT_LABELS[statKey] ?? statKey
+      const pct = Math.abs(Math.round(delta * 100))
+      const name = await fetchAthleteName(athlete_id)
+      const direction_text = delta > 0 ? 'trending +' : 'down '
+      const insight_text =
+        `${name} is ${direction_text}${pct}% in ${label} over the last ${last3.length} games` +
+        ` — averaging ${rolling3Avg.toFixed(1)} per game vs a ${seasonAvg.toFixed(1)} season average.`
+
+      await upsertInsight({
+        entity_type: 'player',
+        entity_id: athlete_id,
+        sport,
+        season_id: seasonId,
+        insight_text,
+        insight_type: direction,
+        data: {
+          stat_key: statKey,
+          season_avg: seasonAvg,
+          rolling_avg: rolling3Avg,
+          delta_pct: pct,
+          match_id: matchId,
+        },
+      })
+
+      // The opposite trend can no longer be true.
+      await clearInsight(
+        'player',
+        athlete_id,
+        sport,
+        seasonId,
+        direction === 'trending_up' ? 'trending_down' : 'trending_up',
+      )
+    } else {
+      // No stat cleared the threshold — drop any stale trend claim rather
+      // than leaving it to expire on its own a week later.
+      await clearInsight('player', athlete_id, sport, seasonId, 'trending_up')
+      await clearInsight('player', athlete_id, sport, seasonId, 'trending_down')
     }
   }
 }
