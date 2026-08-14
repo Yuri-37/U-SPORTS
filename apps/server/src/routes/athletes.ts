@@ -2,7 +2,13 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { respondIfSportForbidden } from '../utils/organizerSportAccess'
-import { resetAccountPassword, type PasswordResetResult } from '../utils/accountEmail'
+import {
+  resetAccountPassword,
+  createAthleteAuthUser,
+  type PasswordResetResult,
+  type AccountCreationResult,
+} from '../utils/accountEmail'
+import { generatedEmail, generatedPassword } from '../utils/studentAccounts'
 import supabase from '../utils/supabase'
 
 const router = Router()
@@ -21,6 +27,101 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   const { data, error } = await query
   if (error) return res.status(500).json({ error: error.message })
   res.json(data)
+})
+
+// Add a single athlete -- the bulk importer (routes/students.ts) was
+// previously the only way to create an athlete account at all. Same account
+// creation path (createAthleteAuthUser), just one row instead of a sheet.
+router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
+  const schema = z.object({
+    full_name: z.string().trim().min(1),
+    student_id: z.string().trim().min(1),
+    department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']),
+    sport: z.enum(['basketball', 'volleyball', 'table-tennis']),
+    year_level: z.string().trim().optional().default(''),
+    course: z.string().trim().optional().default(''),
+    email: z.string().trim().email().optional(),
+    password: z.string().min(8).optional(),
+  })
+
+  try {
+    const body = schema.parse(req.body)
+    if (await respondIfSportForbidden(req, res, body.sport)) return
+
+    const { data: existingAthlete } = await supabase
+      .from('athletes')
+      .select('id')
+      .eq('student_id', body.student_id)
+      .maybeSingle()
+    if (existingAthlete) {
+      return res.status(409).json({ error: `Student ID ${body.student_id} already exists.` })
+    }
+
+    const email = (body.email ?? generatedEmail(body.student_id)).toLowerCase()
+    const password = body.password ?? generatedPassword(body.student_id)
+
+    let account: AccountCreationResult
+    try {
+      account = await createAthleteAuthUser({
+        email,
+        password,
+        fullName: body.full_name,
+        studentId: body.student_id,
+        department: body.department,
+        course: body.course,
+        yearLevel: body.year_level,
+      })
+    } catch (e: unknown) {
+      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not create auth user' })
+    }
+
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: account.userId,
+      email,
+      full_name: body.full_name,
+      role: null,
+      department: body.department,
+    })
+    if (profileError) return res.status(400).json({ error: profileError.message })
+
+    const { data: athlete, error: athleteError } = await supabase
+      .from('athletes')
+      .insert({
+        profile_id: account.userId,
+        student_id: body.student_id,
+        sport: body.sport,
+        year_level: body.year_level,
+        department: body.department,
+        season_status: 'active',
+      })
+      .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url)')
+      .single()
+    if (athleteError || !athlete) {
+      return res.status(400).json({ error: athleteError?.message ?? 'Could not create athlete row' })
+    }
+
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: 'athlete_created',
+      entity_type: 'athlete',
+      entity_id: athlete.id as string,
+      details: { student_id: body.student_id, email, mode: account.mode },
+    })
+
+    res.status(201).json({
+      athlete,
+      email,
+      mode: account.mode,
+      // Only meaningful in 'password' mode -- the invited path never sets a
+      // password server-side, the invitee picks their own via the email link.
+      ...(account.mode === 'password' ? { tempPassword: password } : {}),
+    })
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
+    }
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not create athlete' })
+  }
 })
 
 /** Bulk season-status updates for organizers and super admins */

@@ -16,7 +16,7 @@ import {
   createStaffAuthUser,
   inviteEmailsEnabled,
   resetAccountPassword,
-  type StaffAccountResult,
+  type AccountCreationResult,
   type PasswordResetResult,
 } from '../utils/accountEmail'
 
@@ -168,7 +168,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       }
     }
 
-    let account: StaffAccountResult
+    let account: AccountCreationResult
     try {
       account = await createStaffAuthUser({
         email, password: parsed.password, role, fullName: full_name, department,
@@ -492,7 +492,7 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
     const email = parsed.email.trim().toLowerCase()
     const full_name = parsed.full_name.trim()
 
-    let account: StaffAccountResult
+    let account: AccountCreationResult
     try {
       account = await createStaffAuthUser({
         email, password: parsed.password, role: 'Admin', fullName: full_name, department: null,

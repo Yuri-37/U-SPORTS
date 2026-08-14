@@ -26,7 +26,7 @@ export function inviteEmailsEnabled(): boolean {
   return process.env.INVITE_EMAILS_ENABLED === 'true'
 }
 
-export type StaffAccountResult =
+export type AccountCreationResult =
   | { mode: 'invited'; userId: string }
   | { mode: 'password'; userId: string }
 
@@ -42,7 +42,7 @@ export async function createStaffAuthUser(params: {
   role: string
   fullName: string
   department: string | null
-}): Promise<StaffAccountResult> {
+}): Promise<AccountCreationResult> {
   const { email, password, role, fullName, department } = params
 
   if (inviteEmailsEnabled()) {
@@ -75,6 +75,60 @@ export async function createStaffAuthUser(params: {
   })
   if (error || !data?.user?.id) {
     throw new Error(error?.message ?? 'Could not create staff account')
+  }
+  return { mode: 'password', userId: data.user.id }
+}
+
+/**
+ * Creates the auth user for a new athlete account, same invited/password
+ * split as createStaffAuthUser above but with athlete-shaped metadata
+ * (student_id/course/year_level instead of a staff role). Used by both the
+ * single-athlete form and the bulk importer (routes/students.ts) so there's
+ * one code path instead of three.
+ */
+export async function createAthleteAuthUser(params: {
+  email: string
+  password?: string
+  fullName: string
+  studentId: string
+  department: string
+  course?: string
+  yearLevel?: string
+}): Promise<AccountCreationResult> {
+  const { email, password, fullName, studentId, department, course, yearLevel } = params
+  const metadata = {
+    full_name: fullName,
+    student_id: studentId,
+    department,
+    course,
+    year_level: yearLevel,
+  }
+
+  if (inviteEmailsEnabled()) {
+    const redirectTo = process.env.WEB_URL
+      ? `${process.env.WEB_URL.replace(/\/+$/, '')}/auth/accept-invite`
+      : undefined
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      data: metadata,
+      redirectTo,
+    })
+    if (error || !data?.user?.id) {
+      throw new Error(error?.message ?? 'Could not send invitation email')
+    }
+    return { mode: 'invited', userId: data.user.id }
+  }
+
+  if (!password) {
+    throw new Error('Password is required while invite emails are disabled (INVITE_EMAILS_ENABLED)')
+  }
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata,
+  })
+  if (error || !data?.user?.id) {
+    throw new Error(error?.message ?? 'Could not create athlete account')
   }
   return { mode: 'password', userId: data.user.id }
 }

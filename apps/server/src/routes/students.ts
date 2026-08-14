@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
+import { createAthleteAuthUser, inviteEmailsEnabled } from '../utils/accountEmail'
+import { generatedEmail, generatedPassword } from '../utils/studentAccounts'
 
 const router = Router()
 
@@ -11,11 +13,6 @@ const upload = spreadsheetUpload
 
 const departmentEnum = z.enum(['SBMA', 'SECA', 'SASE', 'SHS'])
 const sportEnum = z.enum(['basketball', 'volleyball', 'table-tennis'])
-
-// The school's real student email domain — live Outlook/Microsoft 365
-// mailboxes, not a placeholder. Used only when an imported row has no email
-// column value; a supplied email is always used as-is instead.
-const STUDENT_EMAIL_DOMAIN = 'students.nu-dasma.edu.ph'
 
 const importRowSchema = z.object({
   full_name: z.string().trim().min(1),
@@ -53,17 +50,6 @@ function normalizeImportRow(row: Record<string, unknown>) {
   }
 }
 
-function generatedEmail(studentId: string) {
-  return `${studentId
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')}@${STUDENT_EMAIL_DOMAIN}`
-}
-
-function generatedPassword(studentId: string) {
-  return `UrSports-${studentId.replace(/\s+/g, '')}-2026!`
-}
-
 router.post(
   '/import',
   requireAuth,
@@ -89,7 +75,12 @@ router.post(
         return res.status(400).json({ error: 'Upload a CSV or Excel file, or provide rows.' })
       }
 
-      const created: Array<{ student_id: string; email: string; athlete_id: string }> = []
+      const created: Array<{
+        student_id: string
+        email: string
+        athlete_id: string
+        tempPassword?: string
+      }> = []
       const errors: Array<{ row: number; error: string }> = []
 
       for (const [idx, raw] of rawRows.entries()) {
@@ -124,25 +115,27 @@ router.post(
           continue
         }
 
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: {
-            full_name: row.full_name,
-            student_id: row.student_id,
-            course: row.course,
-            year_level: row.year_level,
+        let userId: string
+        let mode: 'invited' | 'password'
+        try {
+          const account = await createAthleteAuthUser({
+            email,
+            password,
+            fullName: row.full_name,
+            studentId: row.student_id,
             department: row.department,
-          },
-        })
-        if (authError || !authUser.user?.id) {
-          errors.push({ row: idx + 1, error: authError?.message ?? 'Could not create auth user' })
+            course: row.course,
+            yearLevel: row.year_level,
+          })
+          userId = account.userId
+          mode = account.mode
+        } catch (e: unknown) {
+          errors.push({ row: idx + 1, error: e instanceof Error ? e.message : 'Could not create auth user' })
           continue
         }
 
         const { error: profileError } = await supabase.from('profiles').upsert({
-          id: authUser.user.id,
+          id: userId,
           email,
           full_name: row.full_name,
           role: null,
@@ -156,7 +149,7 @@ router.post(
         const { data: athlete, error: athleteError } = await supabase
           .from('athletes')
           .insert({
-            profile_id: authUser.user.id,
+            profile_id: userId,
             student_id: row.student_id,
             sport: row.sport,
             year_level: row.year_level,
@@ -173,7 +166,14 @@ router.post(
           continue
         }
 
-        created.push({ student_id: row.student_id, email, athlete_id: athlete.id })
+        created.push({
+          student_id: row.student_id,
+          email,
+          athlete_id: athlete.id,
+          // Only meaningful in 'password' mode -- the invited path never
+          // sets a password server-side, the invitee picks their own.
+          ...(mode === 'password' ? { tempPassword: password } : {}),
+        })
       }
 
       await supabase.from('audit_logs').insert({
@@ -184,7 +184,11 @@ router.post(
         details: { created_count: created.length, error_count: errors.length },
       })
 
-      res.status(errors.length > 0 ? 207 : 201).json({ created, errors })
+      res.status(errors.length > 0 ? 207 : 201).json({
+        created,
+        errors,
+        invited: inviteEmailsEnabled(),
+      })
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Import failed' })
     }

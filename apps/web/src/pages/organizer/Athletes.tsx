@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check } from 'lucide-react'
+import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check, UserPlus } from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select } from '../../components/ui'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
+import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
+
+const DEPARTMENT_OPTIONS = [
+  { value: 'SBMA', label: 'SBMA' },
+  { value: 'SECA', label: 'SECA' },
+  { value: 'SASE', label: 'SASE' },
+  { value: 'SHS', label: 'SHS' },
+] as const
 
 type AthleteWithProfile = Athlete & {
   profile: { full_name: string; email: string }
@@ -68,6 +76,7 @@ export default function OrganizerAthletes() {
   const [loadMessage, setLoadMessage] = useState('')
   const { profile } = useAuthStore()
   const isSuperAdmin = profile?.role === 'Admin'
+  const { sportOptionsForForms } = useOrganizerSportScope()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkConfirmAction, setBulkConfirmAction] = useState<'set_inactive' | 'set_active' | null>(
@@ -98,14 +107,87 @@ export default function OrganizerAthletes() {
       .catch(() => setInviteEmailsEnabled(false))
   }, [])
 
+  // Add single athlete
+  const [showAddAthlete, setShowAddAthlete] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addStudentId, setAddStudentId] = useState('')
+  const [addDepartment, setAddDepartment] = useState<string>('SBMA')
+  const [addSport, setAddSport] = useState<Sport | ''>('')
+  const [addYearLevel, setAddYearLevel] = useState('')
+  const [addCourse, setAddCourse] = useState('')
+  const [addEmail, setAddEmail] = useState('')
+  const [addAthleteBusy, setAddAthleteBusy] = useState(false)
+  const [addAthleteError, setAddAthleteError] = useState('')
+  const [addAthleteResult, setAddAthleteResult] = useState<{
+    name: string
+    email: string
+    mode: 'invited' | 'password'
+    tempPassword?: string
+  } | null>(null)
+  const [addAthleteResultCopied, setAddAthleteResultCopied] = useState(false)
+
+  const resetAddAthleteForm = () => {
+    setAddName('')
+    setAddStudentId('')
+    setAddDepartment('SBMA')
+    setAddSport('')
+    setAddYearLevel('')
+    setAddCourse('')
+    setAddEmail('')
+    setAddAthleteError('')
+  }
+
+  const handleAddAthlete = async () => {
+    if (!addName.trim()) return setAddAthleteError('Full name is required')
+    if (!addStudentId.trim()) return setAddAthleteError('Student ID is required')
+    if (!addSport) return setAddAthleteError('Sport is required')
+    setAddAthleteBusy(true)
+    setAddAthleteError('')
+    try {
+      const { data } = await api.post<{
+        athlete: { profile?: { full_name?: string } }
+        email: string
+        mode: 'invited' | 'password'
+        tempPassword?: string
+      }>('/athletes', {
+        full_name: addName.trim(),
+        student_id: addStudentId.trim(),
+        department: addDepartment,
+        sport: addSport,
+        year_level: addYearLevel.trim(),
+        course: addCourse.trim(),
+        ...(addEmail.trim() ? { email: addEmail.trim() } : {}),
+      })
+      setAddAthleteResult({
+        name: addName.trim(),
+        email: data.email,
+        mode: data.mode,
+        tempPassword: data.tempPassword,
+      })
+      setAddAthleteResultCopied(false)
+      setShowAddAthlete(false)
+      resetAddAthleteForm()
+      fetchAthletes()
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'response' in e
+          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined
+      setAddAthleteError(msg ?? 'Could not create athlete')
+    } finally {
+      setAddAthleteBusy(false)
+    }
+  }
+
   // Roster import state (CSV or Excel)
   const [showImport, setShowImport] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [downloadingTemplate, setDownloadingTemplate] = useState(false)
   const [importResult, setImportResult] = useState<{
-    created: { student_id: string; email: string; athlete_id: string }[]
+    created: { student_id: string; email: string; athlete_id: string; tempPassword?: string }[]
     errors: { row: number; error: string }[]
+    invited?: boolean
   } | null>(null)
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[] | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -343,8 +425,9 @@ export default function OrganizerAthletes() {
     setImportResult(null)
     try {
       const res = await api.post<{
-        created: { student_id: string; email: string; athlete_id: string }[]
+        created: { student_id: string; email: string; athlete_id: string; tempPassword?: string }[]
         errors: { row: number; error: string }[]
+        invited?: boolean
       }>('/students/import', {
         rows: validRows.map((r) => ({
           full_name: r.full_name,
@@ -406,6 +489,16 @@ export default function OrganizerAthletes() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            icon={<UserPlus className="w-4 h-4" />}
+            onClick={() => {
+              resetAddAthleteForm()
+              setShowAddAthlete(true)
+            }}
+          >
+            Add athlete
+          </Button>
           <Button
             size="sm"
             variant="secondary"
@@ -774,6 +867,133 @@ export default function OrganizerAthletes() {
         ) : null}
       </Modal>
 
+      {/* Add single athlete */}
+      <Modal
+        open={showAddAthlete}
+        onClose={() => {
+          if (!addAthleteBusy) setShowAddAthlete(false)
+        }}
+        title="Add athlete"
+      >
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          {inviteEmailsEnabled
+            ? "Sends an email invite. They'll set their own password to finish setting up."
+            : 'Creates their login immediately with a generated password shown after saving.'}
+        </p>
+        {addAthleteError && (
+          <Alert type="danger" className="mb-4">
+            {addAthleteError}
+          </Alert>
+        )}
+        <div className="space-y-4">
+          <Input
+            label="Full name"
+            value={addName}
+            onChange={(e) => setAddName(e.target.value)}
+            placeholder="Athlete name"
+          />
+          <Input
+            label="Student ID"
+            value={addStudentId}
+            onChange={(e) => setAddStudentId(e.target.value)}
+            placeholder="2024-1001"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label="Department"
+              value={addDepartment}
+              onChange={(e) => setAddDepartment(e.target.value)}
+              options={DEPARTMENT_OPTIONS.map((d) => ({ value: d.value, label: d.label }))}
+            />
+            <Select
+              label="Sport"
+              value={addSport}
+              onChange={(e) => setAddSport(e.target.value as Sport)}
+              options={[{ value: '', label: 'Select a sport' }, ...sportOptionsForForms]}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Year level (optional)"
+              value={addYearLevel}
+              onChange={(e) => setAddYearLevel(e.target.value)}
+              placeholder="1st Year"
+            />
+            <Input
+              label="Course (optional)"
+              value={addCourse}
+              onChange={(e) => setAddCourse(e.target.value)}
+              placeholder="BSIT"
+            />
+          </div>
+          <Input
+            label="Email (optional)"
+            type="email"
+            value={addEmail}
+            onChange={(e) => setAddEmail(e.target.value)}
+            placeholder="Leave blank to generate one from the student ID"
+          />
+          <Button className="w-full" loading={addAthleteBusy} onClick={() => void handleAddAthlete()}>
+            {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Add single athlete result */}
+      <Modal
+        open={addAthleteResult !== null}
+        onClose={() => {
+          setAddAthleteResult(null)
+          setAddAthleteResultCopied(false)
+        }}
+        title="Athlete added"
+        size="md"
+      >
+        {addAthleteResult && (
+          <div className="space-y-4">
+            <Alert type="success">
+              <span className="font-semibold">{addAthleteResult.name}</span> was added with the
+              email <span className="font-semibold">{addAthleteResult.email}</span>.{' '}
+              {addAthleteResult.mode === 'invited'
+                ? "They'll get an email to set their own password."
+                : 'This is shown once — copy it now and relay it to them directly.'}
+            </Alert>
+            {addAthleteResult.mode === 'password' && addAthleteResult.tempPassword && (
+              <div className="flex gap-2">
+                <Input readOnly value={addAthleteResult.tempPassword} className="font-mono" />
+                <Button
+                  variant="secondary"
+                  icon={
+                    addAthleteResultCopied ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )
+                  }
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(addAthleteResult.tempPassword ?? '')
+                    setAddAthleteResultCopied(true)
+                  }}
+                >
+                  {addAthleteResultCopied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setAddAthleteResult(null)
+                  setAddAthleteResultCopied(false)
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Roster import modal (CSV or Excel) */}
       <Modal
         open={showImport}
@@ -958,8 +1178,27 @@ export default function OrganizerAthletes() {
                     {importResult.created.length} athlete
                     {importResult.created.length !== 1 ? 's' : ''} imported successfully.
                   </span>{' '}
-                  They are immediately active.
+                  They are immediately active.{' '}
+                  {importResult.invited
+                    ? "They'll each get an email invite to set their own password."
+                    : 'Their generated passwords are shown below — this is the only time they’re shown, so copy them before closing this dialog.'}
                 </Alert>
+              )}
+              {!importResult.invited && importResult.created.some((c) => c.tempPassword) && (
+                <div className="max-h-48 overflow-y-auto">
+                  <Table
+                    columns={[
+                      { key: 'student_id', label: 'Student ID' },
+                      { key: 'email', label: 'Email' },
+                      { key: 'password', label: 'Password' },
+                    ]}
+                    data={importResult.created.map((c) => ({
+                      student_id: c.student_id,
+                      email: c.email,
+                      password: <span className="font-mono text-xs">{c.tempPassword}</span>,
+                    }))}
+                  />
+                </div>
               )}
               {importResult.errors.length > 0 && (
                 <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 space-y-1.5 max-h-48 overflow-y-auto">
