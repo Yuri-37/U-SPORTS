@@ -140,6 +140,16 @@ export default function SuperAdminOrganizers() {
   const [listError, setListError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // Whether new accounts get an invite email (self-service password) or the
+  // admin sets a password directly — off until SMTP is configured server-side.
+  const [inviteEmailsEnabled, setInviteEmailsEnabled] = useState(false)
+  useEffect(() => {
+    api
+      .get<{ inviteEmailsEnabled: boolean }>('/admin/config')
+      .then(({ data }) => setInviteEmailsEnabled(data.inviteEmailsEnabled))
+      .catch(() => setInviteEmailsEnabled(false))
+  }, [])
+
   // Super Admins
   const [admins, setAdmins] = useState<AdminAccount[]>([])
   const [adminsLoading, setAdminsLoading] = useState(true)
@@ -184,24 +194,28 @@ export default function SuperAdminOrganizers() {
       setAddingAdmin(false)
       return
     }
-    if (addAdminPassword.length < 8) {
-      setAddAdminError('Password must be at least 8 characters')
-      setAddingAdmin(false)
-      return
-    }
-    if (addAdminPassword !== addAdminConfirmPassword) {
-      setAddAdminError('Passwords do not match')
-      setAddingAdmin(false)
-      return
+    if (!inviteEmailsEnabled) {
+      if (addAdminPassword.length < 8) {
+        setAddAdminError('Password must be at least 8 characters')
+        setAddingAdmin(false)
+        return
+      }
+      if (addAdminPassword !== addAdminConfirmPassword) {
+        setAddAdminError('Passwords do not match')
+        setAddingAdmin(false)
+        return
+      }
     }
     try {
       await api.post('/admin/admins', {
         full_name: addAdminName.trim(),
         email: addAdminEmail.trim(),
-        password: addAdminPassword,
+        ...(inviteEmailsEnabled ? {} : { password: addAdminPassword }),
       })
       setSuccess(
-        `Super Admin account created for ${addAdminEmail.trim()}. Share the sign-in page and password with them securely.`,
+        inviteEmailsEnabled
+          ? `Invitation email sent to ${addAdminEmail.trim()}.`
+          : `Super Admin account created for ${addAdminEmail.trim()}. Share the sign-in page and password with them securely.`,
       )
       resetAddAdminForm()
       setShowAddAdmin(false)
@@ -255,10 +269,9 @@ export default function SuperAdminOrganizers() {
   // Reset password
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState<StaffWithProfile | null>(null)
   const [resetPasswordBusy, setResetPasswordBusy] = useState(false)
-  const [resetPasswordResult, setResetPasswordResult] = useState<{
-    name: string
-    tempPassword: string
-  } | null>(null)
+  const [resetPasswordResult, setResetPasswordResult] = useState<
+    { name: string; mode: 'email' } | { name: string; mode: 'password'; tempPassword: string } | null
+  >(null)
   const [resetPasswordCopied, setResetPasswordCopied] = useState(false)
 
   /**
@@ -310,6 +323,7 @@ export default function SuperAdminOrganizers() {
       email: addEmail,
       password: addPassword,
       confirmPassword: addConfirmPassword,
+      requirePassword: !inviteEmailsEnabled,
       role: addRole,
       department: addRole === 'Coach' ? addDepartment : null,
       assigned_sports: addSports,
@@ -323,7 +337,7 @@ export default function SuperAdminOrganizers() {
       await api.post('/admin/organizers', {
         email: parsed.data.email,
         full_name: parsed.data.full_name,
-        password: parsed.data.password,
+        ...(inviteEmailsEnabled ? {} : { password: parsed.data.password }),
         role: parsed.data.role,
         department: parsed.data.department,
         assigned_sports: parsed.data.assigned_sports,
@@ -333,7 +347,9 @@ export default function SuperAdminOrganizers() {
         ...(addSeasonIds.length > 0 ? { season_ids: addSeasonIds } : {}),
       })
       setSuccess(
-        `${parsed.data.role} account created for ${parsed.data.email}. Share the sign-in page and password with them securely.`,
+        inviteEmailsEnabled
+          ? `Invitation email sent to ${parsed.data.email}.`
+          : `${parsed.data.role} account created for ${parsed.data.email}. Share the sign-in page and password with them securely.`,
       )
       resetAddForm()
       setShowAdd(false)
@@ -418,16 +434,16 @@ export default function SuperAdminOrganizers() {
     }
   }
 
-  const confirmResetPassword = async () => {
+  const confirmResetPassword = async (mode: 'email' | 'password') => {
     if (!resetPasswordConfirm) return
     setResetPasswordBusy(true)
     try {
-      const { data } = await api.post<{ tempPassword: string }>(
-        `/admin/organizers/${resetPasswordConfirm.id}/reset-password`,
-      )
+      const { data } = await api.post<
+        { mode: 'email' } | { mode: 'password'; tempPassword: string }
+      >(`/admin/organizers/${resetPasswordConfirm.id}/reset-password`, { mode })
       setResetPasswordResult({
         name: resetPasswordConfirm.profile?.full_name ?? 'this staff member',
-        tempPassword: data.tempPassword,
+        ...data,
       })
       setResetPasswordConfirm(null)
       setListError('')
@@ -728,12 +744,11 @@ export default function SuperAdminOrganizers() {
         {resetPasswordConfirm && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
-              Generate a new temporary password for{' '}
+              Reset the password for{' '}
               <span className="font-semibold">{resetPasswordConfirm.profile?.full_name}</span>?
-              Their current password stops working immediately — you'll need to relay the new one
-              to them directly (there's no self-service reset yet).
+              Their current password stops working immediately.
             </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 flex-wrap">
               <Button
                 variant="secondary"
                 onClick={() => setResetPasswordConfirm(null)}
@@ -741,9 +756,24 @@ export default function SuperAdminOrganizers() {
               >
                 Cancel
               </Button>
-              <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword()}>
-                Generate new password
-              </Button>
+              {inviteEmailsEnabled ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    loading={resetPasswordBusy}
+                    onClick={() => void confirmResetPassword('password')}
+                  >
+                    Use temporary password
+                  </Button>
+                  <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('email')}>
+                    Send reset email
+                  </Button>
+                </>
+              ) : (
+                <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('password')}>
+                  Generate new password
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -759,7 +789,20 @@ export default function SuperAdminOrganizers() {
         title="Password reset"
         size="md"
       >
-        {resetPasswordResult && (
+        {resetPasswordResult?.mode === 'email' ? (
+          <div className="space-y-4">
+            <Alert type="success">
+              Reset email sent to{' '}
+              <span className="font-semibold">{resetPasswordResult.name}</span>. They'll get a
+              link to choose a new password.
+            </Alert>
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setResetPasswordResult(null)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : resetPasswordResult?.mode === 'password' ? (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
               New temporary password for{' '}
@@ -793,7 +836,7 @@ export default function SuperAdminOrganizers() {
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </Modal>
 
       {/* Add Super Admin modal */}
@@ -807,8 +850,9 @@ export default function SuperAdminOrganizers() {
         title="Add Super Admin"
       >
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          Creates their login immediately with full platform access. No email is sent — share the
-          password with them directly.
+          {inviteEmailsEnabled
+            ? "Sends an email invite with full platform access. They'll set their own password to finish setting up."
+            : 'Creates their login immediately with full platform access. No email is sent — share the password with them directly.'}
         </p>
         {addAdminError && (
           <Alert type="danger" className="mb-4">
@@ -830,29 +874,33 @@ export default function SuperAdminOrganizers() {
             placeholder="admin@school.edu"
             icon={<Mail className="w-4 h-4" />}
           />
-          <div>
-            <Input
-              label="Temporary password"
-              type="password"
-              value={addAdminPassword}
-              onChange={(e) => setAddAdminPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              icon={<Lock className="w-4 h-4" />}
-            />
-            <PasswordStrengthMeter password={addAdminPassword} />
-          </div>
-          <Input
-            label="Confirm password"
-            type="password"
-            value={addAdminConfirmPassword}
-            onChange={(e) => setAddAdminConfirmPassword(e.target.value)}
-            placeholder="Repeat password"
-            autoComplete="new-password"
-            icon={<Lock className="w-4 h-4" />}
-          />
+          {!inviteEmailsEnabled && (
+            <>
+              <div>
+                <Input
+                  label="Temporary password"
+                  type="password"
+                  value={addAdminPassword}
+                  onChange={(e) => setAddAdminPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  icon={<Lock className="w-4 h-4" />}
+                />
+                <PasswordStrengthMeter password={addAdminPassword} />
+              </div>
+              <Input
+                label="Confirm password"
+                type="password"
+                value={addAdminConfirmPassword}
+                onChange={(e) => setAddAdminConfirmPassword(e.target.value)}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                icon={<Lock className="w-4 h-4" />}
+              />
+            </>
+          )}
           <Button className="w-full" loading={addingAdmin} onClick={handleAddAdmin}>
-            Create account
+            {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
           </Button>
         </div>
       </Modal>
@@ -868,7 +916,9 @@ export default function SuperAdminOrganizers() {
         title="Add staff member"
       >
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          Creates their login immediately. No email is sent — share the password with them directly.
+          {inviteEmailsEnabled
+            ? "Sends an email invite. They'll set their own password to finish setting up."
+            : 'Creates their login immediately. No email is sent — share the password with them directly.'}
         </p>
         {addError && (
           <Alert type="danger" className="mb-4">
@@ -890,27 +940,31 @@ export default function SuperAdminOrganizers() {
             placeholder="staff@school.edu"
             icon={<Mail className="w-4 h-4" />}
           />
-          <div>
-            <Input
-              label="Temporary password"
-              type="password"
-              value={addPassword}
-              onChange={(e) => setAddPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              icon={<Lock className="w-4 h-4" />}
-            />
-            <PasswordStrengthMeter password={addPassword} />
-          </div>
-          <Input
-            label="Confirm password"
-            type="password"
-            value={addConfirmPassword}
-            onChange={(e) => setAddConfirmPassword(e.target.value)}
-            placeholder="Repeat password"
-            autoComplete="new-password"
-            icon={<Lock className="w-4 h-4" />}
-          />
+          {!inviteEmailsEnabled && (
+            <>
+              <div>
+                <Input
+                  label="Temporary password"
+                  type="password"
+                  value={addPassword}
+                  onChange={(e) => setAddPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  icon={<Lock className="w-4 h-4" />}
+                />
+                <PasswordStrengthMeter password={addPassword} />
+              </div>
+              <Input
+                label="Confirm password"
+                type="password"
+                value={addConfirmPassword}
+                onChange={(e) => setAddConfirmPassword(e.target.value)}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                icon={<Lock className="w-4 h-4" />}
+              />
+            </>
+          )}
           <div className={addRole === 'Coach' ? 'grid grid-cols-2 gap-3' : ''}>
             <Select
               label="Role"
@@ -950,7 +1004,7 @@ export default function SuperAdminOrganizers() {
             onChange={setAddSeasonIds}
           />
           <Button className="w-full" loading={adding} onClick={handleAddStaff}>
-            Create account
+            {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
           </Button>
         </div>
       </Modal>

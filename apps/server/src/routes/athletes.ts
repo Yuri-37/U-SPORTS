@@ -1,8 +1,8 @@
-import { randomBytes } from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { respondIfSportForbidden } from '../utils/organizerSportAccess'
+import { resetAccountPassword, type PasswordResetResult } from '../utils/accountEmail'
 import supabase from '../utils/supabase'
 
 const router = Router()
@@ -239,38 +239,46 @@ router.get(
   },
 )
 
-// No self-service "forgot password" can deliver email until SMTP is
-// configured, and even then a student's inbox may be slow to check. This
-// gives an admin/coach/organizer a way to restore access immediately —
-// same trust model as setting the first password at account creation.
+// Lets staff restore an athlete's access: either trigger a self-service
+// reset email (mode: 'email', the same flow as /auth/forgot-password) or
+// mint a temporary password to relay by hand (mode: 'password', the
+// explicit fallback for a dead/unreachable inbox). Same helper and same
+// choice as the staff reset in routes/admin.ts.
 router.post(
   '/:id/reset-password',
   requireAuth,
   requireRole('Organizer', 'Admin', 'Coach'),
   async (req: AuthRequest, res) => {
+    const mode = req.body?.mode === 'email' ? 'email' : 'password'
+
     const { data: athlete, error } = await supabase
       .from('athletes')
-      .select('sport, profile_id')
+      .select('sport, profile_id, profile:profiles!athletes_profile_id_fkey(email)')
       .eq('id', req.params.id)
       .maybeSingle()
     if (error) return res.status(500).json({ error: error.message })
     if (!athlete) return res.status(404).json({ error: 'Athlete not found' })
     if (await respondIfSportForbidden(req, res, athlete.sport)) return
 
-    const tempPassword = randomBytes(9).toString('base64url')
-    const { error: updateError } = await supabase.auth.admin.updateUserById(athlete.profile_id, {
-      password: tempPassword,
-    })
-    if (updateError) return res.status(400).json({ error: updateError.message })
+    let result: PasswordResetResult
+    try {
+      const email = (athlete.profile as { email?: string } | null)?.email
+      if (mode === 'email' && !email) {
+        return res.status(400).json({ error: 'No email on file for this athlete' })
+      }
+      result = await resetAccountPassword({ profileId: athlete.profile_id, email: email ?? '', mode })
+    } catch (e: unknown) {
+      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not reset password' })
+    }
 
     await supabase.from('audit_logs').insert({
       actor_id: req.user!.id,
-      action: 'athlete_password_reset',
+      action: mode === 'email' ? 'athlete_password_reset_email' : 'athlete_password_reset',
       entity_type: 'athlete',
       entity_id: req.params.id,
     })
 
-    res.json({ tempPassword })
+    res.json(result)
   },
 )
 

@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto'
 import { Router } from 'express'
 import multer from 'multer'
 import { z } from 'zod'
@@ -13,6 +12,13 @@ import {
 } from '../utils/institutionLogoStorage'
 import { validateSeasonDates } from '../utils/seasonDates'
 import { fetchActiveSportSlugs, type AppSport } from '../utils/organizerSportAccess'
+import {
+  createStaffAuthUser,
+  inviteEmailsEnabled,
+  resetAccountPassword,
+  type StaffAccountResult,
+  type PasswordResetResult,
+} from '../utils/accountEmail'
 
 const router = Router()
 
@@ -44,6 +50,14 @@ router.get('/stats', requireAuth, requireRole('Admin', 'Organizer'), async (_req
     activeEvents: events.count ?? 0,
     currentSeason: seasons.data,
   })
+})
+
+// Lets the Add/Edit Staff, Add Admin, and reset-password forms (staff and
+// athlete) know whether email delivery can be relied on -- see
+// utils/accountEmail.ts. Any staff role can read this: it's just a
+// boolean, and Organizers/Coaches need it too for the athlete reset flow.
+router.get('/config', requireAuth, requireRole('Admin', 'Organizer', 'Coach'), async (_req, res) => {
+  res.json({ inviteEmailsEnabled: inviteEmailsEnabled() })
 })
 
 // List organizers (super admin)
@@ -115,7 +129,10 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       // Organizers aren't, so this is optional/absent for them.
       department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
       assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
-      password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+      // Optional at the schema level -- required only when invite emails are
+      // disabled, checked below (inviteEmailsEnabled() is an env toggle, not
+      // something zod can see at schema-build time).
+      password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
       season_ids: z.array(z.string().uuid()).optional(),
     })
     .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
@@ -126,6 +143,10 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       message: 'Department is required for coaches',
       path: ['department'],
     })
+    .refine((v) => inviteEmailsEnabled() || Boolean(v.password), {
+      message: 'Password is required',
+      path: ['password'],
+    })
 
   try {
     const parsed = schema.parse(req.body)
@@ -134,10 +155,10 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     const role = parsed.role
     const department = role === 'Coach' ? (parsed.department ?? null) : null
     const assigned_sports = parsed.assigned_sports
-    const password = parsed.password
 
-    // Check before createUser so a rejection can't leave an orphaned auth user.
-    // department is guaranteed non-null here by the schema's refine above.
+    // Check before creating the auth user so a rejection can't leave an
+    // orphaned auth user. department is guaranteed non-null here by the
+    // schema's refine above.
     if (role === 'Coach' && department) {
       const conflict = await findCoachSportConflict(department, assigned_sports)
       if (conflict) {
@@ -147,16 +168,13 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       }
     }
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      app_metadata: { role },
-      user_metadata: { full_name, department },
-    })
-
-    if (authError || !authData?.user?.id) {
-      const msg = authError?.message ?? 'Could not create staff account'
+    let account: StaffAccountResult
+    try {
+      account = await createStaffAuthUser({
+        email, password: parsed.password, role, fullName: full_name, department,
+      })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Could not create staff account'
       if (/already registered|already exists/i.test(msg)) {
         return res.status(400).json({
           error:
@@ -165,9 +183,10 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       }
       throw new Error(msg)
     }
+    const userId = account.userId
 
     const { error: profileError } = await supabase.from('profiles').upsert({
-      id: authData.user.id,
+      id: userId,
       email,
       full_name,
       role,
@@ -178,7 +197,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     const { data: newOrganizer, error: organizerError } = await supabase
       .from('organizers')
       .upsert({
-        profile_id: authData.user.id,
+        profile_id: userId,
         assigned_sports,
         is_active: true,
         invited_by: req.user!.id,
@@ -212,14 +231,17 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       actor_id: req.user!.id,
       action: 'staff_created',
       entity_type: 'staff',
-      entity_id: authData.user.id,
+      entity_id: userId,
       details: { email, role, department, assigned_sports, season_count: seasonIds.length },
     })
     if (auditError) throw new Error(auditError.message)
 
     res.status(201).json({
       success: true,
-      message: `${role} account created for ${email}. They can sign in with this email and the password you set.`,
+      message:
+        account.mode === 'invited'
+          ? `Invitation email sent to ${email}. They'll set their own password to finish setting up their ${role} account.`
+          : `${role} account created for ${email}. They can sign in with this email and the password you set.`,
     })
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
@@ -394,36 +416,47 @@ router.patch(
   },
 )
 
-// No self-service "forgot password" can deliver email until SMTP is
-// configured — this gives an admin a way to restore an organizer/coach's
-// access immediately, same trust model as setting their first password.
+// Lets an admin restore an organizer/coach's access: either trigger a
+// self-service reset email (mode: 'email', the same flow as
+// /auth/forgot-password) or mint a temporary password to relay by hand
+// (mode: 'password', the explicit fallback for a dead/unreachable inbox).
 router.post(
   '/organizers/:id/reset-password',
   requireAuth,
   requireRole('Admin'),
   async (req: AuthRequest, res) => {
+    const mode = req.body?.mode === 'email' ? 'email' : 'password'
+
     const { data: organizer } = await supabase
       .from('organizers')
-      .select('profile_id')
+      .select('profile_id, profile:profiles!organizers_profile_id_fkey(email)')
       .eq('id', req.params.id)
       .maybeSingle()
     if (!organizer) return res.status(404).json({ error: 'Organizer not found' })
 
-    const tempPassword = randomBytes(9).toString('base64url')
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      organizer.profile_id,
-      { password: tempPassword },
-    )
-    if (updateError) return res.status(400).json({ error: updateError.message })
+    let result: PasswordResetResult
+    try {
+      const email = (organizer.profile as { email?: string } | null)?.email
+      if (mode === 'email' && !email) {
+        return res.status(400).json({ error: 'No email on file for this account' })
+      }
+      result = await resetAccountPassword({
+        profileId: organizer.profile_id,
+        email: email ?? '',
+        mode,
+      })
+    } catch (e: unknown) {
+      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not reset password' })
+    }
 
     await supabase.from('audit_logs').insert({
       actor_id: req.user!.id,
-      action: 'organizer_password_reset',
+      action: mode === 'email' ? 'organizer_password_reset_email' : 'organizer_password_reset',
       entity_type: 'staff',
       entity_id: req.params.id,
     })
 
-    res.json({ tempPassword })
+    res.json(result)
   },
 )
 
@@ -439,31 +472,33 @@ router.get('/admins', requireAuth, requireRole('Admin'), async (_req, res) => {
   res.json(data ?? [])
 })
 
-// Create another Super Admin account (no email sent — shares credentials directly,
-// same pattern as staff creation). Lets the default admin hand off / add more admins
-// without touching Supabase Auth by hand.
+// Create another Super Admin account. Sends an invite email when
+// INVITE_EMAILS_ENABLED, otherwise falls back to the admin setting a
+// password directly, same pattern as staff creation.
 router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
-  const schema = z.object({
-    email: z.string().trim().email(),
-    full_name: z.string().min(1),
-    password: z.string().min(8, 'Password must be at least 8 characters').max(128),
-  })
+  const schema = z
+    .object({
+      email: z.string().trim().email(),
+      full_name: z.string().min(1),
+      password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
+    })
+    .refine((v) => inviteEmailsEnabled() || Boolean(v.password), {
+      message: 'Password is required',
+      path: ['password'],
+    })
 
   try {
     const parsed = schema.parse(req.body)
     const email = parsed.email.trim().toLowerCase()
     const full_name = parsed.full_name.trim()
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password: parsed.password,
-      email_confirm: true,
-      app_metadata: { role: 'Admin' },
-      user_metadata: { full_name },
-    })
-
-    if (authError || !authData?.user?.id) {
-      const msg = authError?.message ?? 'Could not create admin account'
+    let account: StaffAccountResult
+    try {
+      account = await createStaffAuthUser({
+        email, password: parsed.password, role: 'Admin', fullName: full_name, department: null,
+      })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Could not create admin account'
       if (/already registered|already exists/i.test(msg)) {
         return res.status(400).json({
           error:
@@ -472,23 +507,27 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
       }
       throw new Error(msg)
     }
+    const userId = account.userId
 
     const { error: profileError } = await supabase
       .from('profiles')
-      .upsert({ id: authData.user.id, email, full_name, role: 'Admin' })
+      .upsert({ id: userId, email, full_name, role: 'Admin' })
     if (profileError) throw new Error(profileError.message)
 
     await supabase.from('audit_logs').insert({
       actor_id: req.user!.id,
       action: 'admin_created',
       entity_type: 'staff',
-      entity_id: authData.user.id,
+      entity_id: userId,
       details: { email },
     })
 
     res.status(201).json({
       success: true,
-      message: `Super Admin account created for ${email}. They can sign in with this email and the password you set.`,
+      message:
+        account.mode === 'invited'
+          ? `Invitation email sent to ${email}. They'll set their own password to finish setting up their Super Admin account.`
+          : `Super Admin account created for ${email}. They can sign in with this email and the password you set.`,
     })
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {

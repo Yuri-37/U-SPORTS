@@ -83,11 +83,20 @@ export default function OrganizerAthletes() {
     name: string
   } | null>(null)
   const [resetPasswordBusy, setResetPasswordBusy] = useState(false)
-  const [resetPasswordResult, setResetPasswordResult] = useState<{
-    name: string
-    tempPassword: string
-  } | null>(null)
+  const [resetPasswordResult, setResetPasswordResult] = useState<
+    { name: string; mode: 'email' } | { name: string; mode: 'password'; tempPassword: string } | null
+  >(null)
   const [resetPasswordCopied, setResetPasswordCopied] = useState(false)
+
+  // Whether an admin-triggered reset can rely on email delivery — off until
+  // SMTP is configured server-side (see utils/accountEmail.ts).
+  const [inviteEmailsEnabled, setInviteEmailsEnabled] = useState(false)
+  useEffect(() => {
+    api
+      .get<{ inviteEmailsEnabled: boolean }>('/admin/config')
+      .then(({ data }) => setInviteEmailsEnabled(data.inviteEmailsEnabled))
+      .catch(() => setInviteEmailsEnabled(false))
+  }, [])
 
   // Roster import state (CSV or Excel)
   const [showImport, setShowImport] = useState(false)
@@ -210,15 +219,15 @@ export default function OrganizerAthletes() {
     }
   }
 
-  const confirmResetPassword = async () => {
+  const confirmResetPassword = async (mode: 'email' | 'password') => {
     if (!resetPasswordConfirm) return
     setResetPasswordBusy(true)
     setLoadMessage('')
     try {
-      const { data } = await api.post<{ tempPassword: string }>(
-        `/athletes/${resetPasswordConfirm.id}/reset-password`,
-      )
-      setResetPasswordResult({ name: resetPasswordConfirm.name, tempPassword: data.tempPassword })
+      const { data } = await api.post<
+        { mode: 'email' } | { mode: 'password'; tempPassword: string }
+      >(`/athletes/${resetPasswordConfirm.id}/reset-password`, { mode })
+      setResetPasswordResult({ name: resetPasswordConfirm.name, ...data })
       setResetPasswordConfirm(null)
     } catch (e: unknown) {
       const msg =
@@ -672,12 +681,11 @@ export default function OrganizerAthletes() {
         {resetPasswordConfirm && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
-              Generate a new temporary password for{' '}
+              Reset the password for{' '}
               <span className="font-semibold">{resetPasswordConfirm.name}</span>? Their current
-              password stops working immediately — you'll need to relay the new one to them
-              directly (there's no self-service reset yet).
+              password stops working immediately.
             </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 flex-wrap">
               <Button
                 variant="secondary"
                 onClick={() => setResetPasswordConfirm(null)}
@@ -685,9 +693,24 @@ export default function OrganizerAthletes() {
               >
                 Cancel
               </Button>
-              <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword()}>
-                Generate new password
-              </Button>
+              {inviteEmailsEnabled ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    loading={resetPasswordBusy}
+                    onClick={() => void confirmResetPassword('password')}
+                  >
+                    Use temporary password
+                  </Button>
+                  <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('email')}>
+                    Send reset email
+                  </Button>
+                </>
+              ) : (
+                <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('password')}>
+                  Generate new password
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -702,7 +725,19 @@ export default function OrganizerAthletes() {
         title="Password reset"
         size="md"
       >
-        {resetPasswordResult && (
+        {resetPasswordResult?.mode === 'email' ? (
+          <div className="space-y-4">
+            <Alert type="success">
+              Reset email sent to <span className="font-semibold">{resetPasswordResult.name}</span>.
+              They'll get a link to choose a new password.
+            </Alert>
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setResetPasswordResult(null)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : resetPasswordResult?.mode === 'password' ? (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
               New temporary password for{' '}
@@ -736,7 +771,7 @@ export default function OrganizerAthletes() {
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </Modal>
 
       {/* Roster import modal (CSV or Excel) */}
