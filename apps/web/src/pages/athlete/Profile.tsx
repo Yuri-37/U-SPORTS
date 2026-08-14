@@ -6,6 +6,7 @@ import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 import { Trophy, Users } from 'lucide-react'
 import { deriveEliminationPodium, placementRankLabel } from '../../lib/eventPlacements'
 import { useNavigate } from 'react-router'
+import AvatarUpload from '../../components/settings/AvatarUpload'
 
 type AthleteTeamSummary = {
   teamId: string
@@ -174,9 +175,7 @@ export default function AthleteProfile() {
       <h1 className="text-2xl font-bold">My Profile</h1>
 
       <Card className="flex items-center gap-6">
-        <div className="w-20 h-20 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-2xl font-bold text-[var(--school-secondary)] flex-shrink-0">
-          {getInitials(profile.full_name)}
-        </div>
+        <AvatarUpload size="lg" fallbackInitials={getInitials(profile.full_name)} />
         <div>
           <h2 className="font-bold text-xl">{profile.full_name}</h2>
           <p className="text-[var(--text-muted)] text-sm">{profile.email}</p>

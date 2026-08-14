@@ -1,15 +1,14 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../theme/layout_tokens.dart';
 import '../../utils/event_placements.dart';
 import '../../utils/sport_helpers.dart';
 import '../../utils/error_helpers.dart';
+import '../../widgets/avatar_upload_button.dart';
 
 class AthleteOwnProfileScreen extends ConsumerStatefulWidget {
   const AthleteOwnProfileScreen({super.key});
@@ -91,19 +90,10 @@ class _AthleteOwnProfileScreenState extends ConsumerState<AthleteOwnProfileScree
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
+                          AvatarUploadButton(
+                            avatarUrl: profile.avatarUrl,
+                            fallbackInitial: initial,
                             radius: 40,
-                            backgroundColor: AppTheme.schoolPrimary,
-                            backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-                                ? CachedNetworkImageProvider(profile.avatarUrl!)
-                                : null,
-                            child: profile.avatarUrl == null || profile.avatarUrl!.isEmpty
-                                ? Text(
-                                    initial,
-                                    style: TextStyle(
-                                        fontSize: 32, color: AppTheme.schoolSecondary, fontWeight: FontWeight.w900),
-                                  )
-                                : null,
                           ),
                           const SizedBox(width: 16),
                           Expanded(

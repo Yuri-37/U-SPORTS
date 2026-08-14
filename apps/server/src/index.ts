@@ -17,6 +17,7 @@ import adminRouter from './routes/admin'
 import studentsRouter from './routes/students'
 import participantsRouter from './routes/participants'
 import notificationsRouter from './routes/notifications'
+import profileRouter from './routes/profile'
 import { bootstrapDefaultAdmin } from './utils/bootstrapAdmin'
 
 const app = express()
@@ -97,6 +98,7 @@ app.use('/api/admin', adminRouter)
 app.use('/api/students', studentsRouter)
 app.use('/api/participants', participantsRouter)
 app.use('/api/notifications', notificationsRouter)
+app.use('/api/profile', profileRouter)
 
 // Friendly root — API has no HTML; avoids "is the server broken?" confusion
 app.get('/', (_req, res) => {

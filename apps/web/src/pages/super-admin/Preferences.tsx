@@ -4,8 +4,13 @@ import { Card } from '../../components/ui'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
+import AvatarUpload from '../../components/settings/AvatarUpload'
+import { useAuthStore } from '../../stores/authStore'
+import { getInitials } from '../../lib/utils'
 
 export default function SuperAdminPreferences() {
+  const { profile } = useAuthStore()
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -14,6 +19,14 @@ export default function SuperAdminPreferences() {
           Personal preferences — dark mode is in the header.
         </p>
       </div>
+
+      <Card className="p-6 flex items-center gap-4">
+        <AvatarUpload size="md" fallbackInitials={getInitials(profile?.full_name ?? 'A')} />
+        <div>
+          <p className="font-bold">{profile?.full_name}</p>
+          <p className="text-sm text-[var(--text-muted)]">{profile?.email}</p>
+        </div>
+      </Card>
 
       <ChangePasswordSection />
 

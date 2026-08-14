@@ -3,6 +3,10 @@
     <!-- Required on Android 13+ (API 33+) to post any notification, including
          FCM push — requested at runtime too via FirebaseMessaging.requestPermission(). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Camera option in the profile-photo picker (image_picker). Gallery
+         selection uses the system Photos Picker and needs no permission
+         declaration here. -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <!-- Local Supabase/API use http:// — cleartext is blocked by default on Android 9+. -->
     <application
         android:label="U-Sports"

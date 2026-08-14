@@ -26,6 +26,10 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Choose a profile photo from your photo library.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Take a profile photo with your camera.</string>
 		<!-- Password-reset deep link — the email link opens
 		     usports://reset-password#access_token=...&type=recovery,
 		     caught in main.dart via app_links. -->

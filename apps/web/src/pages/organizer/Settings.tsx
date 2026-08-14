@@ -6,6 +6,7 @@ import { sessionScopedProfile } from '../../lib/sessionProfile'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
+import AvatarUpload from '../../components/settings/AvatarUpload'
 
 export default function OrganizerSettings() {
   const { profile, organizer, session } = useAuthStore()
@@ -20,9 +21,7 @@ export default function OrganizerSettings() {
 
       <Card>
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xl font-bold text-[var(--school-secondary)]">
-            {getInitials(scopedProfile?.full_name ?? 'O')}
-          </div>
+          <AvatarUpload size="md" fallbackInitials={getInitials(scopedProfile?.full_name ?? 'O')} />
           <div>
             <h2 className="font-bold text-lg">{scopedProfile?.full_name}</h2>
             <p className="text-sm text-[var(--text-muted)]">{scopedProfile?.email}</p>
