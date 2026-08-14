@@ -191,7 +191,10 @@ export default function AthleteProfile() {
       </Card>
 
       <Card>
-        <h3 className="font-bold mb-4">Athlete Details</h3>
+        <h3 className="font-bold mb-1">Athlete Details</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">
+          Managed by your organizer or coach — contact them for any changes.
+        </p>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-xs text-[var(--text-muted)] mb-1">Student ID</p>
