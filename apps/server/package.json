@@ -14,7 +14,8 @@
     "inspect:data": "tsx src/scripts/inspectData.ts",
     "reset:seed": "tsx src/scripts/resetAndSeed.ts",
     "make:import-files": "tsx src/scripts/makeImportFiles.ts",
-    "fix:shs-years": "tsx src/scripts/fixShsYearLevels.ts"
+    "fix:shs-years": "tsx src/scripts/fixShsYearLevels.ts",
+    "migrate:apply": "tsx src/scripts/applyMigration.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

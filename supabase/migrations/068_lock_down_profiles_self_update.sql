@@ -1,0 +1,26 @@
+-- SECURITY FIX: profiles_update_own (002, recreated in 037) lets any
+-- authenticated user UPDATE their own profiles row with NO column
+-- restriction and no WITH CHECK. RLS's USING clause only gates *which row*
+-- can be touched, not which columns -- so any signed-in user (an athlete,
+-- say) could call, straight from the browser console using the app's own
+-- Supabase client:
+--
+--   supabase.from('profiles').update({ role: 'Admin' }).eq('id', myId)
+--
+-- and succeed, since 053_grant_default_table_privileges.sql already grants
+-- the `authenticated` role blanket UPDATE on all public tables and RLS is
+-- the only remaining gate. Every server request re-derives role straight
+-- from profiles.role (middleware/auth.ts), so this is a full self-service
+-- path to Admin, not a theoretical one.
+--
+-- Confirmed no legitimate code depends on this: every profile write in
+-- this app (routes/admin.ts, routes/athletes.ts, routes/students.ts,
+-- routes/auth.ts) goes through the Express API using the service-role
+-- key, which bypasses RLS entirely -- there is no direct-from-client
+-- profiles.update() call anywhere in apps/web or mobile/. So the policy
+-- was pure unused attack surface, not a feature to preserve narrowly.
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+
+-- profiles_select_all (read) and profiles_write_admin (is_admin() gated
+-- FOR ALL) are unaffected and remain the only self/other write paths at
+-- the RLS layer; all real writes continue through the audited server API.
