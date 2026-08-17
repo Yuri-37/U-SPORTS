@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
+import { Stepper } from '../../components/ui/Stepper'
 import api from '../../lib/api'
 import type { Season, Sport } from '../../types'
 import { formatDate, formatEnumLabel, getSportLabel } from '../../lib/utils'
@@ -133,6 +134,11 @@ export default function SuperAdminSeasons() {
     staff_ids: [] as string[],
   })
   const [error, setError] = useState('')
+  // Starter placeholders, generated right after the season is created. Default
+  // 0/0 so creating a season keeps its previous behaviour unless asked for.
+  const [starterTeams, setStarterTeams] = useState(0)
+  const [starterEvents, setStarterEvents] = useState(0)
+  const [starterWarning, setStarterWarning] = useState('')
   const [editSeason, setEditSeason] = useState<Season | null>(null)
   const [editForm, setEditForm] = useState({
     name: '',
@@ -199,9 +205,32 @@ export default function SuperAdminSeasons() {
       // so sending `[]` would silently assign nobody instead of everyone.
       const { staff_ids, ...rest } = form
       const payload = staff_ids.length > 0 ? form : rest
-      await api.post('/admin/seasons', payload)
+      const { data: created } = await api.post<{ id: string }>('/admin/seasons', payload)
+
+      // Placeholders are a convenience on top of a season that already exists.
+      // A failure here must not read as "season creation failed" — the season
+      // is already saved, so surface it as a warning and let them retry from
+      // the tour's generator step instead.
+      if (created?.id && (starterTeams > 0 || starterEvents > 0)) {
+        try {
+          await api.post('/season-setup/placeholders', {
+            season_id: created.id,
+            teams_per_sport: starterTeams,
+            events_per_sport: starterEvents,
+            mode: 'top_up',
+            dry_run: false,
+          })
+        } catch {
+          setStarterWarning(
+            `"${form.name}" was created, but the starter teams and events could not be generated. You can add them later.`,
+          )
+        }
+      }
+
       setShowCreate(false)
       setForm({ name: '', start_date: '', end_date: '', sports: [], staff_ids: [] })
+      setStarterTeams(0)
+      setStarterEvents(0)
       fetch()
     } catch (e: any) {
       setError(e.response?.data?.error ?? 'Failed')
@@ -511,6 +540,17 @@ export default function SuperAdminSeasons() {
         )}
       </Modal>
 
+      {starterWarning && (
+        <Alert
+          type="warning"
+          className="mb-4"
+          onDismiss={() => setStarterWarning('')}
+          dismissAriaLabel="Dismiss warning"
+        >
+          {starterWarning}
+        </Alert>
+      )}
+
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Season">
         {error && (
           <Alert type="danger" className="mb-4">
@@ -547,6 +587,37 @@ export default function SuperAdminSeasons() {
             onChange={(sports) => setForm((f) => ({ ...f, sports }))}
             dataTour="seasons-sports"
           />
+          <div className="space-y-2" data-tour="seasons-starters">
+            <div>
+              <p className="text-sm font-medium">Starter teams &amp; events</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Optional placeholders so Organizers and Coaches have something to rename instead of
+                an empty season. Leave at 0 to skip.
+              </p>
+            </div>
+            <Stepper
+              label="Teams per sport"
+              value={starterTeams}
+              onChange={setStarterTeams}
+              max={20}
+              disabled={form.sports.length === 0}
+            />
+            <Stepper
+              label="Events per sport"
+              value={starterEvents}
+              onChange={setStarterEvents}
+              max={10}
+              disabled={form.sports.length === 0}
+            />
+            <p className="text-xs text-[var(--text-muted)]">
+              {form.sports.length === 0
+                ? 'Select at least one sport to add starters.'
+                : `${starterTeams} × ${form.sports.length} sport${form.sports.length === 1 ? '' : 's'} = ` +
+                  `${starterTeams * form.sports.length} team${starterTeams * form.sports.length === 1 ? '' : 's'}, ` +
+                  `${starterEvents} × ${form.sports.length} = ` +
+                  `${starterEvents * form.sports.length} event${starterEvents * form.sports.length === 1 ? '' : 's'}`}
+            </p>
+          </div>
           <StaffCheckboxes
             options={staffOptions}
             selected={form.staff_ids}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Minus, Plus, Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Stepper } from '../../ui/Stepper'
 import api from '../../../lib/api'
 import { getSportLabel, getSportIcon } from '../../../lib/utils'
 import type { TourStepContext } from '../../../tours/types'
@@ -26,48 +27,14 @@ interface Plan {
   existing_placeholders: { teams: number; events: number }
 }
 
-function Stepper({
-  label,
-  value,
-  onChange,
-  max,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  max: number
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(0, value - 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] transition-colors"
-          aria-label={`Decrease ${label}`}
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </button>
-        <span className="w-6 text-center text-sm font-semibold tabular-nums">{value}</span>
-        <button
-          type="button"
-          onClick={() => onChange(Math.min(max, value + 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)] transition-colors"
-          aria-label={`Increase ${label}`}
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
 /**
  * The Super Admin tour's centrepiece: pick a season, set counts per sport,
- * preview, then generate placeholder teams/events. Also surfaced standalone
- * in the Help Center — that's why it takes no tour-specific props beyond
- * the optional `ctx` used to gate the tour's Next button.
+ * preview, then generate placeholder teams/events.
+ *
+ * Seasons.tsx offers the same generation inline in the Create Season modal —
+ * that's the primary path. This step covers the other case: topping up a
+ * season that already exists. `ctx` is optional so the component can be
+ * rendered outside a tour.
  */
 export default function PlaceholderGeneratorStep({ ctx }: { ctx?: TourStepContext }) {
   const [seasons, setSeasons] = useState<SeasonOption[]>([])
