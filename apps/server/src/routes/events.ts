@@ -14,7 +14,7 @@ import { slugifyEventName } from '../utils/eventSlug'
 
 const router = Router()
 
-const EVENT_CATEGORIES: Record<string, string[]> = {
+export const EVENT_CATEGORIES: Record<string, string[]> = {
   basketball: ["Men's Open", "Women's Open", "Men's Varsity", "Women's Varsity", 'Mixed'],
   volleyball: ["Men's Open", "Women's Open", "Men's Varsity", "Women's Varsity", 'Mixed'],
   'table-tennis': [

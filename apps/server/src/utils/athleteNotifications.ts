@@ -45,3 +45,22 @@ export async function profileIdsForTeamRoster(teamId: string): Promise<string[]>
   }
   return [...ids]
 }
+
+/**
+ * Staff notification sites deal in `organizers.id` (season_staff's own
+ * foreign key — it covers both Organizer and Coach roles with one column),
+ * not `profiles.id` directly. This resolves the one hop between them so
+ * insertNotificationsForProfiles can be called the same way as everywhere
+ * else. Nothing about that function is athlete-specific despite the file
+ * name -- it just takes profile IDs.
+ */
+export async function profileIdsForOrganizerIds(organizerIds: string[]): Promise<string[]> {
+  const unique = [...new Set(organizerIds.filter(Boolean))]
+  if (unique.length === 0) return []
+  const { data, error } = await supabase
+    .from('organizers')
+    .select('profile_id')
+    .in('id', unique)
+  if (error) throw new Error(error.message)
+  return [...new Set((data ?? []).map((r) => r.profile_id as string).filter(Boolean))]
+}

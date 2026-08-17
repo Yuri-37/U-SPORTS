@@ -19,6 +19,7 @@ import {
   type AccountCreationResult,
   type PasswordResetResult,
 } from '../utils/accountEmail'
+import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
 
 const router = Router()
 
@@ -236,6 +237,18 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     })
     if (auditError) throw new Error(auditError.message)
 
+    // Best-effort — a notification failure must never fail account creation,
+    // and userId already IS the profile id here (see the auth-user creation
+    // above), no organizer-id -> profile-id hop needed like the other sites.
+    if (seasonIds.length > 0) {
+      insertNotificationsForProfiles([userId], {
+        type: 'season_staff_assigned',
+        title: 'Assigned to a season',
+        body: `You've been added as ${role} on ${seasonIds.length} season${seasonIds.length === 1 ? '' : 's'}. Sign in to see what's assigned to you.`,
+        data: { season_ids: seasonIds },
+      }).catch((err) => console.error('notify season_staff_assigned:', err))
+    }
+
     res.status(201).json({
       success: true,
       message:
@@ -343,6 +356,33 @@ router.patch(
               assigned_by: req.user!.id,
             })),
           )
+        }
+
+        // Best-effort — never fail the request over a notification.
+        if (toAdd.length > 0 || toRemove.length > 0) {
+          void (async () => {
+            const { data: seasonRows } = await supabase
+              .from('seasons')
+              .select('id, name')
+              .in('id', [...toAdd, ...toRemove])
+            const nameById = new Map((seasonRows ?? []).map((s) => [s.id as string, s.name as string]))
+            if (toAdd.length > 0) {
+              await insertNotificationsForProfiles([org.profile_id], {
+                type: 'season_staff_assigned',
+                title: 'Assigned to a season',
+                body: `You've been added to ${toAdd.map((id) => nameById.get(id) ?? 'a season').join(', ')}.`,
+                data: { season_ids: toAdd },
+              })
+            }
+            if (toRemove.length > 0) {
+              await insertNotificationsForProfiles([org.profile_id], {
+                type: 'season_staff_removed',
+                title: 'Removed from a season',
+                body: `You've been removed from ${toRemove.map((id) => nameById.get(id) ?? 'a season').join(', ')}.`,
+                data: { season_ids: toRemove },
+              })
+            }
+          })().catch((err) => console.error('notify season_staff diff:', err))
         }
       }
 
@@ -631,6 +671,18 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
         await supabase.from('seasons').delete().eq('id', data.id)
         throw new Error(staffErr.message)
       }
+
+      // Best-effort — never fail season creation over a notification.
+      void profileIdsForOrganizerIds(staffIds)
+        .then((profileIds) =>
+          insertNotificationsForProfiles(profileIds, {
+            type: 'season_staff_assigned',
+            title: 'Assigned to a season',
+            body: `You've been added to the organizing team for "${body.name}".`,
+            data: { season_id: data.id },
+          }),
+        )
+        .catch((err) => console.error('notify season_staff_assigned:', err))
     }
 
     await writeAuditLog({
@@ -746,6 +798,8 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
       }
     }
 
+    let staffToAdd: string[] = []
+    let staffToRemove: string[] = []
     if (staff_ids !== undefined) {
       const { data: currentStaffRows } = await supabase
         .from('season_staff')
@@ -753,19 +807,19 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
         .eq('season_id', req.params.id)
       const current = new Set((currentStaffRows ?? []).map((r) => r.organizer_id as string))
       const next = new Set(staff_ids)
-      const toAdd = staff_ids.filter((id) => !current.has(id))
-      const toRemove = [...current].filter((id) => !next.has(id))
+      staffToAdd = staff_ids.filter((id) => !current.has(id))
+      staffToRemove = [...current].filter((id) => !next.has(id))
 
-      if (toRemove.length > 0) {
+      if (staffToRemove.length > 0) {
         await supabase
           .from('season_staff')
           .delete()
           .eq('season_id', req.params.id)
-          .in('organizer_id', toRemove)
+          .in('organizer_id', staffToRemove)
       }
-      if (toAdd.length > 0) {
+      if (staffToAdd.length > 0) {
         await supabase.from('season_staff').insert(
-          toAdd.map((organizer_id) => ({
+          staffToAdd.map((organizer_id) => ({
             season_id: req.params.id,
             organizer_id,
             assigned_by: req.user!.id,
@@ -790,6 +844,33 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
               .single()
           ).data
         : (await supabase.from('seasons').select().eq('id', req.params.id).single()).data
+
+    // Best-effort — never fail the update over a notification. Waits until
+    // here for `data.name` (the season row isn't otherwise fetched earlier
+    // in this handler when only staff_ids/sports change, not name/dates).
+    if (staffToAdd.length > 0 || staffToRemove.length > 0) {
+      const seasonName = (data?.name as string | undefined) ?? 'a season'
+      void (async () => {
+        if (staffToAdd.length > 0) {
+          const profileIds = await profileIdsForOrganizerIds(staffToAdd)
+          await insertNotificationsForProfiles(profileIds, {
+            type: 'season_staff_assigned',
+            title: 'Assigned to a season',
+            body: `You've been added to the organizing team for "${seasonName}".`,
+            data: { season_id: req.params.id },
+          })
+        }
+        if (staffToRemove.length > 0) {
+          const profileIds = await profileIdsForOrganizerIds(staffToRemove)
+          await insertNotificationsForProfiles(profileIds, {
+            type: 'season_staff_removed',
+            title: 'Removed from a season',
+            body: `You've been removed from the organizing team for "${seasonName}".`,
+            data: { season_id: req.params.id },
+          })
+        }
+      })().catch((err) => console.error('notify season_staff diff:', err))
+    }
 
     await writeAuditLog({
       actorId: req.user!.id,

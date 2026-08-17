@@ -55,22 +55,22 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
   const bellWrapRef = useRef<HTMLDivElement>(null)
 
   const uid = scopedProfile?.id
-  const usesNotificationPopover = scopedProfile?.role === 'Athlete'
+  const isStaff =
+    scopedProfile?.role === 'Organizer' ||
+    scopedProfile?.role === 'Coach' ||
+    scopedProfile?.role === 'Admin'
+  // Every signed-in role now has a personal inbox — previously this popover
+  // (and its realtime subscription below) was athlete-only, and the bell
+  // routed staff to Announcements (the broadcast feature) instead of
+  // anything personal.
+  const usesNotificationPopover = scopedProfile?.role === 'Athlete' || isStaff
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/auth/login')
   }
 
-  const getNotifRoute = () => {
-    if (
-      scopedProfile?.role === 'Organizer' ||
-      scopedProfile?.role === 'Coach' ||
-      scopedProfile?.role === 'Admin'
-    )
-      return '/organizer/announcements'
-    return '/guest'
-  }
+  const notificationsRoute = isStaff ? '/organizer/notifications' : '/athlete/notifications'
 
   useEffect(() => {
     if (!uid || !usesNotificationPopover) return
@@ -138,10 +138,7 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
         >
           <button
             type="button"
-            onClick={() => {
-              if (usesNotificationPopover) openInboxPopover()
-              else navigate(getNotifRoute())
-            }}
+            onClick={openInboxPopover}
             className="relative p-2 rounded-lg hover:bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
             aria-expanded={usesNotificationPopover ? notifOpen : undefined}
             aria-haspopup={usesNotificationPopover ? 'dialog' : undefined}
@@ -231,7 +228,7 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
                 type="button"
                 onClick={() => {
                   setNotifOpen(false)
-                  navigate('/athlete/notifications')
+                  navigate(notificationsRoute)
                 }}
                 className="w-full text-center text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] py-2 border-t border-[var(--border-subtle)] shrink-0 transition-colors"
               >

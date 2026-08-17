@@ -496,6 +496,7 @@ export default function OrganizerAthletes() {
               resetAddAthleteForm()
               setShowAddAthlete(true)
             }}
+            data-tour="athletes-add"
           >
             Add athlete
           </Button>
@@ -508,6 +509,7 @@ export default function OrganizerAthletes() {
               setImportFile(null)
               setShowImport(true)
             }}
+            data-tour="athletes-import"
           >
             Import roster
           </Button>

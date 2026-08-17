@@ -5,6 +5,7 @@ import ChangePasswordSection from '../../components/settings/ChangePasswordSecti
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 import AvatarUpload from '../../components/settings/AvatarUpload'
+import StaffManualLinkSection from '../../components/settings/StaffManualLinkSection'
 import { useAuthStore } from '../../stores/authStore'
 import { getInitials } from '../../lib/utils'
 
@@ -61,6 +62,8 @@ export default function SuperAdminPreferences() {
           to open the Super Admin portal when signed in as a super admin.
         </p>
       </Card>
+
+      <StaffManualLinkSection />
 
       <PrivacyNoticeLinkSection />
 

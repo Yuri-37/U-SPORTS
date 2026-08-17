@@ -59,9 +59,11 @@ interface CardProps {
   className?: string
   elevated?: boolean
   onClick?: () => void
+  /** Rarely needed — e.g. `data-tour` anchors for the guided tour system. */
+  [dataAttr: `data-${string}`]: string | undefined
 }
 
-export function Card({ children, className, elevated, onClick }: CardProps) {
+export function Card({ children, className, elevated, onClick, ...rest }: CardProps) {
   return (
     <div
       className={cn(
@@ -71,6 +73,7 @@ export function Card({ children, className, elevated, onClick }: CardProps) {
         className,
       )}
       onClick={onClick}
+      {...rest}
     >
       {children}
     </div>

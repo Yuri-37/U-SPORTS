@@ -22,14 +22,18 @@ function SportCheckboxes({
   options,
   selected,
   onChange,
+  dataTour,
 }: {
   options: Sport[]
   selected: string[]
   onChange: (next: string[]) => void
+  /** Only the Create-season call site sets this — shared with Edit, so a
+   *  bare `data-tour` here would match twice in the DOM. */
+  dataTour?: string
 }) {
   const allSelected = options.length > 0 && options.every((s) => selected.includes(s))
   return (
-    <div>
+    <div data-tour={dataTour}>
       <div className="flex items-center justify-between mb-1.5">
         <label className="text-sm font-medium text-[var(--text-secondary)]">Sports</label>
         <button
@@ -68,16 +72,20 @@ function StaffCheckboxes({
   options,
   selected,
   onChange,
+  dataTour,
 }: {
   options: StaffOption[]
   selected: string[]
   onChange: (next: string[]) => void
+  /** Only the Create-season call site sets this — shared with Edit, so a
+   *  bare `data-tour` here would match twice in the DOM. */
+  dataTour?: string
 }) {
   if (options.length === 0) {
     return <p className="text-xs text-[var(--text-muted)]">No staff accounts exist yet.</p>
   }
   return (
-    <div>
+    <div data-tour={dataTour}>
       <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">
         Staff in charge
       </label>
@@ -312,7 +320,11 @@ export default function SuperAdminSeasons() {
           <h1 className="text-2xl font-bold">Seasons</h1>
           <p className="text-[var(--text-muted)] text-sm">Manage the sports season lifecycle</p>
         </div>
-        <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+        <Button
+          icon={<Plus className="w-4 h-4" />}
+          onClick={() => setShowCreate(true)}
+          data-tour="seasons-new"
+        >
           New Season
         </Button>
       </div>
@@ -532,16 +544,23 @@ export default function SuperAdminSeasons() {
             options={sportOptions}
             selected={form.sports}
             onChange={(sports) => setForm((f) => ({ ...f, sports }))}
+            dataTour="seasons-sports"
           />
           <StaffCheckboxes
             options={staffOptions}
             selected={form.staff_ids}
             onChange={(staff_ids) => setForm((f) => ({ ...f, staff_ids }))}
+            dataTour="seasons-staff"
           />
           <p className="text-xs text-[var(--text-muted)]">
             Leave staff unselected to assign every current Organizer/Coach by default.
           </p>
-          <Button className="w-full" loading={creating} onClick={handleCreate}>
+          <Button
+            className="w-full"
+            loading={creating}
+            onClick={handleCreate}
+            data-tour="seasons-create-submit"
+          >
             Create Season
           </Button>
         </div>

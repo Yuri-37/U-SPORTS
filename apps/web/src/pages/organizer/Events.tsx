@@ -108,6 +108,7 @@ export default function OrganizerEvents() {
             icon={<Plus className="w-4 h-4" />}
             onClick={() => setShowCreate(true)}
             disabled={!canCreateEvents}
+            data-tour="events-create-header"
           >
             New Event
           </Button>
@@ -156,7 +157,11 @@ export default function OrganizerEvents() {
             title="No events found"
             description="Create your first event to get started"
             action={
-              <Button onClick={() => setShowCreate(true)} disabled={!canCreateEvents}>
+              <Button
+                onClick={() => setShowCreate(true)}
+                disabled={!canCreateEvents}
+                data-tour="events-create-empty"
+              >
                 Create Event
               </Button>
             }

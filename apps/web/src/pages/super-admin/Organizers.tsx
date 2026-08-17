@@ -531,6 +531,7 @@ export default function SuperAdminOrganizers() {
             setAddError('')
             setShowAdd(true)
           }}
+          data-tour="staff-add"
         >
           Add staff
         </Button>

@@ -478,7 +478,7 @@ export default function OrganizerAnalytics() {
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="analytics-root">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>

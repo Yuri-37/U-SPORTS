@@ -141,7 +141,7 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
       {error && (
         <div className="text-[#FF3355] text-sm mb-4 bg-[#FF3355]/10 p-3 rounded-lg">{error}</div>
       )}
-      <div className="space-y-4">
+      <div className="space-y-4" data-tour="create-event-modal">
         <Input
           label="Event Name"
           placeholder="Men's Basketball Tournament"

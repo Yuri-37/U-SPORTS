@@ -231,7 +231,7 @@ export default function OrganizerAnnouncements() {
             Broadcast messages to athletes and the public
           </p>
         </div>
-        <Button icon={<Plus className="w-4 h-4" />} onClick={openCreate}>
+        <Button icon={<Plus className="w-4 h-4" />} onClick={openCreate} data-tour="announcements-new">
           New Announcement
         </Button>
       </div>

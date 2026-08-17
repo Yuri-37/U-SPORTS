@@ -40,7 +40,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4" data-tour="admin-stats">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)
         ) : (
@@ -58,7 +58,7 @@ export default function SuperAdminDashboard() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Quick actions */}
-        <Card>
+        <Card data-tour="admin-actions">
           <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5 text-[#0066FF]" />
             Admin Actions

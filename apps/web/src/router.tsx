@@ -45,7 +45,7 @@ const AthleteDashboard = React.lazy(() => import('./pages/athlete/Dashboard'))
 const AthleteEventDetail = React.lazy(() => import('./pages/athlete/EventDetail'))
 const AthleteProfile = React.lazy(() => import('./pages/athlete/Profile'))
 const AthleteEvents = React.lazy(() => import('./pages/athlete/Events'))
-const AthleteNotifications = React.lazy(() => import('./pages/athlete/Notifications'))
+const NotificationsPage = React.lazy(() => import('./pages/shared/Notifications'))
 const AthleteSettings = React.lazy(() => import('./pages/athlete/Settings'))
 
 // Guest
@@ -58,6 +58,9 @@ const GuestTeamDetail = React.lazy(() => import('./pages/guest/TeamDetail'))
 
 // Jumbotron
 const JumbotronPage = React.lazy(() => import('./pages/jumbotron/JumbotronPage'))
+
+// Help
+const HelpCenter = React.lazy(() => import('./pages/help/HelpCenter'))
 
 const router = createBrowserRouter([
   {
@@ -120,13 +123,17 @@ const router = createBrowserRouter([
           { path: 'organizer/analytics', element: <OrganizerAnalytics /> },
           { path: 'organizer/announcements', element: <OrganizerAnnouncements /> },
           { path: 'organizer/settings', element: <OrganizerSettings /> },
+          { path: 'organizer/notifications', element: <NotificationsPage /> },
+
+          // Help (shared across staff roles)
+          { path: 'help', element: <HelpCenter /> },
 
           // Athlete
           { path: 'athlete', element: <AthleteDashboard /> },
           { path: 'athlete/events/:id', element: <AthleteEventDetail /> },
           { path: 'athlete/profile', element: <AthleteProfile /> },
           { path: 'athlete/events', element: <AthleteEvents /> },
-          { path: 'athlete/notifications', element: <AthleteNotifications /> },
+          { path: 'athlete/notifications', element: <NotificationsPage /> },
           { path: 'athlete/settings', element: <AthleteSettings /> },
         ],
       },

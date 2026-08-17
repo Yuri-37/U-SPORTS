@@ -8,7 +8,10 @@ import { formatDateTime } from '../../lib/utils'
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 type Filter = 'all' | 'unread' | 'recent'
 
-export default function AthleteNotifications() {
+/** Generic notification inbox — reused by both the athlete route
+ *  (/athlete/notifications) and the staff route (/organizer/notifications).
+ *  Nothing here is role-specific: it reads whichever profile is signed in. */
+export default function NotificationsPage() {
   const { profile } = useAuthStore()
   const { notifications, fetchNotifications, markRead, markAllRead, deleteNotification, clearAll } =
     useNotificationStore()

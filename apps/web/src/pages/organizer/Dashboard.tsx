@@ -170,7 +170,7 @@ export default function OrganizerDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" data-tour="coach-stats">
           <StatCard
             label="Teams"
             value={loading ? '—' : coachTeams.length}
@@ -217,7 +217,7 @@ export default function OrganizerDashboard() {
         )}
 
         {/* My teams */}
-        <div>
+        <div data-tour="coach-teams">
           <h2 className="font-semibold mb-3 flex items-center gap-2">
             <Dumbbell className="w-4 h-4 text-[var(--accent-default)]" />
             My teams
@@ -289,7 +289,7 @@ export default function OrganizerDashboard() {
         )}
 
         {/* Quick actions */}
-        <div>
+        <div data-tour="coach-quick-actions">
           <h2 className="font-semibold mb-3">Quick actions</h2>
           <div className="grid sm:grid-cols-3 gap-3">
             {[
@@ -342,7 +342,7 @@ export default function OrganizerDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4" data-tour="org-stats">
         <StatCard label="My Events" value={events.length} subValue="Active + Draft" />
         <StatCard label="Live Now" value={liveMatches.length} subValue="Matches in progress" />
         <StatCard
@@ -353,7 +353,7 @@ export default function OrganizerDashboard() {
       </div>
 
       {liveMatches.length > 0 && (
-        <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-4">
+        <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-4" data-tour="org-live-panel">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-live" />
             <span className="font-bold text-[var(--danger)] text-sm">LIVE MATCHES</span>
@@ -437,7 +437,7 @@ export default function OrganizerDashboard() {
           )}
         </Card>
 
-        <Card>
+        <Card data-tour="org-quick-actions">
           <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
             {[

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import { z } from 'zod'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvatar } from '../utils/avatarStorage'
 import supabase from '../utils/supabase'
@@ -82,6 +83,61 @@ router.delete('/avatar', requireAuth, async (req: AuthRequest, res) => {
     res.json({ success: true })
   } catch (err: unknown) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Could not remove avatar' })
+  }
+})
+
+const tourCompletionSchema = z.object({
+  tour_id: z.string().min(1).max(40),
+  version: z.number().int().min(1),
+  reason: z.enum(['completed', 'skipped']),
+})
+
+// Records a guided-tour completion/skip so TourOverlay's auto-start doesn't
+// re-trigger it (column added in migration 069). Lives here rather than
+// routes/auth.ts because the auth router is capped at 20 req/15min --
+// replaying tours from the Help Center would burn the budget that password
+// changes need. Read-modify-write is fine here: a user only ever writes
+// their own row, so there's no real concurrent-write race.
+router.post('/tour-completion', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const body = tourCompletionSchema.parse(req.body)
+
+    const { data: current, error: readErr } = await supabase
+      .from('profiles')
+      .select('tours_completed')
+      .eq('id', req.user!.id)
+      .maybeSingle()
+    if (readErr) return res.status(500).json({ error: readErr.message })
+
+    const existing = (current?.tours_completed ?? {}) as Record<
+      string,
+      { at: string; version: number }
+    >
+    const next = {
+      ...existing,
+      [body.tour_id]: { at: new Date().toISOString(), version: body.version },
+    }
+
+    const { error: writeErr } = await supabase
+      .from('profiles')
+      .update({ tours_completed: next })
+      .eq('id', req.user!.id)
+    if (writeErr) return res.status(500).json({ error: writeErr.message })
+
+    await writeAuditLog({
+      actorId: req.user!.id,
+      action: 'tour_completed',
+      entityType: 'profile',
+      entityId: req.user!.id,
+      details: { tour_id: body.tour_id, version: body.version, reason: body.reason },
+    })
+
+    res.json({ tours_completed: next })
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
+    }
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not save tour progress' })
   }
 })
 

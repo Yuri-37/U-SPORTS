@@ -16,13 +16,18 @@ import {
   Dumbbell,
   UserCheck,
   Building2,
+  HelpCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { cn } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 
-const superAdminNav = [
+// Exported (in addition to being used below) purely so tours/index.ts can
+// assert every `nav-*` tour target actually exists in the role's real nav —
+// otherwise editing one of these arrays can silently strand a tour step on
+// its centered fallback with no obvious cause.
+export const superAdminNav = [
   { to: '/super-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/super-admin/organizers', label: 'Staff', icon: Users },
   { to: '/super-admin/seasons', label: 'Seasons', icon: Calendar },
@@ -34,10 +39,11 @@ const superAdminNav = [
   { to: '/super-admin/settings', label: 'School Profile', icon: Building2 },
   { to: '/super-admin/preferences', label: 'Settings', icon: Settings },
   { to: '/super-admin/audit', label: 'Audit Logs', icon: ClipboardList },
+  { to: '/help', label: 'Help Center', icon: HelpCircle },
   { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
 ]
 
-const organizerNav = [
+export const organizerNav = [
   { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
   { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
@@ -47,9 +53,10 @@ const organizerNav = [
   { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/organizer/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/organizer/settings', label: 'Settings', icon: Settings },
+  { to: '/help', label: 'Help Center', icon: HelpCircle },
 ]
 
-const coachNav = [
+export const coachNav = [
   { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
   { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
@@ -57,6 +64,7 @@ const coachNav = [
   { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
   { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/organizer/settings', label: 'Settings', icon: Settings },
+  { to: '/help', label: 'Help Center', icon: HelpCircle },
 ]
 
 const athleteNav = [
@@ -134,6 +142,7 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               end={Boolean(item.exact)}
+              data-tour={`nav-${item.to}`}
               className={cn(
                 'flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-0.5',
                 isActive

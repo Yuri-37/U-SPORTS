@@ -7,6 +7,7 @@ import { Spinner } from './components/ui'
 import { defaultPostLoginPath, safeInternalPath } from './lib/navigation'
 import { sessionScopedProfile } from './lib/sessionProfile'
 import PrivacyNoticeGate from './components/auth/PrivacyNoticeGate'
+import TourOverlay from './components/tour/TourOverlay'
 
 export default function App() {
   const { session, profile, loading: authLoading } = useAuth()
@@ -112,14 +113,20 @@ export default function App() {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-          <Spinner size="lg" />
-        </div>
-      }
-    >
-      <Outlet />
-    </Suspense>
+    <>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        }
+      >
+        <Outlet />
+      </Suspense>
+      {/* Sibling of Suspense, not a child — every route is React.lazy, so a
+          tour step that navigates would otherwise unmount mid-step into the
+          Suspense fallback. */}
+      <TourOverlay />
+    </>
   )
 }

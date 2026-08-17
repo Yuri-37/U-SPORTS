@@ -7,6 +7,7 @@ import ChangePasswordSection from '../../components/settings/ChangePasswordSecti
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 import AvatarUpload from '../../components/settings/AvatarUpload'
+import StaffManualLinkSection from '../../components/settings/StaffManualLinkSection'
 
 export default function OrganizerSettings() {
   const { profile, organizer, session } = useAuthStore()
@@ -65,6 +66,8 @@ export default function OrganizerSettings() {
       </Card>
 
       <ChangePasswordSection />
+
+      <StaffManualLinkSection />
 
       <PrivacyNoticeLinkSection />
 

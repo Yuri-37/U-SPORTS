@@ -1244,6 +1244,7 @@ export default function OrganizerTeams() {
 
               setShowCreate(true)
             }}
+            data-tour="teams-create-header"
           >
             New Team
           </Button>
@@ -1281,6 +1282,7 @@ export default function OrganizerTeams() {
 
                 setShowCreate(true)
               }}
+              data-tour="teams-create-empty"
             >
               Create Team
             </Button>
@@ -2038,7 +2040,7 @@ export default function OrganizerTeams() {
                 ]}
               />
 
-              <div className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-3">
+              <div className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-3" data-tour="teams-roster">
                 {(() => {
                   const members = editTeam?.members ?? []
                   const sport = editTeam.sport
