@@ -99,15 +99,21 @@ export function computePlacement(
   viewport: Viewport,
   preferred: Side = 'bottom',
 ): Placement {
-  if (viewport.width < NARROW_VIEWPORT) {
+  // 'center' means "middle of the viewport" -- not "centered on `target`".
+  // Routing it through the loop below like any other side used rawPosition's
+  // target-relative math against a target that, for this case, is a
+  // placeholder zero box (no resolved anchor yet, or no target at all). That
+  // put the card at the target's phantom (0,0) origin, clamped to the
+  // MARGIN -- i.e. pinned to the top-left corner, not centered. Most visibly:
+  // every step transition passes through one 'center' render while the next
+  // step's anchor is still resolving, so the card flashed top-left before
+  // snapping to its real spot.
+  if (viewport.width < NARROW_VIEWPORT || preferred === 'center') {
     const c = centerOf(card, viewport)
     return { side: 'center', ...c }
   }
 
-  const order: Side[] =
-    preferred === 'center'
-      ? ['center']
-      : [preferred, OPPOSITE[preferred], ...crossSides(preferred)]
+  const order: Side[] = [preferred, OPPOSITE[preferred], ...crossSides(preferred)]
 
   for (const side of order) {
     if (!mainAxisFits(side, target, card, viewport)) continue
