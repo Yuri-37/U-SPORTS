@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { liveScorePresentation } from '../../lib/liveMatchPresentation'
 import { useTimerListener } from '../../hooks/useGameTimer'
-import { formatDateTime } from '../../lib/utils'
+import { formatTime as formatClockTime } from '../../lib/utils'
 
 interface ScoreState {
   q1: number
@@ -148,6 +148,7 @@ export default function JumbotronPage() {
   const [teamBName, setTeamBName] = useState('AWAY')
   const [flash, setFlash] = useState<'A' | 'B' | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [wallClock, setWallClock] = useState(() => new Date())
 
   // Seeds the clock from the last persisted snapshot (migration 055) so a
   // board that loads before the scorer's next tick still shows the real time
@@ -175,6 +176,14 @@ export default function JumbotronPage() {
   useEffect(() => {
     sportRef.current = sport
   }, [sport])
+
+  // Live wall-clock time for the footer — this board is meant to run
+  // unattended on an arena screen for hours, so it must show the actual
+  // current time, not a value frozen from whenever the match was scheduled.
+  useEffect(() => {
+    const id = window.setInterval(() => setWallClock(new Date()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const triggerFlash = useCallback((side: 'A' | 'B') => {
     setFlash(side)
@@ -575,7 +584,10 @@ export default function JumbotronPage() {
           so with flex the row silently reflowed and the centre text drifted
           off-centre whenever a side item's width changed. The right slot no
           longer prints a truncated match UUID — on a public scoreboard that
-          read as random characters and meant nothing to anyone watching. */}
+          read as random characters and meant nothing to anyone watching. It
+          shows the actual current time (ticking, from wallClock above), not
+          match.scheduled_at -- a fixed value from whenever the match was
+          booked, which silently drifts from real time as the game runs. */}
       <div
         className="px-10 py-3 border-t grid grid-cols-3 items-center gap-4"
         style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.5)' }}
@@ -584,8 +596,8 @@ export default function JumbotronPage() {
           U-Sports Platform · {institution?.name}
         </p>
         <p className="text-white/30 text-sm text-center truncate">{match?.venue ?? ''}</p>
-        <p className="text-white/30 text-sm text-right truncate">
-          {match?.scheduled_at ? formatDateTime(match.scheduled_at) : ''}
+        <p className="text-white/30 text-sm text-right truncate tabular-nums">
+          {formatClockTime(wallClock)}
         </p>
       </div>
     </div>
