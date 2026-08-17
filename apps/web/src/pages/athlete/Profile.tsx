@@ -174,9 +174,8 @@ export default function AthleteProfile() {
     <div className="space-y-6 max-w-xl">
       <h1 className="text-2xl font-bold">My Profile</h1>
 
-      <Card className="flex items-center gap-6">
-        <AvatarUpload size="lg" fallbackInitials={getInitials(profile.full_name)} />
-        <div>
+      <Card>
+        <AvatarUpload size="lg" fallbackInitials={getInitials(profile.full_name)}>
           <h2 className="font-bold text-xl">{profile.full_name}</h2>
           <p className="text-[var(--text-muted)] text-sm">{profile.email}</p>
           <div className="flex flex-wrap gap-2 mt-2">
@@ -187,7 +186,7 @@ export default function AthleteProfile() {
               {athlete.season_status}
             </Badge>
           </div>
-        </div>
+        </AvatarUpload>
       </Card>
 
       <Card>

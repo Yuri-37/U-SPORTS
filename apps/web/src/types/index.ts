@@ -81,6 +81,8 @@ export interface Profile {
   password_changed_at?: string | null
   /** Null means the user has not accepted the privacy notice yet — App.tsx blocks on this. */
   privacy_accepted_at?: string | null
+  /** Keyed by tour id. A stored version behind the tour's current version auto-starts it again. */
+  tours_completed?: Record<string, { at: string; version: number }> | null
 }
 
 export interface Organizer {

@@ -20,9 +20,8 @@ export default function OrganizerSettings() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-4 mb-6">
-          <AvatarUpload size="md" fallbackInitials={getInitials(scopedProfile?.full_name ?? 'O')} />
-          <div>
+        <div className="mb-6">
+          <AvatarUpload size="md" fallbackInitials={getInitials(scopedProfile?.full_name ?? 'O')}>
             <h2 className="font-bold text-lg">{scopedProfile?.full_name}</h2>
             <p className="text-sm text-[var(--text-muted)]">{scopedProfile?.email}</p>
             <Badge variant="info" size="sm" className="mt-1">
@@ -30,7 +29,7 @@ export default function OrganizerSettings() {
                 ? 'Super Admin'
                 : (scopedProfile?.role ?? 'Organizer')}
             </Badge>
-          </div>
+          </AvatarUpload>
         </div>
 
         <div className="space-y-4">

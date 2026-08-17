@@ -16,13 +16,25 @@ function apiErrorMessage(e: unknown, fallback: string): string {
   return msg ?? fallback
 }
 
-/** Self-service avatar upload/removal — drop into any role's Profile/Settings page. */
+/**
+ * Self-service avatar upload/removal — drop into any role's Profile/Settings page.
+ *
+ * Owns the whole identity row, not just the circle: pass the name/email as
+ * children and they stack with the photo controls in one column beside the
+ * avatar. An earlier version rendered avatar-above-controls and left each
+ * caller to place the text beside it with `flex items-center`, which centred
+ * the text against the *combined* avatar+controls height and left a visible
+ * gap next to the controls row.
+ */
 export default function AvatarUpload({
   size = 'md',
   fallbackInitials,
+  children,
 }: {
   size?: 'md' | 'lg'
   fallbackInitials: string
+  /** Identity text (name, email, badges) rendered above the photo controls. */
+  children?: React.ReactNode
 }) {
   const { profile, setProfile } = useAuthStore()
   const [busy, setBusy] = useState(false)
@@ -59,7 +71,7 @@ export default function AvatarUpload({
   }
 
   return (
-    <div className="flex flex-col items-start gap-1.5">
+    <div className="flex items-center gap-4">
       <div
         className={`relative ${SIZE_CLASSES[size]} rounded-full overflow-hidden bg-[var(--school-primary)] flex items-center justify-center font-bold text-[var(--school-secondary)] shrink-0`}
       >
@@ -92,30 +104,33 @@ export default function AvatarUpload({
           if (file) void handleFile(file)
         }}
       />
-      <div className="flex items-center gap-2 text-xs">
-        <button
-          type="button"
-          className="text-[#0066FF] hover:underline"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-        >
-          Change photo
-        </button>
-        {profile?.avatar_url && (
-          <>
-            <span className="text-[var(--text-muted)]">·</span>
-            <button
-              type="button"
-              className="text-[var(--danger)] hover:underline"
-              onClick={() => void handleRemove()}
-              disabled={busy}
-            >
-              Remove
-            </button>
-          </>
-        )}
+      <div className="flex flex-col items-start gap-1.5 min-w-0">
+        {children}
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            className="text-[#0066FF] hover:underline"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            Change photo
+          </button>
+          {profile?.avatar_url && (
+            <>
+              <span className="text-[var(--text-muted)]">·</span>
+              <button
+                type="button"
+                className="text-[var(--danger)] hover:underline"
+                onClick={() => void handleRemove()}
+                disabled={busy}
+              >
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+        {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
       </div>
-      {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
     </div>
   )
 }

@@ -20,12 +20,11 @@ export default function SuperAdminPreferences() {
         </p>
       </div>
 
-      <Card className="p-6 flex items-center gap-4">
-        <AvatarUpload size="md" fallbackInitials={getInitials(profile?.full_name ?? 'A')} />
-        <div>
+      <Card className="p-6">
+        <AvatarUpload size="md" fallbackInitials={getInitials(profile?.full_name ?? 'A')}>
           <p className="font-bold">{profile?.full_name}</p>
           <p className="text-sm text-[var(--text-muted)]">{profile?.email}</p>
-        </div>
+        </AvatarUpload>
       </Card>
 
       <ChangePasswordSection />

@@ -10,18 +10,9 @@ import {
   insertNotificationsForProfiles,
   profileIdsForTeamRoster,
 } from '../utils/athleteNotifications'
+import { slugifyEventName } from '../utils/eventSlug'
 
 const router = Router()
-
-/** Slugs are generated once at creation and never change, even if the event is later renamed. */
-function slugifyEventName(name: string, id: string): string {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return `${base}-${id.replace(/-/g, '').slice(-6)}`
-}
 
 const EVENT_CATEGORIES: Record<string, string[]> = {
   basketball: ["Men's Open", "Women's Open", "Men's Varsity", "Women's Varsity", 'Mixed'],

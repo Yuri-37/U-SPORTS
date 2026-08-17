@@ -69,6 +69,7 @@ import readline from 'readline'
 import { randomUUID } from 'crypto'
 import dotenv from 'dotenv'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { slugifyEventName } from '../utils/eventSlug'
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
@@ -650,11 +651,6 @@ async function main() {
   const SPORTS: Sport[] = ['basketball', 'volleyball', 'table-tennis']
   const sportLabel: Record<Sport, string> = {
     basketball: 'Basketball', volleyball: 'Volleyball', 'table-tennis': 'Table Tennis',
-  }
-
-  function slugifyEventName(name: string, id: string): string {
-    const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    return `${base}-${id.replace(/-/g, '').slice(-6)}`
   }
 
   async function makeEvent(
