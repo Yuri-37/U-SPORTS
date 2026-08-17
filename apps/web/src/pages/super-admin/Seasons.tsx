@@ -523,6 +523,7 @@ export default function SuperAdminSeasons() {
             placeholder="AY 2026-2027"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            maxLength={80}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -578,6 +579,7 @@ export default function SuperAdminSeasons() {
               label="Season Name"
               value={editForm.name}
               onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              maxLength={80}
             />
             <div className="grid grid-cols-2 gap-4">
               <Input

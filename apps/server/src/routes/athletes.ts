@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import { passwordZ } from '../utils/passwordSchema'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { respondIfSportForbidden } from '../utils/organizerSportAccess'
 import {
@@ -41,7 +42,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
     year_level: z.string().trim().optional().default(''),
     course: z.string().trim().optional().default(''),
     email: z.string().trim().email().optional(),
-    password: z.string().min(8).optional(),
+    password: passwordZ.optional(),
   })
 
   try {

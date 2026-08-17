@@ -28,8 +28,8 @@ export default function PrivacyNoticePage() {
             <h1 className="text-lg font-bold">Your Privacy on U-Sports</h1>
           </div>
           <div className="p-6 space-y-4 text-sm text-[var(--text-secondary)]">
-            {PRIVACY_NOTICE_SECTIONS.map((section) => (
-              <div key={section.heading}>
+            {PRIVACY_NOTICE_SECTIONS.map((section, i) => (
+              <div key={i}>
                 {section.heading && (
                   <p className="font-semibold text-[var(--text-primary)] mb-1">
                     {section.heading}

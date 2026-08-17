@@ -147,6 +147,7 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
           placeholder="Men's Basketball Tournament"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          maxLength={120}
         />
         <Select
           label="Season"

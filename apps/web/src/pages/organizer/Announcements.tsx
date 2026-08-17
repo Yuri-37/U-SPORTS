@@ -396,6 +396,7 @@ export default function OrganizerAnnouncements() {
             value={form.title}
             onChange={(e) => update('title', e.target.value)}
             placeholder="Match postponed"
+            maxLength={150}
           />
           <Textarea
             label="Message Body"
@@ -403,6 +404,7 @@ export default function OrganizerAnnouncements() {
             onChange={(e) => update('body', e.target.value)}
             placeholder="Due to weather conditions..."
             rows={3}
+            maxLength={5000}
           />
 
           {/* Audience targeting */}

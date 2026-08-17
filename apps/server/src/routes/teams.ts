@@ -44,8 +44,12 @@ const teamSportEnum = z.enum(['basketball', 'volleyball', 'table-tennis'])
 
 const departmentEnum = z.enum(['SBMA', 'SECA', 'SASE', 'SHS'])
 
+// 80 matches the bulk-import schema's team_name bound below — the columns are
+// unbounded TEXT, so these are the only thing stopping a multi-megabyte name.
+const teamNameZ = z.string().trim().min(1, 'Team name is required').max(80, 'Team name is too long')
+
 const teamCreateSchema = z.object({
-  name: z.string().min(1),
+  name: teamNameZ,
   sport: teamSportEnum,
   season_id: z.string().uuid(),
   department: departmentEnum.optional(),
@@ -53,7 +57,7 @@ const teamCreateSchema = z.object({
 })
 
 const teamPatchSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: teamNameZ.optional(),
   sport: teamSportEnum.optional(),
   season_id: z.string().uuid().optional(),
   department: departmentEnum.nullable().optional(),

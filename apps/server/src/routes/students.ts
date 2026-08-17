@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
+import { passwordZ } from '../utils/passwordSchema'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
@@ -22,7 +23,7 @@ const importRowSchema = z.object({
   department: departmentEnum,
   sport: sportEnum.optional(),
   email: z.string().trim().email().optional(),
-  password: z.string().min(8).optional(),
+  password: passwordZ.optional(),
 })
 
 function normalizeImportRow(row: Record<string, unknown>) {

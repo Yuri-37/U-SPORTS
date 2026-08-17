@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { z } from 'zod'
+import { passwordZ } from '../utils/passwordSchema'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
@@ -22,6 +23,15 @@ import {
 import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
 
 const router = Router()
+
+// The underlying columns are unbounded TEXT, so these caps are the only thing
+// bounding what a client can store.
+const seasonNameZ = z
+  .string()
+  .trim()
+  .min(1, 'Season name is required')
+  .max(80, 'Season name is too long')
+const fullNameZ = z.string().trim().min(1, 'Full name is required').max(120, 'Name is too long')
 
 const institutionLogoUpload = multer({
   storage: multer.memoryStorage(),
@@ -124,7 +134,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
   const schema = z
     .object({
       email: z.string().trim().email(),
-      full_name: z.string().min(1),
+      full_name: fullNameZ,
       role: z.enum(['Organizer', 'Coach']),
       // Only Coach is department-scoped (see findCoachSportConflict) —
       // Organizers aren't, so this is optional/absent for them.
@@ -133,7 +143,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       // Optional at the schema level -- required only when invite emails are
       // disabled, checked below (inviteEmailsEnabled() is an env toggle, not
       // something zod can see at schema-build time).
-      password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
+      password: passwordZ.optional(),
       season_ids: z.array(z.string().uuid()).optional(),
     })
     .refine((v) => v.role !== 'Coach' || v.assigned_sports.length === 1, {
@@ -519,8 +529,8 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
   const schema = z
     .object({
       email: z.string().trim().email(),
-      full_name: z.string().min(1),
-      password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
+      full_name: fullNameZ,
+      password: passwordZ.optional(),
     })
     .refine((v) => inviteEmailsEnabled() || Boolean(v.password), {
       message: 'Password is required',
@@ -623,7 +633,7 @@ router.get('/seasons', requireAuth, async (_req: AuthRequest, res) => {
 
 router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z.object({
-    name: z.string().min(1),
+    name: seasonNameZ,
     start_date: z.string(),
     end_date: z.string(),
     sports: z.array(z.string()).min(1, 'Select at least one sport'),
@@ -703,7 +713,7 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
 router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z
     .object({
-      name: z.string().min(1).optional(),
+      name: seasonNameZ.optional(),
       start_date: z.string().optional(),
       end_date: z.string().optional(),
       sports: z.array(z.string()).optional(),

@@ -14,7 +14,13 @@ import {
 import api from '../../lib/api'
 import type { Organizer, Profile } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
-import { createOrganizerFormSchema, STAFF_ROLES, DEPARTMENTS } from '../../lib/validation/forms'
+import {
+  createOrganizerFormSchema,
+  emailZ,
+  passwordZ,
+  STAFF_ROLES,
+  DEPARTMENTS,
+} from '../../lib/validation/forms'
 
 type StaffWithProfile = Organizer & { profile: Profile & { role?: string; department?: string } }
 type AdminAccount = { id: string; full_name: string; email: string; created_at: string }
@@ -189,14 +195,16 @@ export default function SuperAdminOrganizers() {
       setAddingAdmin(false)
       return
     }
-    if (!addAdminEmail.trim()) {
-      setAddAdminError('Email is required')
+    const parsedEmail = emailZ.safeParse(addAdminEmail)
+    if (!parsedEmail.success) {
+      setAddAdminError(parsedEmail.error.issues[0]?.message ?? 'Enter a valid email')
       setAddingAdmin(false)
       return
     }
     if (!inviteEmailsEnabled) {
-      if (addAdminPassword.length < 8) {
-        setAddAdminError('Password must be at least 8 characters')
+      const parsedPassword = passwordZ.safeParse(addAdminPassword)
+      if (!parsedPassword.success) {
+        setAddAdminError(parsedPassword.error.issues[0]?.message ?? 'Invalid password')
         setAddingAdmin(false)
         return
       }
@@ -866,6 +874,7 @@ export default function SuperAdminOrganizers() {
             value={addAdminName}
             onChange={(e) => setAddAdminName(e.target.value)}
             placeholder="Admin name"
+            maxLength={120}
           />
           <Input
             label="Email"
@@ -932,6 +941,7 @@ export default function SuperAdminOrganizers() {
             value={addName}
             onChange={(e) => setAddName(e.target.value)}
             placeholder="Staff member name"
+            maxLength={120}
           />
           <Input
             label="Email"

@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
+import { passwordZ } from '../utils/passwordSchema'
 
 const router = Router()
 
@@ -16,10 +17,7 @@ const COOLDOWN_MS = PASSWORD_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Password is too long'),
+  newPassword: passwordZ,
 })
 
 router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {

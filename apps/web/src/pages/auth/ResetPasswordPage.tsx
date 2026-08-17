@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Lock, Eye, EyeOff, KeyRound } from 'lucide-react'
-import { Button, Input, Alert } from '../../components/ui'
+import { Button, Input, Alert, PasswordStrengthMeter } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
+import { passwordZ } from '../../lib/validation/forms'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -35,8 +36,9 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+    const parsed = passwordZ.safeParse(password)
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Invalid password')
       return
     }
     if (password !== confirmPassword) {
@@ -111,8 +113,12 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   icon={<Lock className="w-4 h-4" />}
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
                   required
                 />
+                <PasswordStrengthMeter password={password} />
                 <button
                   type="button"
                   className="mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1"
@@ -129,6 +135,8 @@ export default function ResetPasswordPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 icon={<Lock className="w-4 h-4" />}
+                autoComplete="new-password"
+                maxLength={128}
                 required
               />
               <Button

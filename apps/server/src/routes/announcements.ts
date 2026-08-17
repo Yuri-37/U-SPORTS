@@ -91,8 +91,15 @@ router.get('/', async (req, res) => {
 const announcementSchema = z
   .object({
     type: z.enum(['emergency', 'reschedule', 'reminder', 'system']),
-    title: z.preprocess((v) => (typeof v === 'string' ? v.trim() : v), z.string().min(1)),
-    body: z.preprocess((v) => (typeof v === 'string' ? v.trim() : v), z.string().min(1)),
+    // Columns are unbounded TEXT — these caps are the only length enforcement.
+    title: z.preprocess(
+      (v) => (typeof v === 'string' ? v.trim() : v),
+      z.string().min(1, 'Title is required').max(150, 'Title is too long'),
+    ),
+    body: z.preprocess(
+      (v) => (typeof v === 'string' ? v.trim() : v),
+      z.string().min(1, 'Message is required').max(5000, 'Message is too long'),
+    ),
     // urgency is no longer a user input — it is derived from type via DB trigger
     audience_type: z.enum(['all', 'sport', 'event', 'team']).default('all'),
     audience_id: z.string().uuid().optional(),

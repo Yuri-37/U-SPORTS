@@ -1584,6 +1584,7 @@ export default function OrganizerTeams() {
             placeholder="NU Bulldogs"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            maxLength={80}
           />
 
           <Select
@@ -2000,6 +2001,7 @@ export default function OrganizerTeams() {
                 label="Team Name"
                 value={editForm.name}
                 onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                maxLength={80}
               />
 
               <Select

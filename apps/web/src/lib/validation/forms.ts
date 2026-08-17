@@ -1,11 +1,21 @@
 import { z } from 'zod'
 
-const emailZ = z.string().trim().min(1, 'Email is required').email('Enter a valid email')
+export const emailZ = z.string().trim().min(1, 'Email is required').email('Enter a valid email')
 
+/**
+ * The one password rule for the whole app — every place a user *chooses* a
+ * password (change, reset, accept-invite, admin-created staff) validates
+ * against this, so the requirement can't drift between screens. Mirrored
+ * server-side in routes/auth.ts, since client validation is a convenience,
+ * not an enforcement point.
+ */
 export const passwordZ = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password is too long')
+  .refine((p) => /[A-Za-z]/.test(p), { message: 'Password must contain at least one letter' })
+  .refine((p) => /[0-9]/.test(p), { message: 'Password must contain at least one number' })
+  .refine((p) => p.trim().length > 0, { message: 'Password cannot be only spaces' })
 
 export const loginFormSchema = z.object({
   email: emailZ,
@@ -33,9 +43,17 @@ export const createOrganizerFormSchema = z
     department: z.enum(DEPARTMENTS).nullable().optional(),
     assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
   })
-  .refine((d) => !d.requirePassword || passwordZ.safeParse(d.password).success, {
-    message: 'Password must be at least 8 characters',
-    path: ['password'],
+  .superRefine((d, ctx) => {
+    if (!d.requirePassword) return
+    const parsed = passwordZ.safeParse(d.password)
+    if (parsed.success) return
+    // Surface passwordZ's own message rather than a fixed string, so the
+    // two can't drift apart when the password rule changes.
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: parsed.error.issues[0]?.message ?? 'Invalid password',
+      path: ['password'],
+    })
   })
   .refine((d) => !d.requirePassword || d.password === d.confirmPassword, {
     message: 'Passwords do not match',

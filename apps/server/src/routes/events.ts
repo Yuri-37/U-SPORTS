@@ -26,6 +26,13 @@ export const EVENT_CATEGORIES: Record<string, string[]> = {
   ],
 }
 
+// The column is unbounded TEXT — this is the only length enforcement.
+const eventNameZ = z
+  .string()
+  .trim()
+  .min(1, 'Event name is required')
+  .max(120, 'Event name is too long')
+
 function categorySchema(sport?: string) {
   if (!sport) return z.string().optional()
   const allowed = EVENT_CATEGORIES[sport]
@@ -100,7 +107,7 @@ router.patch(
 
     const schema = z
       .object({
-        name: z.string().min(1).optional(),
+        name: eventNameZ.optional(),
         description: z.union([z.string().max(4000), z.null()]).optional(),
         category: categorySchema(event.sport as string).optional(),
         table_tennis_format: z.enum(['singles', 'doubles']).optional().nullable(),
@@ -162,7 +169,7 @@ router.patch(
 router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
   const sport = z.enum(['basketball', 'volleyball', 'table-tennis']).safeParse(req.body?.sport)
   const schema = z.object({
-    name: z.string().min(1),
+    name: eventNameZ,
     sport: z.enum(['basketball', 'volleyball', 'table-tennis']),
     season_id: z.string().uuid(),
     format: z.enum(['single_elim', 'double_elim', 'round_robin']),

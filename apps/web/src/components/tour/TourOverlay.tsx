@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { X, ChevronLeft, ChevronRight, Compass } from 'lucide-react'
 import { useTourStore } from '../../stores/tourStore'
@@ -155,7 +155,25 @@ export default function TourOverlay() {
     navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
   }, [location.pathname, location.search, scopedProfile, activeTourId, start, navigate])
 
-  // ─── route-driven steps: navigate if needed, detect user-initiated navigation ──
+  // Separate effect purely to catch navigation the *user* initiated mid-step.
+  // Declared BEFORE the route-driven effect below and must stay that way: when
+  // a step's own navigate() is still resolving (lazy chunk still loading) and
+  // the tour advances to a routeless step before it lands, this effect needs
+  // to see `tourNavRef.current` still set (our nav, not the user's) before the
+  // route-driven effect below clears it for the new, routeless step. Reversing
+  // the order re-introduces a spurious pause on that race.
+  useEffect(() => {
+    if (prevPathnameRef.current === location.pathname) return
+    const changed = location.pathname
+    prevPathnameRef.current = changed
+    if (!activeTourId || !step) return
+    if (step.route && routeMatches(changed, step.route)) return // landed where the tour wanted
+    if (tourNavRef.current) return // our own navigate() is still resolving
+    pause()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
+
+  // ─── route-driven steps: navigate if needed ──
   useEffect(() => {
     if (!activeTourId || !step) return
     const path = location.pathname
@@ -170,18 +188,6 @@ export default function TourOverlay() {
     if (phase === 'paused') resume()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTourId, step, location.pathname])
-
-  // Separate effect purely to catch navigation the *user* initiated mid-step.
-  useEffect(() => {
-    if (prevPathnameRef.current === location.pathname) return
-    const changed = location.pathname
-    prevPathnameRef.current = changed
-    if (!activeTourId || !step) return
-    if (step.route && routeMatches(changed, step.route)) return // landed where the tour wanted
-    if (tourNavRef.current) return // our own navigate() is still resolving
-    pause()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname])
 
   // ─── keyboard: Escape exits, arrows step (never inside an input) ──────────
   useEffect(() => {
@@ -205,10 +211,18 @@ export default function TourOverlay() {
   }, [activeTourId, canAdvance, stepIndex, total, next, prev, exitTour])
 
   // ─── measure the card, two-pass (hidden -> read -> commit) to avoid an origin flash ──
+  // No dependency array: this must re-run on every render (card content changes size
+  // per step). It bails out via functional setState when the measurement is unchanged
+  // — without that, a fresh `{width, height}` object every render would fail React's
+  // Object.is bailout and re-render forever ("Maximum update depth exceeded").
   useLayoutEffect(() => {
     if (!cardRef.current) return
     const el = cardRef.current
-    const measure = () => setCardSize({ width: el.offsetWidth, height: el.offsetHeight })
+    const measure = () => {
+      const width = el.offsetWidth
+      const height = el.offsetHeight
+      setCardSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }))
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -235,16 +249,24 @@ export default function TourOverlay() {
     cardRef.current?.focus({ preventScroll: true })
   }, [step?.id])
 
-  if (!activeTourId || !def || !step) return null
+  // Memoized so a step's `render(ctx)` — e.g. PlaceholderGeneratorStep's
+  // `useEffect(..., [ctx])` — doesn't see a new reference on every render.
+  // An unmemoized ctx here previously caused an infinite render loop: the
+  // effect fires on the "new" ctx, calls setCanAdvance, Zustand's un-selected
+  // useTourStore() re-renders TourOverlay, which builds a new ctx, forever.
+  const ctx: TourStepContext = useMemo(
+    () => ({
+      next: () => (stepIndex >= total - 1 ? exitTour('completed') : next()),
+      prev,
+      exit: exitTour,
+      setCanAdvance,
+      index: stepIndex,
+      total,
+    }),
+    [stepIndex, total, exitTour, next, prev, setCanAdvance],
+  )
 
-  const ctx: TourStepContext = {
-    next: () => (stepIndex >= total - 1 ? exitTour('completed') : next()),
-    prev,
-    exit: exitTour,
-    setCanAdvance,
-    index: stepIndex,
-    total,
-  }
+  if (!activeTourId || !def || !step) return null
 
   if (phase === 'paused') {
     return (
