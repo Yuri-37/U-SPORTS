@@ -156,19 +156,25 @@ export default function TourOverlay() {
   }, [location.pathname, location.search, scopedProfile, activeTourId, start, navigate])
 
   // Separate effect purely to catch navigation the *user* initiated mid-step.
-  // Declared BEFORE the route-driven effect below and must stay that way: when
-  // a step's own navigate() is still resolving (lazy chunk still loading) and
-  // the tour advances to a routeless step before it lands, this effect needs
-  // to see `tourNavRef.current` still set (our nav, not the user's) before the
-  // route-driven effect below clears it for the new, routeless step. Reversing
-  // the order re-introduces a spurious pause on that race.
+  // Declared BEFORE the route-driven effect below and must stay that way, so it
+  // observes `tourNavRef` before that effect can clear it on the same commit.
+  //
+  // `tourNavRef` is a one-shot token: React Router defers the location update
+  // while a lazy route chunk loads, so a step's navigate() can land *after* the
+  // tour has already advanced to the next (routeless) step. Consuming the token
+  // here — rather than testing it and leaving it set — means that late arrival
+  // is correctly attributed to us, while any *subsequent* navigation still
+  // pauses the tour as a genuine user action.
   useEffect(() => {
     if (prevPathnameRef.current === location.pathname) return
     const changed = location.pathname
     prevPathnameRef.current = changed
     if (!activeTourId || !step) return
     if (step.route && routeMatches(changed, step.route)) return // landed where the tour wanted
-    if (tourNavRef.current) return // our own navigate() is still resolving
+    if (tourNavRef.current) {
+      tourNavRef.current = null // our own navigate() just landed — consume it
+      return
+    }
     pause()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
@@ -178,13 +184,20 @@ export default function TourOverlay() {
     if (!activeTourId || !step) return
     const path = location.pathname
 
+    // Clear the in-flight marker only once we've actually arrived where it was
+    // set for. Clearing it merely because the *current* step wants no route
+    // strands a still-pending navigation, which then reads as a user action
+    // and spuriously pauses the tour.
+    if (tourNavRef.current && routeMatches(path, tourNavRef.current)) {
+      tourNavRef.current = null
+    }
+
     if (step.route && !routeMatches(path, step.route)) {
       if (tourNavRef.current === step.route) return // already in flight
       tourNavRef.current = step.route
       navigate(step.route)
       return
     }
-    tourNavRef.current = null
     if (phase === 'paused') resume()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTourId, step, location.pathname])
