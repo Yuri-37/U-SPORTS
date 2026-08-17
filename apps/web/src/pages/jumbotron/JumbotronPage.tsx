@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { liveScorePresentation } from '../../lib/liveMatchPresentation'
 import { useTimerListener } from '../../hooks/useGameTimer'
+import { formatDateTime } from '../../lib/utils'
 
 interface ScoreState {
   q1: number
@@ -570,13 +571,22 @@ export default function JumbotronPage() {
         </div>
       </div>
 
+      {/* Three fixed columns rather than justify-between: the venue is optional,
+          so with flex the row silently reflowed and the centre text drifted
+          off-centre whenever a side item's width changed. The right slot no
+          longer prints a truncated match UUID — on a public scoreboard that
+          read as random characters and meant nothing to anyone watching. */}
       <div
-        className="px-10 py-3 border-t flex items-center justify-between"
+        className="px-10 py-3 border-t grid grid-cols-3 items-center gap-4"
         style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.5)' }}
       >
-        <p className="text-white/30 text-sm">U-Sports Platform · {institution?.name}</p>
-        {match?.venue && <p className="text-white/30 text-sm">{match.venue}</p>}
-        <p className="text-white/20 text-xs font-mono">{matchId?.slice(0, 8)}</p>
+        <p className="text-white/30 text-sm truncate">
+          U-Sports Platform · {institution?.name}
+        </p>
+        <p className="text-white/30 text-sm text-center truncate">{match?.venue ?? ''}</p>
+        <p className="text-white/30 text-sm text-right truncate">
+          {match?.scheduled_at ? formatDateTime(match.scheduled_at) : ''}
+        </p>
       </div>
     </div>
   )

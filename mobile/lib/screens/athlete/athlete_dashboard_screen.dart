@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -351,6 +352,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final athlete = ref.watch(athleteRowProvider).valueOrNull;
     final fullName = prof?.fullName ?? 'Athlete';
     final initial = fullName.trim().isNotEmpty ? fullName.trim()[0].toUpperCase() : 'A';
+    final avatarUrl = prof?.avatarUrl;
 
     // Personal info rows (web parity: name + ID, course/year, department, position/jersey).
     final infoRows = <(String, String)>[
@@ -392,10 +394,18 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
               children: [
                 Row(
                   children: [
+                    // Uploaded photo when there is one, initial otherwise --
+                    // same fallback shape as AvatarUploadButton.
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: AppTheme.accent.withValues(alpha: 0.18),
-                      child: Text(initial, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.accent)),
+                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                          ? CachedNetworkImageProvider(avatarUrl)
+                          : null,
+                      child: avatarUrl == null || avatarUrl.isEmpty
+                          ? Text(initial,
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.accent))
+                          : null,
                     ),
                     const SizedBox(width: 14),
                     Expanded(

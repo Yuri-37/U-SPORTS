@@ -35,6 +35,7 @@ type Props = {
 export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
   const { profile, session, signOut } = useAuthStore()
   const scopedProfile = sessionScopedProfile(session, profile)
+  const avatarUrl = scopedProfile?.avatar_url ?? null
   const {
     unreadCount,
     notifications,
@@ -47,6 +48,10 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
   } = useNotificationStore()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  // Store *which* URL failed rather than a bare boolean: a freshly uploaded
+  // photo has a new URL, so it no longer matches and retries on its own — no
+  // reset effect needed.
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null)
   const [notifOpen, setNotifOpen] = useState(false)
   const [detailNotif, setDetailNotif] = useState<Notification | null>(null)
   const [notifDeleteConfirm, setNotifDeleteConfirm] = useState(false)
@@ -244,9 +249,21 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[var(--surface-elevated)] transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xs font-bold text-[var(--school-secondary)]">
-              {getInitials(scopedProfile.full_name)}
-            </div>
+            {/* Uploaded photo when there is one, initials otherwise. `onError`
+                falls back to initials if the stored URL 404s, so a deleted
+                storage object can't leave an empty circle. */}
+            {avatarUrl && failedAvatarUrl !== avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                onError={() => setFailedAvatarUrl(avatarUrl)}
+                className="w-7 h-7 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xs font-bold text-[var(--school-secondary)] shrink-0">
+                {getInitials(scopedProfile.full_name)}
+              </div>
+            )}
             <span className="text-sm text-[var(--text-secondary)] hidden sm:block">
               {scopedProfile.full_name.split(' ')[0]}
             </span>
