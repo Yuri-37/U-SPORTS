@@ -16,7 +16,7 @@ import type { Organizer, Profile } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
 import {
   createOrganizerFormSchema,
-  emailZ,
+  staffEmailZ,
   passwordZ,
   STAFF_ROLES,
   DEPARTMENTS,
@@ -195,7 +195,7 @@ export default function SuperAdminOrganizers() {
       setAddingAdmin(false)
       return
     }
-    const parsedEmail = emailZ.safeParse(addAdminEmail)
+    const parsedEmail = staffEmailZ.safeParse(addAdminEmail)
     if (!parsedEmail.success) {
       setAddAdminError(parsedEmail.error.issues[0]?.message ?? 'Enter a valid email')
       setAddingAdmin(false)

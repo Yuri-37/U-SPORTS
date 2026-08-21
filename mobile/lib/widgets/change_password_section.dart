@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
+import '../utils/password_validation.dart';
 import 'password_strength_meter.dart';
 
 /// Change-password card with a 7-day cooldown enforced server-side — mirrors
@@ -46,12 +47,9 @@ class _ChangePasswordSectionState extends ConsumerState<ChangePasswordSection> {
       setState(() => _error = 'Enter your current password');
       return;
     }
-    if (next.length < 8) {
-      setState(() => _error = 'Password must be at least 8 characters');
-      return;
-    }
-    if (next.length > 128) {
-      setState(() => _error = 'Password is too long');
+    final passwordError = passwordValidationError(next);
+    if (passwordError != null) {
+      setState(() => _error = passwordError);
       return;
     }
     if (next != confirm) {
@@ -144,9 +142,11 @@ class _ChangePasswordSectionState extends ConsumerState<ChangePasswordSection> {
             TextField(
               controller: _newCtrl,
               obscureText: !_showPasswords,
+              maxLength: 128,
               style: TextStyle(color: onSurface),
               decoration: const InputDecoration(
                 labelText: 'New password',
+                counterText: '', // hard cap, not a visible counter -- matches web's silent maxLength
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               onChanged: (_) => setState(() {}),
@@ -156,9 +156,11 @@ class _ChangePasswordSectionState extends ConsumerState<ChangePasswordSection> {
             TextField(
               controller: _confirmCtrl,
               obscureText: !_showPasswords,
+              maxLength: 128,
               style: TextStyle(color: onSurface),
               decoration: const InputDecoration(
                 labelText: 'Confirm new password',
+                counterText: '',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
             ),

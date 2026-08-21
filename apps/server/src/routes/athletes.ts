@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
+import { studentEmailZ } from '../utils/emailDomain'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { respondIfSportForbidden } from '../utils/organizerSportAccess'
 import {
@@ -41,7 +42,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
     sport: z.enum(['basketball', 'volleyball', 'table-tennis']),
     year_level: z.string().trim().optional().default(''),
     course: z.string().trim().optional().default(''),
-    email: z.string().trim().email().optional(),
+    email: studentEmailZ.optional(),
     password: passwordZ.optional(),
   })
 

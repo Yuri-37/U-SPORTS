@@ -6,6 +6,7 @@ import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
+import { studentEmailZ } from '../../lib/validation/forms'
 
 const DEPARTMENT_OPTIONS = [
   { value: 'SBMA', label: 'SBMA' },
@@ -141,6 +142,15 @@ export default function OrganizerAthletes() {
     if (!addName.trim()) return setAddAthleteError('Full name is required')
     if (!addStudentId.trim()) return setAddAthleteError('Student ID is required')
     if (!addSport) return setAddAthleteError('Sport is required')
+    // Left blank, this falls back to a generated @students.nu-dasma.edu.ph
+    // address server-side (already correctly domained) -- only validate it
+    // when the organizer actually typed one in.
+    if (addEmail.trim()) {
+      const parsedEmail = studentEmailZ.safeParse(addEmail.trim())
+      if (!parsedEmail.success) {
+        return setAddAthleteError(parsedEmail.error.issues[0]?.message ?? 'Enter a valid email')
+      }
+    }
     setAddAthleteBusy(true)
     setAddAthleteError('')
     try {

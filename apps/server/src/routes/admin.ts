@@ -2,6 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
+import { staffEmailZ } from '../utils/emailDomain'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
@@ -133,7 +134,7 @@ function sportLabel(slug: string): string {
 router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z
     .object({
-      email: z.string().trim().email(),
+      email: staffEmailZ,
       full_name: fullNameZ,
       role: z.enum(['Organizer', 'Coach']),
       // Only Coach is department-scoped (see findCoachSportConflict) —
@@ -528,7 +529,7 @@ router.get('/admins', requireAuth, requireRole('Admin'), async (_req, res) => {
 router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
   const schema = z
     .object({
-      email: z.string().trim().email(),
+      email: staffEmailZ,
       full_name: fullNameZ,
       password: passwordZ.optional(),
     })

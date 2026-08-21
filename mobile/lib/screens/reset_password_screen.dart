@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
+import '../utils/password_validation.dart';
 
 /// Reached only via the password-reset deep link (usports://reset-password)
 /// — main.dart's link listener already calls getSessionFromUrl and establishes
@@ -33,8 +34,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   Future<void> _submit() async {
     final password = _passCtrl.text;
-    if (password.length < 8) {
-      setState(() => _error = 'Password must be at least 8 characters');
+    final passwordError = passwordValidationError(password);
+    if (passwordError != null) {
+      setState(() => _error = passwordError);
       return;
     }
     if (password != _confirmCtrl.text) {
@@ -59,7 +61,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = friendlyError(e));
+      setState(() => _error = friendlyError(e, authActionLabel: 'Updating your password'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -133,9 +135,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 TextField(
                   controller: _passCtrl,
                   obscureText: !_showPassword,
+                  maxLength: 128,
                   style: TextStyle(color: onSurface),
                   decoration: InputDecoration(
                     labelText: 'New password',
+                    counterText: '', // hard cap, not a visible counter -- matches web's silent maxLength
                     prefixIcon: Icon(Icons.lock_outline,
                         color: LayoutTokens.secondaryText(context)),
                   ),
@@ -144,9 +148,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 TextField(
                   controller: _confirmCtrl,
                   obscureText: !_showPassword,
+                  maxLength: 128,
                   style: TextStyle(color: onSurface),
                   decoration: InputDecoration(
                     labelText: 'Confirm new password',
+                    counterText: '',
                     prefixIcon: Icon(Icons.lock_outline,
                         color: LayoutTokens.secondaryText(context)),
                   ),
