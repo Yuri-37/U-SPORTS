@@ -84,14 +84,19 @@ List<EventPlacement>? _deriveEliminationStandings(List<Map<String, dynamic>> bra
   remaining.remove(champion.participantId);
   remaining.remove(runnerUp.participantId);
 
+  // Furthest round each remaining participant reached. A losers-bracket
+  // appearance is always chronologically later than the winners-bracket loss
+  // that sent them there, so it should determine their placement once it
+  // exists -- the generator's losers-round numbers (1000+) are deliberately
+  // well above any realistic winners-bracket round count, so plain max()
+  // over round already prefers it with no special-casing needed.
   final effectiveRound = <String, int>{};
   for (final b in brackets) {
     final round = (b['round'] as num?)?.toInt() ?? 0;
-    final r = (b['bracket_type'] as String?) == 'losers' ? round - 1000000 : round;
     for (final pid in [b['participant_a_id'] as String?, b['participant_b_id'] as String?]) {
       if (pid == null || !remaining.contains(pid)) continue;
       final cur = effectiveRound[pid];
-      if (cur == null || r > cur) effectiveRound[pid] = r;
+      if (cur == null || round > cur) effectiveRound[pid] = round;
     }
   }
 

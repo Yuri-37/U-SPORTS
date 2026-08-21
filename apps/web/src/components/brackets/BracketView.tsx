@@ -36,13 +36,112 @@ function isWinnerSlot(
   return Boolean(participantId && winnerId && participantId === winnerId)
 }
 
+/** One match card. Extracted so the winners round, losers round, and grand
+ *  final column loops below don't each carry their own copy of this markup. */
+function BracketCard({
+  bracket,
+  match,
+  participantLabels,
+  onMatchClick,
+}: {
+  bracket: Bracket
+  match: Match | undefined
+  participantLabels: Record<string, string> | undefined
+  onMatchClick?: (match: Match) => void
+}) {
+  const isLive = match?.status === 'live'
+  const isDone = match?.status === 'completed' || bracket.is_bye
+  const clickable = Boolean(match && onMatchClick)
+  return (
+    <div className="relative">
+      <div
+        role={clickable ? 'button' : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        className={cn(
+          'border rounded-xl overflow-hidden transition-all text-left',
+          isLive ? 'border-[#FF3355] shadow-[0_0_12px_rgba(255,51,85,0.3)]' : 'border-[var(--border-subtle)]',
+          isDone ? 'opacity-80' : '',
+          clickable
+            ? 'cursor-pointer hover:border-[#0066FF]/50 hover:shadow-[0_0_8px_rgba(0,102,255,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]'
+            : '',
+        )}
+        style={{ width: 160 }}
+        onClick={() => clickable && match && onMatchClick?.(match)}
+        onKeyDown={(e) => {
+          if (!clickable || !match) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onMatchClick?.(match)
+          }
+        }}
+      >
+        {isLive && (
+          <div className="bg-[#FF3355] text-white text-[9px] font-bold text-center py-0.5 tracking-widest">
+            ● LIVE
+          </div>
+        )}
+        {(['a', 'b'] as const).map((slot) => {
+          const participantId = slot === 'a' ? bracket.participant_a_id : bracket.participant_b_id
+          const isWinner = isWinnerSlot(participantId, bracket.winner_id)
+          return (
+            <div
+              key={slot}
+              className={cn(
+                'flex items-center justify-between px-3 py-2',
+                slot === 'a' && 'border-b border-[var(--border-subtle)]',
+                // Exactly one background class — stacking a tint on top of
+                // bg-surface-card left the winner row's color decided by
+                // stylesheet order rather than theme.
+                isWinner ? 'bg-[var(--success)]/15' : 'bg-[var(--surface-card)]',
+              )}
+            >
+              <span
+                className={cn(
+                  'text-xs truncate flex-1 text-[var(--text-primary)]',
+                  isWinner ? 'font-bold' : 'font-medium',
+                )}
+                title={participantId ?? undefined}
+              >
+                {slotLabel(participantId, participantLabels, slot, bracket.is_bye)}
+              </span>
+              {isWinner && <span className="text-[var(--success)] text-xs ml-1">✓</span>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const LOSERS_TYPES = new Set(['losers', 'losers_final'])
+
 export default function BracketView({ brackets, matches, participantLabels, onMatchClick }: Props) {
   const bracketRef = useRef<HTMLDivElement>(null)
 
-  const visibleBrackets = brackets.filter((b) => b.bracket_type !== 'losers')
+  // Winners/losers/grand-final are rendered as three separate sections rather
+  // than one dense round→column loop: the losers bracket and grand final use
+  // deliberately large, sparse round numbers (1000+, 9999) so they never
+  // collide with winners-bracket round numbers -- looping every integer from
+  // 1 to the max round, as a single-elim/round-robin bracket safely can,
+  // would try to render several thousand mostly-empty columns here.
+  const winnersBrackets = brackets
+    .filter((b) => (b.bracket_type ?? 'winners') === 'winners')
+    .sort((a, b) => a.round - b.round || a.match_order - b.match_order)
+  const losersBrackets = brackets
+    .filter((b) => LOSERS_TYPES.has(b.bracket_type ?? ''))
+    .sort((a, b) => a.round - b.round || a.match_order - b.match_order)
+  const grandFinal = brackets.find((b) => b.bracket_type === 'grand_final') ?? null
+
+  // Round robin (plain or split-pool) has no bracket_type === 'winners' rows
+  // at all -- everything is 'round_robin' / 'rr_pool_a' / 'rr_pool_b', plus a
+  // real knockout final for the split format. All of that still belongs in
+  // one flat round→column sequence exactly like before, so it falls through
+  // to winnersBrackets here (nothing has 'losers' or 'grand_final' type).
+  const flatBrackets = winnersBrackets.length > 0 ? winnersBrackets : brackets
+  const isDoubleElim = losersBrackets.length > 0 || grandFinal !== null
 
   function roundColumnLabel(round: number, maxRound: number, inRound: Bracket[]): string {
-    if (round === maxRound) return '🏆 Final'
+    if (round === maxRound) return isDoubleElim ? '🏆 Winners Final' : '🏆 Final'
     const typesInRound = new Set(inRound.map((b) => b.bracket_type))
     if (round === maxRound - 1) {
       return typesInRound.has('crossover_semi') ? 'Crossover semis' : 'Semi-Final'
@@ -52,12 +151,20 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
     return `Round ${round}`
   }
 
-  const maxRound =
-    visibleBrackets.length === 0 ? 0 : Math.max(...visibleBrackets.map((b) => b.round), 0)
-  const rounds = Array.from({ length: maxRound }, (_, i) => i + 1)
+  const winnersDisplayRounds = [...new Set(flatBrackets.map((b) => b.round))].sort((a, b) => a - b)
+  const losersDisplayRounds = [...new Set(losersBrackets.map((b) => b.round))].sort((a, b) => a - b)
+  const maxWinnersRound = winnersDisplayRounds.length === 0 ? 0 : Math.max(...winnersDisplayRounds)
 
-  const getBracketsForRound = (round: number) =>
-    visibleBrackets.filter((b) => b.round === round).sort((a, b) => a.match_order - b.match_order)
+  // Internal losers-round numbers (1000+, with gaps where a round carried an
+  // odd entrant forward with no match) aren't meaningful to show directly --
+  // relabel them as a plain sequential "Losers Round 1, 2, 3...".
+  function losersRoundLabel(round: number, inRound: Bracket[]): string {
+    if (inRound.some((b) => b.bracket_type === 'losers_final')) return 'Losers Final'
+    return `Losers Round ${losersDisplayRounds.indexOf(round) + 1}`
+  }
+
+  const getBracketsForRound = (source: Bracket[], round: number) =>
+    source.filter((b) => b.round === round).sort((a, b) => a.match_order - b.match_order)
 
   const getMatch = (bracketId: string) => matches.find((m) => m.bracket_id === bracketId)
 
@@ -75,7 +182,7 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
     link.click()
   }
 
-  if (visibleBrackets.length === 0) {
+  if (brackets.length === 0) {
     return (
       <div className="text-center text-[var(--text-muted)] py-12">No bracket generated yet</div>
     )
@@ -116,119 +223,83 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
               </button>
             </div>
             <TransformComponent>
-              <div ref={bracketRef} className="flex gap-0 p-6 min-w-max">
-                {rounds.map((round) => {
-                  const roundBrackets = getBracketsForRound(round)
-                  return (
-                    <div key={round} className="flex flex-col justify-around min-w-[180px]">
-                      <div className="text-center text-xs text-[var(--text-muted)] mb-4 font-semibold uppercase tracking-wider px-4">
-                        {roundColumnLabel(round, maxRound, roundBrackets)}
-                      </div>
-                      <div className="flex flex-col justify-around flex-1 gap-4">
-                        {roundBrackets.map((bracket) => {
-                          const match = getMatch(bracket.id)
-                          const isLive = match?.status === 'live'
-                          const isDone = match?.status === 'completed' || bracket.is_bye
-                          const clickable = Boolean(match && onMatchClick)
-                          return (
-                            <div key={bracket.id} className="relative">
-                              <div
-                                role={clickable ? 'button' : undefined}
-                                tabIndex={clickable ? 0 : undefined}
-                                className={cn(
-                                  'border rounded-xl overflow-hidden transition-all text-left',
-                                  isLive
-                                    ? 'border-[#FF3355] shadow-[0_0_12px_rgba(255,51,85,0.3)]'
-                                    : 'border-[var(--border-subtle)]',
-                                  isDone ? 'opacity-80' : '',
-                                  clickable
-                                    ? 'cursor-pointer hover:border-[#0066FF]/50 hover:shadow-[0_0_8px_rgba(0,102,255,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]'
-                                    : '',
-                                )}
-                                style={{ width: 160 }}
-                                onClick={() => clickable && match && onMatchClick?.(match)}
-                                onKeyDown={(e) => {
-                                  if (!clickable || !match) return
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault()
-                                    onMatchClick?.(match)
-                                  }
-                                }}
-                              >
-                                {isLive && (
-                                  <div className="bg-[#FF3355] text-white text-[9px] font-bold text-center py-0.5 tracking-widest">
-                                    ● LIVE
-                                  </div>
-                                )}
-                                {/* Participant A */}
-                                <div
-                                  className={cn(
-                                    'flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]',
-                                    // Exactly one background class — stacking a tint on top of
-                                    // bg-surface-card left the winner row's color decided by
-                                    // stylesheet order rather than theme.
-                                    isWinnerSlot(bracket.participant_a_id, bracket.winner_id)
-                                      ? 'bg-[var(--success)]/15'
-                                      : 'bg-[var(--surface-card)]',
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      'text-xs truncate flex-1 text-[var(--text-primary)]',
-                                      isWinnerSlot(bracket.participant_a_id, bracket.winner_id)
-                                        ? 'font-bold'
-                                        : 'font-medium',
-                                    )}
-                                    title={bracket.participant_a_id ?? undefined}
-                                  >
-                                    {slotLabel(
-                                      bracket.participant_a_id,
-                                      participantLabels,
-                                      'a',
-                                      bracket.is_bye,
-                                    )}
-                                  </span>
-                                  {isWinnerSlot(bracket.participant_a_id, bracket.winner_id) && (
-                                    <span className="text-[var(--success)] text-xs ml-1">✓</span>
-                                  )}
-                                </div>
-                                {/* Participant B */}
-                                <div
-                                  className={cn(
-                                    'flex items-center justify-between px-3 py-2',
-                                    isWinnerSlot(bracket.participant_b_id, bracket.winner_id)
-                                      ? 'bg-[var(--success)]/15'
-                                      : 'bg-[var(--surface-card)]',
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      'text-xs truncate flex-1 text-[var(--text-primary)]',
-                                      isWinnerSlot(bracket.participant_b_id, bracket.winner_id)
-                                        ? 'font-bold'
-                                        : 'font-medium',
-                                    )}
-                                    title={bracket.participant_b_id ?? undefined}
-                                  >
-                                    {slotLabel(
-                                      bracket.participant_b_id,
-                                      participantLabels,
-                                      'b',
-                                      bracket.is_bye,
-                                    )}
-                                  </span>
-                                  {isWinnerSlot(bracket.participant_b_id, bracket.winner_id) && (
-                                    <span className="text-[var(--success)] text-xs ml-1">✓</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
+              <div ref={bracketRef} className="flex flex-col gap-8 p-6 min-w-max">
+                <div>
+                  {isDoubleElim && (
+                    <div className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2 px-1">
+                      Winners Bracket
                     </div>
-                  )
-                })}
+                  )}
+                  <div className="flex gap-0">
+                    {winnersDisplayRounds.map((round) => {
+                      const roundBrackets = getBracketsForRound(flatBrackets, round)
+                      return (
+                        <div key={round} className="flex flex-col justify-around min-w-[180px]">
+                          <div className="text-center text-xs text-[var(--text-muted)] mb-4 font-semibold uppercase tracking-wider px-4">
+                            {roundColumnLabel(round, maxWinnersRound, roundBrackets)}
+                          </div>
+                          <div className="flex flex-col justify-around flex-1 gap-4">
+                            {roundBrackets.map((bracket) => (
+                              <BracketCard
+                                key={bracket.id}
+                                bracket={bracket}
+                                match={getMatch(bracket.id)}
+                                participantLabels={participantLabels}
+                                onMatchClick={onMatchClick}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {grandFinal && (
+                      <div className="flex flex-col justify-around min-w-[180px]">
+                        <div className="text-center text-xs text-[var(--text-muted)] mb-4 font-semibold uppercase tracking-wider px-4">
+                          🏆 Grand Final
+                        </div>
+                        <div className="flex flex-col justify-around flex-1 gap-4">
+                          <BracketCard
+                            bracket={grandFinal}
+                            match={getMatch(grandFinal.id)}
+                            participantLabels={participantLabels}
+                            onMatchClick={onMatchClick}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {losersDisplayRounds.length > 0 && (
+                  <div>
+                    <div className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider mb-2 px-1">
+                      Losers Bracket
+                    </div>
+                    <div className="flex gap-0">
+                      {losersDisplayRounds.map((round) => {
+                        const roundBrackets = getBracketsForRound(losersBrackets, round)
+                        return (
+                          <div key={round} className="flex flex-col justify-around min-w-[180px]">
+                            <div className="text-center text-xs text-[var(--text-muted)] mb-4 font-semibold uppercase tracking-wider px-4">
+                              {losersRoundLabel(round, roundBrackets)}
+                            </div>
+                            <div className="flex flex-col justify-around flex-1 gap-4">
+                              {roundBrackets.map((bracket) => (
+                                <BracketCard
+                                  key={bracket.id}
+                                  bracket={bracket}
+                                  match={getMatch(bracket.id)}
+                                  participantLabels={participantLabels}
+                                  onMatchClick={onMatchClick}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </TransformComponent>
           </div>

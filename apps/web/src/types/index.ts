@@ -157,7 +157,7 @@ export interface Bracket {
   winner_id: string | null
   next_bracket_id: string | null
   is_bye: boolean
-  /** 'winners' | 'losers' | 'grand_final' from DB */
+  /** 'winners' | 'losers' | 'losers_final' | 'grand_final' | 'round_robin' | 'rr_pool_a' | 'rr_pool_b' | 'crossover_semi' | 'knockout_final' from DB */
   bracket_type?: string | null
 }
 

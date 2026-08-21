@@ -71,14 +71,15 @@ export function placementRankLabel(rank: number): string {
  *   (unchanged, see deriveEliminationPodium above), everyone else ranked by
  *   the furthest round they reached before losing. Teams eliminated in the
  *   same round tie and share a rank (standard "1,2,3,3,5" competition
- *   ranking — the next distinct rank skips by the tie group's size).
- *   Double-elim's losers-bracket rows are deprioritized below every winners
- *   round regardless of raw round number (the generator stores losers
- *   rounds as `round + 100`, which would otherwise sort them *above*
- *   winners rounds) — see effectiveRound below. In practice this app's
- *   double-elim never actually advances a loser into those slots (only
- *   advanceWinner exists, no advanceLoser), so this mostly matters for
- *   forward-compatibility rather than real data today.
+ *   ranking — the next distinct rank skips by the tie group's size). For
+ *   double elim, a losers-bracket appearance is chronologically later than
+ *   the winners-bracket loss that sent them there (advanceWinner routes
+ *   losers into their losers-bracket match, not just winners forward), so it
+ *   should win the "furthest round" comparison once it exists — the
+ *   generator's losers-round numbers (1000+) are deliberately far above any
+ *   realistic winners-bracket round count, so plain `max()` over `b.round`
+ *   already prefers it with no special-casing needed — see effectiveRound
+ *   below.
  *
  * - Round robin (plain or split-pool-with-crossover): ranked by event-scoped
  *   win/loss record tallied directly from bracket rows (pool matches store
@@ -114,16 +115,18 @@ function deriveEliminationStandings(brackets: BracketPlacementInput[]): EventPla
   remaining.delete(champion.participantId)
   remaining.delete(runnerUp.participantId)
 
-  // Furthest round each remaining participant reached. Losers-bracket rounds
-  // are pushed far below any winners round so double-elim can't accidentally
-  // rank a losers-bracket team above one still alive in winners.
+  // Furthest round each remaining participant reached. A losers-bracket
+  // appearance is always chronologically later than the winners-bracket loss
+  // that sent them there, so it should determine their placement once it
+  // exists -- the generator's losers-round numbers (1000+) are deliberately
+  // well above any realistic winners-bracket round count, so plain `max()`
+  // over `b.round` already prefers it with no special-casing needed.
   const effectiveRound = new Map<string, number>()
   for (const b of brackets) {
-    const r = b.bracket_type === 'losers' ? b.round - 1_000_000 : b.round
     for (const pid of [b.participant_a_id, b.participant_b_id]) {
       if (!pid || !remaining.has(pid)) continue
       const cur = effectiveRound.get(pid)
-      if (cur === undefined || r > cur) effectiveRound.set(pid, r)
+      if (cur === undefined || b.round > cur) effectiveRound.set(pid, b.round)
     }
   }
 

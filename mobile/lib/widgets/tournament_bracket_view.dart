@@ -40,8 +40,10 @@ class TournamentBracketView extends StatelessWidget {
     return null;
   }
 
-  static String roundLabelStatic(int round, int maxRound, List<Map<String, dynamic>> inRound) {
-    if (round == maxRound) return 'Final';
+  static const _losersTypes = {'losers', 'losers_final'};
+
+  static String roundLabelStatic(int round, int maxRound, List<Map<String, dynamic>> inRound, {required bool isDoubleElim}) {
+    if (round == maxRound) return isDoubleElim ? 'Winners Final' : 'Final';
     final types = inRound.map((b) => b['bracket_type'] as String?).whereType<String>().toSet();
     if (round == maxRound - 1) {
       return types.contains('crossover_semi') ? 'Crossover semis' : 'Semi-Final';
@@ -51,10 +53,46 @@ class TournamentBracketView extends StatelessWidget {
     return 'Round $round';
   }
 
+  static String losersRoundLabelStatic(int round, List<Map<String, dynamic>> inRound, List<int> losersRounds) {
+    if (inRound.any((b) => b['bracket_type'] == 'losers_final')) return 'Losers Final';
+    return 'Losers Round ${losersRounds.indexOf(round) + 1}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final visible = brackets.where((b) => b['bracket_type'] != 'losers').toList();
-    if (visible.isEmpty) {
+    // Winners/losers/grand-final are rendered as separate sections rather
+    // than one dense round→column loop: the losers bracket and grand final
+    // use deliberately large, sparse round numbers (1000+, 9999) so they
+    // never collide with winners-bracket round numbers -- looping every
+    // integer up to the max round, as single-elim/round-robin safely can,
+    // would try to render thousands of mostly-empty columns here.
+    final winnersBrackets = brackets.where((b) => (b['bracket_type'] as String? ?? 'winners') == 'winners').toList()
+      ..sort((a, b) {
+        final r = ((a['round'] as num?) ?? 0).compareTo((b['round'] as num?) ?? 0);
+        return r != 0 ? r : ((a['match_order'] as num?) ?? 0).compareTo((b['match_order'] as num?) ?? 0);
+      });
+    final losersBrackets = brackets.where((b) => _losersTypes.contains(b['bracket_type'] as String? ?? '')).toList()
+      ..sort((a, b) {
+        final r = ((a['round'] as num?) ?? 0).compareTo((b['round'] as num?) ?? 0);
+        return r != 0 ? r : ((a['match_order'] as num?) ?? 0).compareTo((b['match_order'] as num?) ?? 0);
+      });
+    Map<String, dynamic>? grandFinal;
+    for (final b in brackets) {
+      if (b['bracket_type'] == 'grand_final') {
+        grandFinal = b;
+        break;
+      }
+    }
+
+    // Round robin (plain or split-pool) has no bracket_type == 'winners' rows
+    // at all -- everything is 'round_robin' / 'rr_pool_a' / 'rr_pool_b', plus
+    // a real knockout_final. That still belongs in one flat round→column
+    // sequence exactly like before, so it falls through to winnersBrackets
+    // here (nothing has 'losers' or 'grand_final' type in that case).
+    final flatBrackets = winnersBrackets.isNotEmpty ? winnersBrackets : brackets;
+    final isDoubleElim = losersBrackets.isNotEmpty || grandFinal != null;
+
+    if (flatBrackets.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -63,50 +101,136 @@ class TournamentBracketView extends StatelessWidget {
       );
     }
 
-    final maxRound = visible.map((b) => (b['round'] as num?)?.toInt() ?? 0).reduce((a, c) => a > c ? a : c);
-    final rounds = List.generate(maxRound, (i) => i + 1);
+    int roundOf(Map<String, dynamic> b) => (b['round'] as num?)?.toInt() ?? 0;
+    final winnersRounds = {for (final b in flatBrackets) roundOf(b)}.toList()..sort();
+    final losersRounds = {for (final b in losersBrackets) roundOf(b)}.toList()..sort();
+    final maxWinnersRound = winnersRounds.isEmpty ? 0 : winnersRounds.reduce((a, b) => a > b ? a : b);
 
-    int matchCount(int r) => visible.where((b) => (b['round'] as num?)?.toInt() == r).length;
-    final maxMatchesInRound = rounds.map(matchCount).fold(0, (a, b) => a > b ? a : b);
-    final canvasHeight = (maxMatchesInRound * 96.0 + 84).clamp(280.0, 1400.0);
+    List<Map<String, dynamic>> bracketsForRound(List<Map<String, dynamic>> source, int r) =>
+        source.where((b) => roundOf(b) == r).toList()
+          ..sort((a, b) => ((a['match_order'] as num?) ?? 0).compareTo((b['match_order'] as num?) ?? 0));
+
+    int matchCount(List<Map<String, dynamic>> source, int r) => bracketsForRound(source, r).length;
+
+    Widget buildRoundRow({
+      required List<int> rounds,
+      required List<Map<String, dynamic>> source,
+      required String Function(int round, List<Map<String, dynamic>> inRound) labelFor,
+      Map<String, dynamic>? trailingGrandFinal,
+    }) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var ri = 0; ri < rounds.length; ri++) ...[
+            if (ri > 0)
+              _RoundBridge(
+                leftMatchCount: matchCount(source, rounds[ri - 1]),
+                rightMatchCount: matchCount(source, rounds[ri]),
+              ),
+            _RoundColumn(
+              label: labelFor(rounds[ri], bracketsForRound(source, rounds[ri])),
+              roundBrackets: bracketsForRound(source, rounds[ri]),
+              cellWidth: _cellWidth,
+              participantLabels: participantLabels,
+              matchForBracket: _matchForBracket,
+              onMatchTap: onMatchTap,
+            ),
+          ],
+          if (trailingGrandFinal != null) ...[
+            const _RoundBridge(leftMatchCount: 1, rightMatchCount: 1),
+            _RoundColumn(
+              label: '🏆 Grand Final',
+              roundBrackets: [trailingGrandFinal],
+              cellWidth: _cellWidth,
+              participantLabels: participantLabels,
+              matchForBracket: _matchForBracket,
+              onMatchTap: onMatchTap,
+            ),
+          ],
+        ],
+      );
+    }
+
+    final maxMatchesInRound = [
+      ...winnersRounds.map((r) => matchCount(flatBrackets, r)),
+      ...losersRounds.map((r) => matchCount(losersBrackets, r)),
+    ].fold(0, (a, b) => a > b ? a : b);
+    // Explicit height rather than IntrinsicHeight below: IntrinsicHeight
+    // needs to speculatively re-run layout to measure its child, which a
+    // LayoutBuilder-based ancestor (SingleChildScrollView's viewport builds
+    // one internally) cannot support -- worse, this isn't just a test
+    // artifact, it also fires for real during semantics-tree computation
+    // (screen readers), so it's a real crash risk, not just a testing quirk.
+    final rowHeight = maxMatchesInRound * 96.0 + 84;
+    // Section labels ("WINNERS/LOSERS BRACKET") sit above each row, outside
+    // rowHeight's own budget, plus the outer scroll view's own padding --
+    // there's no vertical scroll fallback (only horizontal), so undercounting
+    // this overflows rather than just clipping.
+    final winnersLabelHeight = isDoubleElim ? 30.0 : 0.0;
+    final losersLabelHeight = losersRounds.isNotEmpty ? 54.0 : 0.0;
+    // Hand-estimated rather than tightly measured (font metrics aren't known
+    // ahead of layout) -- errs generous, since unused space at the bottom
+    // costs nothing but an overflow does.
+    final canvasHeight =
+        rowHeight * (losersRounds.isEmpty ? 1 : 2) + winnersLabelHeight + losersLabelHeight + 110;
 
     return SizedBox(
-      height: canvasHeight,
+      height: canvasHeight.clamp(280.0, 2400.0),
       child: Container(
-      decoration: BoxDecoration(
-        color: LayoutTokens.bracketCanvas,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x22FFFFFF)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InteractiveViewer(
-        boundaryMargin: const EdgeInsets.all(120),
-        minScale: 0.35,
-        maxScale: 2.5,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(20),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+        decoration: BoxDecoration(
+          color: LayoutTokens.bracketCanvas,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0x22FFFFFF)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InteractiveViewer(
+          boundaryMargin: const EdgeInsets.all(120),
+          minScale: 0.35,
+          maxScale: 2.5,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(20),
+            // A second (vertical) SingleChildScrollView here — rather than
+            // just letting the Column lay out within the SizedBox above,
+            // which already sizes for both sections — broke IntrinsicHeight
+            // below: "LayoutBuilder does not support returning intrinsic
+            // dimensions," since SingleChildScrollView's viewport is itself
+            // built via a LayoutBuilder internally.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var ri = 0; ri < rounds.length; ri++) ...[
-                  if (ri > 0)
-                    _RoundBridge(
-                      leftMatchCount: matchCount(rounds[ri - 1]),
-                      rightMatchCount: matchCount(rounds[ri]),
+                if (isDoubleElim)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8, left: 4),
+                    child: Text(
+                      'WINNERS BRACKET',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF8888A0), letterSpacing: 1),
                     ),
-                  _RoundColumn(
-                    round: rounds[ri],
-                    maxRound: maxRound,
-                    roundBrackets: visible
-                        .where((b) => (b['round'] as num?)?.toInt() == rounds[ri])
-                        .toList()
-                      ..sort((a, b) => ((a['match_order'] as num?) ?? 0).compareTo((b['match_order'] as num?) ?? 0)),
-                    cellWidth: _cellWidth,
-                    participantLabels: participantLabels,
-                    matchForBracket: _matchForBracket,
-                    onMatchTap: onMatchTap,
+                  ),
+                SizedBox(
+                  height: rowHeight,
+                  child: buildRoundRow(
+                    rounds: winnersRounds,
+                    source: flatBrackets,
+                    labelFor: (r, inRound) => roundLabelStatic(r, maxWinnersRound, inRound, isDoubleElim: isDoubleElim),
+                    trailingGrandFinal: grandFinal,
+                  ),
+                ),
+                if (losersRounds.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(top: 24, bottom: 8, left: 4),
+                    child: Text(
+                      'LOSERS BRACKET',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF8888A0), letterSpacing: 1),
+                    ),
+                  ),
+                  SizedBox(
+                    height: rowHeight,
+                    child: buildRoundRow(
+                      rounds: losersRounds,
+                      source: losersBrackets,
+                      labelFor: (r, inRound) => losersRoundLabelStatic(r, inRound, losersRounds),
+                    ),
                   ),
                 ],
               ],
@@ -114,7 +238,6 @@ class TournamentBracketView extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 }
@@ -220,8 +343,7 @@ class _EliminationBridgePainter extends CustomPainter {
 
 class _RoundColumn extends StatelessWidget {
   const _RoundColumn({
-    required this.round,
-    required this.maxRound,
+    required this.label,
     required this.roundBrackets,
     required this.cellWidth,
     required this.participantLabels,
@@ -229,8 +351,7 @@ class _RoundColumn extends StatelessWidget {
     this.onMatchTap,
   });
 
-  final int round;
-  final int maxRound;
+  final String label;
   final List<Map<String, dynamic>> roundBrackets;
   final double cellWidth;
   final Map<String, String> participantLabels;
@@ -248,7 +369,7 @@ class _RoundColumn extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              TournamentBracketView.roundLabelStatic(round, maxRound, roundBrackets),
+              label,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 11,
