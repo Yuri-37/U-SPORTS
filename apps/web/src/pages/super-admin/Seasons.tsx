@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { Stepper } from '../../components/ui/Stepper'
+import { SportCheckboxes } from '../../components/ui/SportCheckboxes'
 import api from '../../lib/api'
 import type { Season, Sport } from '../../types'
 import { formatDate, formatEnumLabel, getSportLabel } from '../../lib/utils'
@@ -16,56 +17,6 @@ const STATUS_BADGE: Record<string, 'default' | 'info' | 'success' | 'warning'> =
 }
 
 type StaffOption = { organizer_id: string; full_name: string; role: string }
-
-/** Sport checkboxes with a "Select all" toggle — the professor's diagram drew
- *  this explicitly next to the per-season sport list. */
-function SportCheckboxes({
-  options,
-  selected,
-  onChange,
-  dataTour,
-}: {
-  options: Sport[]
-  selected: string[]
-  onChange: (next: string[]) => void
-  /** Only the Create-season call site sets this — shared with Edit, so a
-   *  bare `data-tour` here would match twice in the DOM. */
-  dataTour?: string
-}) {
-  const allSelected = options.length > 0 && options.every((s) => selected.includes(s))
-  return (
-    <div data-tour={dataTour}>
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-sm font-medium text-[var(--text-secondary)]">Sports</label>
-        <button
-          type="button"
-          className="text-xs text-[#0066FF] hover:underline"
-          onClick={() => onChange(allSelected ? [] : options)}
-        >
-          {allSelected ? 'Clear all' : 'Select all'}
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((s) => (
-          <label
-            key={s}
-            className="flex items-center gap-2 text-sm rounded-lg border border-[var(--border-subtle)] px-3 py-2 cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              className="size-4 rounded border-[var(--border-subtle)] accent-[#0066FF]"
-              checked={selected.includes(s)}
-              onChange={() =>
-                onChange(selected.includes(s) ? selected.filter((x) => x !== s) : [...selected, s])
-              }
-            />
-            {getSportLabel(s)}
-          </label>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /** Which Organizers/Coaches are in charge of this season — the professor's
  *  diagram put this on the Admin side, "before simula ng season". */

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { Stepper } from '../../ui/Stepper'
+import { SportCheckboxes } from '../../ui/SportCheckboxes'
 import api from '../../../lib/api'
-import { getSportLabel, getSportIcon } from '../../../lib/utils'
 import type { TourStepContext } from '../../../tours/types'
 
 type Sport = 'basketball' | 'volleyball' | 'table-tennis'
@@ -157,27 +157,23 @@ export default function PlaceholderGeneratorStep({ ctx }: { ctx?: TourStepContex
       </div>
 
       {selectedSeason && selectedSeason.sports.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selectedSeason.sports.map((s) => (
-            <span
-              key={s}
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-elevated)] px-2.5 py-1 text-xs"
-            >
-              {getSportIcon(s)} {getSportLabel(s)}
-            </span>
-          ))}
-        </div>
+        <SportCheckboxes
+          options={selectedSeason.sports}
+          selected={selectedSeason.sports}
+          onChange={() => {}}
+          readOnly
+        />
       )}
 
       <Stepper label="Teams per sport" value={teamsPerSport} onChange={setTeamsPerSport} max={20} />
-      <p className="text-xs text-[var(--text-muted)] -mt-2">
-        {teamsPerSport} × {selectedSeason?.sports.length ?? 0} sports ={' '}
-        {teamsPerSport * (selectedSeason?.sports.length ?? 0)} teams
-      </p>
       <Stepper label="Events per sport" value={eventsPerSport} onChange={setEventsPerSport} max={10} />
-      <p className="text-xs text-[var(--text-muted)] -mt-2">
-        {eventsPerSport} × {selectedSeason?.sports.length ?? 0} sports ={' '}
-        {eventsPerSport * (selectedSeason?.sports.length ?? 0)} events
+      <p className="text-xs text-[var(--text-muted)]">
+        {(selectedSeason?.sports.length ?? 0) === 0
+          ? 'Pick a season with sports configured.'
+          : `${teamsPerSport} × ${selectedSeason?.sports.length} sport${selectedSeason?.sports.length === 1 ? '' : 's'} = ` +
+            `${teamsPerSport * (selectedSeason?.sports.length ?? 0)} team${teamsPerSport * (selectedSeason?.sports.length ?? 0) === 1 ? '' : 's'}, ` +
+            `${eventsPerSport} × ${selectedSeason?.sports.length} = ` +
+            `${eventsPerSport * (selectedSeason?.sports.length ?? 0)} event${eventsPerSport * (selectedSeason?.sports.length ?? 0) === 1 ? '' : 's'}`}
       </p>
 
       {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
