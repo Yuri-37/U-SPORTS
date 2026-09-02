@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
+import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
@@ -104,6 +105,19 @@ router.post(
           })
           continue
         }
+        // Blank is allowed (year level is optional); anything present must be
+        // a real level for that department, and is stored canonicalized so a
+        // sheet saying "Grade 11" and one saying "11" land identically.
+        let yearLevel = ''
+        if (row.year_level) {
+          const normalized = normalizeYearLevel(row.year_level, row.department)
+          if (!normalized) {
+            errors.push({ row: idx + 1, error: yearLevelErrorMessage(row.department) })
+            continue
+          }
+          yearLevel = normalized
+        }
+
         const email = (row.email ?? generatedEmail(row.student_id)).toLowerCase()
         const password = row.password ?? generatedPassword(row.student_id)
 
@@ -127,7 +141,7 @@ router.post(
             studentId: row.student_id,
             department: row.department,
             course: row.course,
-            yearLevel: row.year_level,
+            yearLevel,
           })
           userId = account.userId
           mode = account.mode
@@ -154,7 +168,7 @@ router.post(
             profile_id: userId,
             student_id: row.student_id,
             sport: row.sport,
-            year_level: row.year_level,
+            year_level: yearLevel,
             department: row.department,
             season_status: 'active',
           })
@@ -277,6 +291,18 @@ router.post(
             row: idx + 1,
             valid: false,
             error: 'Sport is required either in the file row or request body.',
+            ...common,
+          })
+          continue
+        }
+
+        // Same department/year-level rule the commit path enforces, surfaced
+        // here so a bad sheet is caught in the preview instead of mid-import.
+        if (row.year_level && !normalizeYearLevel(row.year_level, row.department)) {
+          preview.push({
+            row: idx + 1,
+            valid: false,
+            error: yearLevelErrorMessage(row.department),
             ...common,
           })
           continue

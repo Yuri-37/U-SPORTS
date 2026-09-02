@@ -7,6 +7,8 @@ import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import { studentEmailZ } from '../../lib/validation/forms'
+import { yearLevelOptions, yearLevelsForDepartment } from '../../lib/validation/yearLevel'
+import { describeApiError } from '../../lib/apiError'
 
 const DEPARTMENT_OPTIONS = [
   { value: 'SBMA', label: 'SBMA' },
@@ -167,7 +169,10 @@ export default function OrganizerAthletes() {
         year_level: addYearLevel.trim(),
         course: addCourse.trim(),
         ...(addEmail.trim() ? { email: addEmail.trim() } : {}),
-      })
+      },
+      // Creating an account sends an invite email and makes several writes;
+      // on a cold-started API that overruns the 30s client default.
+      { timeout: 60000 })
       setAddAthleteResult({
         name: addName.trim(),
         email: data.email,
@@ -179,11 +184,7 @@ export default function OrganizerAthletes() {
       resetAddAthleteForm()
       fetchAthletes()
     } catch (e: unknown) {
-      const msg =
-        e && typeof e === 'object' && 'response' in e
-          ? (e as { response?: { data?: { error?: string } } }).response?.data?.error
-          : undefined
-      setAddAthleteError(msg ?? 'Could not create athlete')
+      setAddAthleteError(describeApiError(e, 'Could not create athlete'))
     } finally {
       setAddAthleteBusy(false)
     }
@@ -914,7 +915,14 @@ export default function OrganizerAthletes() {
             <Select
               label="Department"
               value={addDepartment}
-              onChange={(e) => setAddDepartment(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value
+                setAddDepartment(next)
+                // SHS runs 11-12 and college 1st-4th, so a level picked for
+                // one is never valid for the other -- clear it rather than
+                // submit a stale value the server will reject.
+                if (!yearLevelsForDepartment(next).includes(addYearLevel)) setAddYearLevel('')
+              }}
               options={DEPARTMENT_OPTIONS.map((d) => ({ value: d.value, label: d.label }))}
             />
             <Select
@@ -925,11 +933,11 @@ export default function OrganizerAthletes() {
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input
+            <Select
               label="Year level (optional)"
               value={addYearLevel}
               onChange={(e) => setAddYearLevel(e.target.value)}
-              placeholder="1st Year"
+              options={yearLevelOptions(addDepartment)}
             />
             <Input
               label="Course (optional)"

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
+import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { respondIfSportForbidden } from '../utils/organizerSportAccess'
 import {
@@ -50,6 +51,17 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
     const body = schema.parse(req.body)
     if (await respondIfSportForbidden(req, res, body.sport)) return
 
+    // Optional, but when supplied it has to be a real level for that
+    // department (SHS 11-12, college 1st-4th).
+    let yearLevel = ''
+    if (body.year_level) {
+      const normalized = normalizeYearLevel(body.year_level, body.department)
+      if (!normalized) {
+        return res.status(400).json({ error: yearLevelErrorMessage(body.department) })
+      }
+      yearLevel = normalized
+    }
+
     const { data: existingAthlete } = await supabase
       .from('athletes')
       .select('id')
@@ -71,7 +83,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
         studentId: body.student_id,
         department: body.department,
         course: body.course,
-        yearLevel: body.year_level,
+        yearLevel,
       })
     } catch (e: unknown) {
       return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not create auth user' })
@@ -92,7 +104,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
         profile_id: account.userId,
         student_id: body.student_id,
         sport: body.sport,
-        year_level: body.year_level,
+        year_level: yearLevel,
         department: body.department,
         season_status: 'active',
       })

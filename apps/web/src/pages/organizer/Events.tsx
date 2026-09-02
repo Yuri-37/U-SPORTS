@@ -1,7 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, ArrowLeft } from 'lucide-react'
-import { Button, Card, Badge, TabBar, EmptyState, Skeleton, Alert } from '../../components/ui'
+import { Plus, ArrowLeft, Search } from 'lucide-react'
+import {
+  Button,
+  Card,
+  Badge,
+  TabBar,
+  EmptyState,
+  Skeleton,
+  Alert,
+  Input,
+  Select,
+} from '../../components/ui'
 import { CreateEventModal } from '../../components/organizer/CreateEventModal'
 import api from '../../lib/api'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
@@ -30,6 +40,8 @@ export default function OrganizerEvents() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [tab, setTab] = useState('active')
+  const [listSearch, setListSearch] = useState('')
+  const [sportFilter, setSportFilter] = useState<string>('')
   const fetchGeneration = useRef(0)
 
   const fetchEvents = (opts?: { silent?: boolean }) => {
@@ -72,12 +84,24 @@ export default function OrganizerEvents() {
 
   const canCreateEvents = sportOptionsForForms.length > 0
 
-  const filtered = events.filter((e) => {
-    if (tab === 'active') return ['in_progress', 'registration', 'draft'].includes(e.status)
-    if (tab === 'completed') return e.status === 'completed'
-    if (tab === 'cancelled') return e.status === 'cancelled'
-    return true
-  })
+  const filtered = useMemo(() => {
+    const q = listSearch.trim().toLowerCase()
+    return events.filter((e) => {
+      if (tab === 'active' && !['in_progress', 'registration', 'draft'].includes(e.status))
+        return false
+      if (tab === 'completed' && e.status !== 'completed') return false
+      if (tab === 'cancelled' && e.status !== 'cancelled') return false
+      if (sportFilter && e.sport !== sportFilter) return false
+      if (!q) return true
+      const name = (e.name ?? '').toLowerCase()
+      const category = (e.category ?? '').toLowerCase()
+      const sport = getSportLabel(e.sport as any).toLowerCase()
+      const status = organizerEventStatusLabel(e.status).toLowerCase()
+      return (
+        name.includes(q) || category.includes(q) || sport.includes(q) || status.includes(q)
+      )
+    })
+  }, [events, tab, listSearch, sportFilter])
 
   return (
     <div className="space-y-6">
@@ -94,7 +118,11 @@ export default function OrganizerEvents() {
           <div>
             <h1 className="text-2xl font-bold">Events</h1>
             <p className="text-[var(--text-muted)] text-sm">
-              {loading ? 'Loading events…' : `${events.length} total events`}
+              {loading
+                ? 'Loading events…'
+                : filtered.length === events.length
+                  ? `${events.length} total events`
+                  : `${filtered.length} of ${events.length} events`}
               {!hasFullSportAccess && assignedSports.length > 0 ? (
                 <span className="block mt-1 text-xs">
                   You can edit events for{' '}
@@ -126,6 +154,31 @@ export default function OrganizerEvents() {
         onChange={setTab}
       />
 
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="flex-1 min-w-0">
+          <Input
+            label="Search"
+            placeholder="Event name, category, sport, or status"
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            icon={<Search className="w-4 h-4" />}
+          />
+        </div>
+        <div className="w-full sm:w-44 shrink-0">
+          <Select
+            label="Sport"
+            value={sportFilter}
+            onChange={(e) => setSportFilter(e.target.value)}
+            options={[
+              { value: '', label: 'All sports' },
+              { value: 'basketball', label: 'Basketball' },
+              { value: 'volleyball', label: 'Volleyball' },
+              { value: 'table-tennis', label: 'Table tennis' },
+            ]}
+          />
+        </div>
+      </div>
+
       {loadError && (
         <Alert
           type="danger"
@@ -148,8 +201,25 @@ export default function OrganizerEvents() {
         events.length > 0 ? (
           <EmptyState
             icon="🏆"
-            title="No events in this tab"
-            description="Try Active, Completed, Cancelled, or All — your events may be under another filter."
+            title={listSearch.trim() || sportFilter ? 'No matching events' : 'No events in this tab'}
+            description={
+              listSearch.trim() || sportFilter
+                ? 'Nothing matches your search and filters. Clear them, or try another tab.'
+                : 'Try Active, Completed, Cancelled, or All — your events may be under another filter.'
+            }
+            action={
+              listSearch.trim() || sportFilter ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setListSearch('')
+                    setSportFilter('')
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <EmptyState
