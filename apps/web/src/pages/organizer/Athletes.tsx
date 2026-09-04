@@ -144,14 +144,12 @@ export default function OrganizerAthletes() {
     if (!addName.trim()) return setAddAthleteError('Full name is required')
     if (!addStudentId.trim()) return setAddAthleteError('Student ID is required')
     if (!addSport) return setAddAthleteError('Sport is required')
-    // Left blank, this falls back to a generated @students.nu-dasma.edu.ph
-    // address server-side (already correctly domained) -- only validate it
-    // when the organizer actually typed one in.
-    if (addEmail.trim()) {
-      const parsedEmail = studentEmailZ.safeParse(addEmail.trim())
-      if (!parsedEmail.success) {
-        return setAddAthleteError(parsedEmail.error.issues[0]?.message ?? 'Enter a valid email')
-      }
+    // Required -- the account is delivered by email, so there's nothing
+    // useful to create without a real mailbox.
+    if (!addEmail.trim()) return setAddAthleteError('Email is required')
+    const parsedEmail = studentEmailZ.safeParse(addEmail.trim())
+    if (!parsedEmail.success) {
+      return setAddAthleteError(parsedEmail.error.issues[0]?.message ?? 'Enter a valid email')
     }
     setAddAthleteBusy(true)
     setAddAthleteError('')
@@ -168,7 +166,7 @@ export default function OrganizerAthletes() {
         sport: addSport,
         year_level: addYearLevel.trim(),
         course: addCourse.trim(),
-        ...(addEmail.trim() ? { email: addEmail.trim() } : {}),
+        email: addEmail.trim(),
       },
       // Creating an account sends an invite email and makes several writes;
       // on a cold-started API that overruns the 30s client default.
@@ -947,11 +945,12 @@ export default function OrganizerAthletes() {
             />
           </div>
           <Input
-            label="Email (optional)"
+            label="Email"
             type="email"
             value={addEmail}
             onChange={(e) => setAddEmail(e.target.value)}
-            placeholder="Leave blank to generate one from the student ID"
+            placeholder="juan.delacruz@students.nu-dasma.edu.ph"
+            hint="Their school email — the invite is sent here."
           />
           <Button className="w-full" loading={addAthleteBusy} onClick={() => void handleAddAthlete()}>
             {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
@@ -1067,15 +1066,19 @@ export default function OrganizerAthletes() {
               </div>
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">Year Level</p>
-                <p className="text-[var(--text-muted)]">e.g. 1st Year, Grade 12</p>
+                <p className="text-[var(--text-muted)]">1st–4th year, or Grade 11–12 for SHS</p>
               </div>
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">Course</p>
                 <p className="text-[var(--text-muted)]">e.g. BSIT, BSCS, BSBA</p>
               </div>
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">Email</p>
-                <p className="text-[var(--text-muted)]">Leave blank to auto-generate</p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  Email <span className="text-[var(--danger)]">*</span>
+                </p>
+                <p className="text-[var(--text-muted)]">
+                  Their school @students.nu-dasma.edu.ph address
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">Password</p>
@@ -1083,8 +1086,7 @@ export default function OrganizerAthletes() {
               </div>
             </div>
             <p className="text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-2">
-              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto login —
-              Email: <em>studentid@students.nu-dasma.edu.ph</em> &nbsp;·&nbsp; Password:{' '}
+              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto password —{' '}
               <em>UrSports-studentid-2026!</em>
             </p>
           </div>

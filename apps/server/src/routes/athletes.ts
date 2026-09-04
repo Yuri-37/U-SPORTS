@@ -11,7 +11,7 @@ import {
   type PasswordResetResult,
   type AccountCreationResult,
 } from '../utils/accountEmail'
-import { generatedEmail, generatedPassword } from '../utils/studentAccounts'
+import { generatedPassword } from '../utils/studentAccounts'
 import supabase from '../utils/supabase'
 
 const router = Router()
@@ -43,7 +43,10 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
     sport: z.enum(['basketball', 'volleyball', 'table-tennis']),
     year_level: z.string().trim().optional().default(''),
     course: z.string().trim().optional().default(''),
-    email: studentEmailZ.optional(),
+    // Required: the account is delivered by email (invite link, or the
+    // credentials an admin relays), so there is no useful account without a
+    // real mailbox to send it to.
+    email: studentEmailZ,
     password: passwordZ.optional(),
   })
 
@@ -71,7 +74,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
       return res.status(409).json({ error: `Student ID ${body.student_id} already exists.` })
     }
 
-    const email = (body.email ?? generatedEmail(body.student_id)).toLowerCase()
+    const email = body.email.toLowerCase()
     const password = body.password ?? generatedPassword(body.student_id)
 
     let account: AccountCreationResult

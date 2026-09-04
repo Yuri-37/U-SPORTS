@@ -8,7 +8,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
 import { createAthleteAuthUser, inviteEmailsEnabled } from '../utils/accountEmail'
-import { generatedEmail, generatedPassword } from '../utils/studentAccounts'
+import { generatedPassword, STUDENT_EMAIL_DOMAIN } from '../utils/studentAccounts'
 
 const router = Router()
 
@@ -24,7 +24,10 @@ const importRowSchema = z.object({
   course: z.string().trim().optional().default(''),
   department: departmentEnum,
   sport: sportEnum.optional(),
-  email: studentEmailZ.optional(),
+  // Required: every imported athlete is sent an invite (or relayed
+  // credentials), so a row without a real mailbox can't produce a usable
+  // account. Rows missing it fail individually rather than the whole file.
+  email: studentEmailZ,
   password: passwordZ.optional(),
 })
 
@@ -118,7 +121,7 @@ router.post(
           yearLevel = normalized
         }
 
-        const email = (row.email ?? generatedEmail(row.student_id)).toLowerCase()
+        const email = row.email.toLowerCase()
         const password = row.password ?? generatedPassword(row.student_id)
 
         const { data: existingAthlete } = await supabase
@@ -319,7 +322,7 @@ router.post(
         }
         seenStudentIds.add(row.student_id)
 
-        const email = (row.email ?? generatedEmail(row.student_id)).toLowerCase()
+        const email = row.email.toLowerCase()
         const password = row.password ?? generatedPassword(row.student_id)
 
         const { data: existingAthlete } = await supabase
@@ -375,7 +378,8 @@ router.get(
       // Keep student_id as text so IDs aren't coerced to numbers.
       ws.getColumn('student_id').numFmt = '@'
 
-      // Example row to show the expected format.
+      // Example row to show the expected format. Email is filled in because
+      // it is required -- a blank here would model a row that fails to import.
       ws.addRow({
         full_name: 'Juan Dela Cruz',
         student_id: '2024-1001',
@@ -383,7 +387,7 @@ router.get(
         sport: 'basketball',
         year_level: '1st Year',
         course: 'BSIT',
-        email: '',
+        email: `juan.delacruz@${STUDENT_EMAIL_DOMAIN}`,
         password: '',
       })
 
