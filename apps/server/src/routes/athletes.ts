@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
@@ -14,7 +14,7 @@ import {
 import { generatedPassword } from '../utils/studentAccounts'
 import supabase from '../utils/supabase'
 
-const router = Router()
+const router = createRouter()
 
 // Get all athletes (with filters)
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
@@ -588,7 +588,13 @@ router.post(
 
     let result: PasswordResetResult
     try {
-      const email = (athlete.profile as { email?: string } | null)?.email
+      // Same array-or-object shape the delete route above handles; without
+      // this an athlete who has an email can be told they have none.
+      const rawProfile = athlete.profile as
+        | { email?: string }
+        | { email?: string }[]
+        | null
+      const email = (Array.isArray(rawProfile) ? rawProfile[0] : rawProfile)?.email
       if (mode === 'email' && !email) {
         return res.status(400).json({ error: 'No email on file for this athlete' })
       }

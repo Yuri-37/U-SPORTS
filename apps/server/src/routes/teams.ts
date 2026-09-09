@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import ExcelJS from 'exceljs'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
@@ -21,7 +21,7 @@ import {
   normalizeTeamLineup,
 } from '../services/teamRoster'
 
-const router = Router()
+const router = createRouter()
 
 const teamSelectEmbedded = `*,
   coaches:team_coaches(organizer:organizers(profile_id)),

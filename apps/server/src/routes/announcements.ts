@@ -1,11 +1,11 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z, type ZodIssue } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { insertNotificationsForProfiles } from '../utils/athleteNotifications'
 
-const router = Router()
+const router = createRouter()
 
 /** HTML datetime-local uses `YYYY-MM-DDTHH:mm` without a timezone; Zod's default `.datetime()` expects a trailing `Z`. */
 function localDatetimeStringToIso(input: string): string {

@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import multer from 'multer'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
@@ -23,7 +23,7 @@ import {
 } from '../utils/accountEmail'
 import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
 
-const router = Router()
+const router = createRouter()
 
 // The underlying columns are unbounded TEXT, so these caps are the only thing
 // bounding what a client can store.
@@ -487,7 +487,15 @@ router.post(
 
     let result: PasswordResetResult
     try {
-      const email = (organizer.profile as { email?: string } | null)?.email
+      // PostgREST returns an embedded row as an object or a single-element
+      // array depending on how it resolves the relationship; the other call
+      // sites here already handle both. Reading .email off an array yields
+      // undefined, which surfaces as a bogus "no email on file".
+      const rawProfile = organizer.profile as
+        | { email?: string }
+        | { email?: string }[]
+        | null
+      const email = (Array.isArray(rawProfile) ? rawProfile[0] : rawProfile)?.email
       if (mode === 'email' && !email) {
         return res.status(400).json({ error: 'No email on file for this account' })
       }
@@ -1078,16 +1086,29 @@ router.get('/audit', requireAuth, requireRole('Admin'), async (req, res) => {
   if (entityType) query = query.eq('entity_type', entityType)
 
   if (q) {
+    // PostgREST .or() takes a raw filter expression, where "," separates
+    // conditions and "." separates column.operator.value. Interpolating the
+    // query straight in let a search term containing those characters break
+    // out of the intended filter -- appending conditions of the attacker's
+    // choosing, or just erroring the request for anyone who searched for a
+    // name with a comma in it. Strip the syntax characters instead.
+    const safeQ = q.replace(/[,.()\\%*"']/g, ' ').trim()
+    if (!safeQ) {
+      // Match the success shape exactly -- the Audit Logs screen reads
+      // data/total/labels, so an ad-hoc empty body would render as broken.
+      return res.json({ data: [], total: 0, labels: {} })
+    }
+
     // Free-text search spans the actor's name/email (resolved to ids first, since
     // PostgREST .or() can't combine a same-table OR with a joined-table match in
     // one filter string) plus the action and entity_type columns directly.
     const { data: matchingActors } = await supabase
       .from('profiles')
       .select('id')
-      .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
+      .or(`full_name.ilike.%${safeQ}%,email.ilike.%${safeQ}%`)
       .limit(200)
     const actorIds = (matchingActors ?? []).map((a) => a.id)
-    const orParts = [`action.ilike.%${q}%`, `entity_type.ilike.%${q}%`]
+    const orParts = [`action.ilike.%${safeQ}%`, `entity_type.ilike.%${safeQ}%`]
     if (actorIds.length > 0) orParts.push(`actor_id.in.(${actorIds.join(',')})`)
     query = query.or(orParts.join(','))
   }

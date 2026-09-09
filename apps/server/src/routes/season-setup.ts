@@ -1,5 +1,5 @@
+import { createRouter } from '../utils/asyncRouter'
 import { randomUUID } from 'crypto'
-import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
@@ -9,7 +9,7 @@ import { slugifyEventName } from '../utils/eventSlug'
 import { EVENT_CATEGORIES } from './events'
 import type { AppSport } from '../utils/organizerSportAccess'
 
-const router = Router()
+const router = createRouter()
 
 const DEPARTMENTS = ['SBMA', 'SECA', 'SASE', 'SHS'] as const
 const SPORT_ENUM = ['basketball', 'volleyball', 'table-tennis'] as const

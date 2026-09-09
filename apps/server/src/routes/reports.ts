@@ -1,4 +1,5 @@
-import { Router, type Response } from 'express'
+import { createRouter } from '../utils/asyncRouter'
+import { type Response } from 'express'
 import { z } from 'zod'
 import ExcelJS from 'exceljs'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
@@ -37,7 +38,7 @@ function safeFilenamePart(s: string): string {
     .replace(/\s+/g, '-')
 }
 
-const router = Router()
+const router = createRouter()
 
 // 'insights' moved to its own richer XLSX export — see GET /analytics/insights-xlsx below.
 const analyticsTabSchema = z.enum(['leaderboard', 'results', 'teams'])

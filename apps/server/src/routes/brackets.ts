@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { generateBracket, advanceWinner } from '../services/bracketGenerator'
@@ -6,7 +6,7 @@ import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
 
-const router = Router()
+const router = createRouter()
 
 // Assign crossover / final teams (split round robin). Must be declared before `/:eventId` so "matches" is not captured as an event id.
 router.patch(

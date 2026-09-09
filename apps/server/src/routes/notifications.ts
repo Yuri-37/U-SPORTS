@@ -1,9 +1,9 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 
-const router = Router()
+const router = createRouter()
 
 const pushTokenSchema = z.object({
   token: z.string().min(1),

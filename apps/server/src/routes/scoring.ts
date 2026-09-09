@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
@@ -15,7 +15,7 @@ import {
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
 import { summarizeFinalScore } from '../utils/matchScorePresentation'
 
-const router = Router()
+const router = createRouter()
 
 /** Refresh player_season_stats for everyone who logged stats in this match; bump team W/L. Returns season_id. */
 async function aggregateOfficialSeasonStatsForMatch(
@@ -251,7 +251,13 @@ router.post(
       }
     }
 
-    await supabase
+    // The lock check above ran several awaits ago, so it cannot be trusted on
+    // its own: two organizers pressing Start at tip-off both read a free lock
+    // and both reach this write, and last-write-wins hands them both the lock
+    // the feature exists to make exclusive. Make the claim itself conditional
+    // -- only take the lock if it is still unheld, or already ours -- and let
+    // the database settle the race. Zero rows back means someone else won.
+    const { data: claimed, error: claimError } = await supabase
       .from('matches')
       // scored_by is never cleared (unlike scoring_locked_by, which /end resets) —
       // it's the score sheet's persistent "who ran this match" record.
@@ -263,6 +269,27 @@ router.post(
         scored_by: req.user!.id,
       })
       .eq('id', req.params.matchId)
+      .or(`scoring_locked_by.is.null,scoring_locked_by.eq.${req.user!.id}`)
+      .select('id')
+
+    if (claimError) return res.status(500).json({ error: claimError.message })
+
+    if (!claimed || claimed.length === 0) {
+      const { data: current } = await supabase
+        .from('matches')
+        .select('scoring_locked_by')
+        .eq('id', req.params.matchId)
+        .maybeSingle()
+      const holderId = (current as { scoring_locked_by?: string } | null)?.scoring_locked_by
+      const { data: locker } = holderId
+        ? await supabase.from('profiles').select('full_name').eq('id', holderId).maybeSingle()
+        : { data: null }
+      return res.status(409).json({
+        error: 'SCORING_LOCKED',
+        lockedBy: (locker as { full_name: string } | null)?.full_name ?? 'Another organizer',
+        lockedById: holderId ?? null,
+      })
+    }
 
     await writeAuditLog({
       actorId: req.user!.id,

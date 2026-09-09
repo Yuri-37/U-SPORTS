@@ -1,8 +1,8 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
 
-const router = Router()
+const router = createRouter()
 
 /** Public bulk label lookup (teams + athletes) for guest/mobile clients. */
 router.get('/labels', async (req, res) => {

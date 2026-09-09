@@ -7,8 +7,6 @@ export interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string }
 }
 
-const STAFF_ROLES = new Set(['Admin', 'Organizer', 'Coach'])
-
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -44,7 +42,12 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
       .select('is_active')
       .eq('profile_id', data.user.id)
       .maybeSingle()
-    if (org && !org.is_active) {
+    // A missing organizers row used to fall through as an active account:
+    // the check only fired when the row existed and said inactive. Staff
+    // authority comes from that row (assigned sports, active flag), so its
+    // absence means the account is not configured to act, not that it may
+    // act without limits.
+    if (!org || !org.is_active) {
       return res.status(401).json({ error: 'Account deactivated. Contact your admin.' })
     }
   }
@@ -66,8 +69,4 @@ export function requireRole(...roles: string[]) {
     }
     next()
   }
-}
-
-export function isStaffRole(role: string | undefined) {
-  return Boolean(role && STAFF_ROLES.has(role))
 }

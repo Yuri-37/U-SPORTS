@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -6,7 +6,7 @@ import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { passwordZ } from '../utils/passwordSchema'
 
-const router = Router()
+const router = createRouter()
 
 // Anon-key client used only to re-verify a user's current password via sign-in —
 // the service-role client can't check a password, it can only overwrite one.

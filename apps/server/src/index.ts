@@ -1,7 +1,21 @@
 import 'dotenv/config'
+
+// Last line of defence. createRouter() (utils/asyncRouter.ts) routes handler
+// rejections into the error middleware, so these should never fire for route
+// code -- but a rejection from a timer, an event emitter or a floating
+// promise elsewhere would otherwise terminate the process under Node's
+// default policy, taking the API down for every user. Log and keep serving;
+// a single bad request is not a reason to drop every in-flight one.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err)
+})
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import { ZodError } from 'zod'
 import rateLimit from 'express-rate-limit'
 
 import authRouter from './routes/auth'
@@ -72,6 +86,17 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: apiRateLimitMax,
   message: { error: 'Too many requests, please try again later.' },
+  // Default keying is per-IP, which is wrong for this deployment: a campus
+  // sits behind one public NAT address, so every student and organizer on
+  // school wifi shares a single budget -- and live scoring plus realtime
+  // polling exhausts it quickly on match day. Key by access token when one
+  // is present so the limit is per-account, falling back to IP for
+  // unauthenticated traffic (where per-IP is the correct unit anyway).
+  keyGenerator: (req) => {
+    const auth = req.headers.authorization
+    if (auth?.startsWith('Bearer ')) return 'tok:' + auth.slice(7, 64)
+    return req.ip ?? 'unknown'
+  },
 })
 app.use('/api/', limiter)
 
@@ -117,6 +142,26 @@ app.use((_req, res) => res.status(404).json({ error: 'Not found' }))
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack)
+  if (res.headersSent) return
+
+  // Zod validation errors reaching here mean a handler parsed without its own
+  // try/catch. That is a bad request, not a server fault -- reporting it as
+  // 500 sends the caller chasing an outage instead of fixing their payload.
+  if (err instanceof ZodError) {
+    return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
+  }
+
+  // body-parser attaches a status (400 for malformed JSON, 413 for a body over
+  // the limit) and so do several middlewares. Reporting those as 500 tells the
+  // caller the server broke when in fact their request did.
+  const status = (err as { status?: number; statusCode?: number }).status ??
+    (err as { statusCode?: number }).statusCode
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    return res.status(status).json({
+      error: status === 400 ? 'Malformed request body' : err.message || 'Request rejected',
+    })
+  }
+
   res.status(500).json({ error: 'Internal server error' })
 })
 

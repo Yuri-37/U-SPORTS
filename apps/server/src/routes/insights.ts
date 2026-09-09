@@ -1,11 +1,11 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { computeInsightsForMatch } from '../services/computeInsights'
 import { writeAuditLog } from '../utils/writeAuditLog'
 
-const router = Router()
+const router = createRouter()
 
 const listQuerySchema = z.object({
   sport: z.string().optional(),

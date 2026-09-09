@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import multer from 'multer'
 import { z } from 'zod'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -6,7 +6,7 @@ import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvata
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 
-const router = Router()
+const router = createRouter()
 
 const avatarUpload = multer({
   storage: multer.memoryStorage(),

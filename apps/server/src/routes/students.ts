@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { createRouter } from '../utils/asyncRouter'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
@@ -10,7 +10,7 @@ import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spread
 import { createAthleteAuthUser, inviteEmailsEnabled } from '../utils/accountEmail'
 import { generatedPassword, STUDENT_EMAIL_DOMAIN } from '../utils/studentAccounts'
 
-const router = Router()
+const router = createRouter()
 
 const upload = spreadsheetUpload
 
