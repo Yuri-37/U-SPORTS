@@ -129,6 +129,22 @@ export default function OrganizerAthletes() {
   } | null>(null)
   const [addAthleteResultCopied, setAddAthleteResultCopied] = useState(false)
 
+  // Editing an existing athlete. Same fields the add form owns, minus the
+  // ones that aren't the athlete row's to change: course is only used to
+  // seed account metadata at creation, and email is the login identity.
+  const [editTarget, setEditTarget] = useState<AthleteWithProfile | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editStudentId, setEditStudentId] = useState('')
+  const [editDepartment, setEditDepartment] = useState<string>('SBMA')
+  const [editSport, setEditSport] = useState<Sport | ''>('')
+  const [editYearLevel, setEditYearLevel] = useState('')
+  const [editBusy, setEditBusy] = useState(false)
+  const [editError, setEditError] = useState('')
+
+  const [deleteTarget, setDeleteTarget] = useState<AthleteWithProfile | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
   const resetAddAthleteForm = () => {
     setAddName('')
     setAddStudentId('')
@@ -185,6 +201,56 @@ export default function OrganizerAthletes() {
       setAddAthleteError(describeApiError(e, 'Could not create athlete'))
     } finally {
       setAddAthleteBusy(false)
+    }
+  }
+
+  const openEditAthlete = (a: AthleteWithProfile) => {
+    setEditTarget(a)
+    setEditName(a.profile?.full_name ?? '')
+    setEditStudentId(a.student_id ?? '')
+    setEditDepartment(a.department ?? 'SBMA')
+    setEditSport((a.sport as Sport) ?? '')
+    setEditYearLevel(a.year_level ?? '')
+    setEditError('')
+  }
+
+  const handleEditAthlete = async () => {
+    if (!editTarget) return
+    setEditError('')
+    if (!editName.trim()) return setEditError('Full name is required')
+    if (!editStudentId.trim()) return setEditError('Student ID is required')
+    if (!editSport) return setEditError('Sport is required')
+
+    setEditBusy(true)
+    try {
+      await api.patch(`/athletes/${editTarget.id}`, {
+        full_name: editName.trim(),
+        student_id: editStudentId.trim(),
+        department: editDepartment,
+        sport: editSport,
+        year_level: editYearLevel,
+      })
+      setEditTarget(null)
+      fetchAthletes()
+    } catch (e: unknown) {
+      setEditError(describeApiError(e, 'Could not update athlete'))
+    } finally {
+      setEditBusy(false)
+    }
+  }
+
+  const handleDeleteAthlete = async () => {
+    if (!deleteTarget) return
+    setDeleteError('')
+    setDeleteBusy(true)
+    try {
+      await api.delete(`/athletes/${deleteTarget.id}`, { timeout: 60000 })
+      setDeleteTarget(null)
+      fetchAthletes()
+    } catch (e: unknown) {
+      setDeleteError(describeApiError(e, 'Could not delete athlete'))
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -635,6 +701,9 @@ export default function OrganizerAthletes() {
           ),
           actions: (
             <div className="flex gap-1 flex-wrap">
+              <Button size="sm" variant="ghost" onClick={() => openEditAthlete(a)}>
+                Edit
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -656,6 +725,17 @@ export default function OrganizerAthletes() {
                 }
               >
                 Reset password
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-[var(--danger)]"
+                onClick={() => {
+                  setDeleteTarget(a)
+                  setDeleteError('')
+                }}
+              >
+                Delete
               </Button>
             </div>
           ),
@@ -956,6 +1036,105 @@ export default function OrganizerAthletes() {
             {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        open={editTarget !== null}
+        onClose={() => {
+          if (!editBusy) setEditTarget(null)
+        }}
+        title="Edit athlete"
+      >
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          Corrects the athlete's own record. Their email and password are unchanged.
+        </p>
+        {editError && (
+          <Alert type="danger" className="mb-4">
+            {editError}
+          </Alert>
+        )}
+        <div className="space-y-4">
+          <Input
+            label="Full name"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Athlete name"
+          />
+          <Input
+            label="Student ID"
+            value={editStudentId}
+            onChange={(e) => setEditStudentId(e.target.value)}
+            placeholder="2024-1001"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label="Department"
+              value={editDepartment}
+              onChange={(e) => {
+                const next = e.target.value
+                setEditDepartment(next)
+                // Same rule as the add form: a level valid for SHS is never
+                // valid for a college department, so clear it on switch.
+                if (!yearLevelsForDepartment(next).includes(editYearLevel)) setEditYearLevel('')
+              }}
+              options={DEPARTMENT_OPTIONS.map((d) => ({ value: d.value, label: d.label }))}
+            />
+            <Select
+              label="Sport"
+              value={editSport}
+              onChange={(e) => setEditSport(e.target.value as Sport)}
+              options={[{ value: '', label: 'Select a sport' }, ...sportOptionsForForms]}
+            />
+          </div>
+          <Select
+            label="Year level (optional)"
+            value={editYearLevel}
+            onChange={(e) => setEditYearLevel(e.target.value)}
+            options={yearLevelOptions(editDepartment)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" disabled={editBusy} onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            <Button loading={editBusy} onClick={() => void handleEditAthlete()}>
+              Save changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => {
+          if (!deleteBusy) setDeleteTarget(null)
+        }}
+        title="Delete athlete"
+        size="md"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            {deleteError && <Alert type="danger">{deleteError}</Alert>}
+            <p className="text-sm text-[var(--text-secondary)]">
+              Permanently delete{' '}
+              <span className="font-semibold">
+                {deleteTarget.profile?.full_name ?? 'this athlete'}
+              </span>
+              ? This removes their account, team memberships and all recorded stats. It cannot be
+              undone.
+            </p>
+            <p className="text-sm text-[var(--text-muted)]">
+              To keep their record but take them out of this season, use Deactivate instead.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" loading={deleteBusy} onClick={() => void handleDeleteAthlete()}>
+                Delete permanently
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Add single athlete result */}

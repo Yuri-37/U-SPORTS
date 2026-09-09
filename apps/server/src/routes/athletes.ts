@@ -201,6 +201,18 @@ router.patch(
       .object({ season_status: z.enum(['active', 'inactive']) })
       .parse(req.body)
 
+    // PATCH /bulk guards this exact action by sport; without the same check
+    // here a coach blocked from bulk-deactivating another sport's athlete
+    // could just do it one at a time.
+    const { data: target, error: lookupError } = await supabase
+      .from('athletes')
+      .select('sport')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (lookupError) return res.status(500).json({ error: lookupError.message })
+    if (!target) return res.status(404).json({ error: 'Athlete not found' })
+    if (await respondIfSportForbidden(req, res, target.sport)) return
+
     const { data, error } = await supabase
       .from('athletes')
       .update({ season_status })
@@ -234,6 +246,18 @@ router.patch(
 
     try {
       const body = schema.parse(req.body)
+
+      // Jersey/position edits are sport-scoped work like every other athlete
+      // mutation -- this route was the one that never checked.
+      const { data: target, error: lookupError } = await supabase
+        .from('athletes')
+        .select('sport')
+        .eq('id', req.params.id)
+        .maybeSingle()
+      if (lookupError) return res.status(500).json({ error: lookupError.message })
+      if (!target) return res.status(404).json({ error: 'Athlete not found' })
+      if (await respondIfSportForbidden(req, res, target.sport)) return
+
       const patch: Record<string, unknown> = {}
       if (body.position !== undefined) patch.position = body.position
       if (body.jersey_number !== undefined) {
@@ -298,6 +322,190 @@ router.patch(
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
     }
+  },
+)
+
+// Edit an athlete's core details. Until now the only mutable fields were
+// season status and jersey/position, so an athlete created with the wrong
+// department, year level, sport or a misspelt name was permanently wrong --
+// and since student_id and email are both unique, deleting and re-adding was
+// not a workaround either.
+router.patch(
+  '/:id',
+  requireAuth,
+  requireRole('Organizer', 'Admin', 'Coach'),
+  async (req: AuthRequest, res) => {
+    const schema = z.object({
+      full_name: z.string().trim().min(1).optional(),
+      student_id: z.string().trim().min(1).optional(),
+      department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).optional(),
+      sport: z.enum(['basketball', 'volleyball', 'table-tennis']).optional(),
+      year_level: z.string().trim().optional(),
+    })
+
+    try {
+      const body = schema.parse(req.body)
+
+      const { data: current, error: lookupError } = await supabase
+        .from('athletes')
+        .select('id, profile_id, sport, department, year_level, student_id')
+        .eq('id', req.params.id)
+        .maybeSingle()
+      if (lookupError) return res.status(500).json({ error: lookupError.message })
+      if (!current) return res.status(404).json({ error: 'Athlete not found' })
+
+      // Guard the sport they are in now...
+      if (await respondIfSportForbidden(req, res, current.sport)) return
+      // ...and the one they would move to, so a coach cannot push an athlete
+      // into a sport they do not run.
+      if (body.sport && body.sport !== current.sport) {
+        if (await respondIfSportForbidden(req, res, body.sport)) return
+      }
+
+      // Year level is validated against whichever department applies AFTER
+      // this edit -- changing SHS -> SECA makes a stored "11" invalid, so the
+      // pair has to be checked together rather than field by field.
+      const department = body.department ?? (current.department as string)
+      let yearLevel: string | undefined
+      if (body.year_level !== undefined) {
+        if (body.year_level === '') {
+          yearLevel = ''
+        } else {
+          const normalized = normalizeYearLevel(body.year_level, department)
+          if (!normalized) {
+            return res.status(400).json({ error: yearLevelErrorMessage(department) })
+          }
+          yearLevel = normalized
+        }
+      } else if (body.department && body.department !== current.department) {
+        // Department changed but year level was not sent: the existing value
+        // may no longer be legal. Re-validate rather than silently leaving a
+        // Grade 11 sitting in a college department.
+        const existing = (current.year_level as string | null) ?? ''
+        if (existing && !normalizeYearLevel(existing, body.department)) {
+          return res.status(400).json({
+            error: `Year level "${existing}" is not valid for ${body.department}. ${yearLevelErrorMessage(body.department)}`,
+          })
+        }
+      }
+
+      if (body.student_id && body.student_id !== current.student_id) {
+        const { data: clash } = await supabase
+          .from('athletes')
+          .select('id')
+          .eq('student_id', body.student_id)
+          .neq('id', req.params.id)
+          .maybeSingle()
+        if (clash) {
+          return res.status(409).json({ error: `Student ID ${body.student_id} already exists.` })
+        }
+      }
+
+      const athletePatch: Record<string, unknown> = {}
+      if (body.student_id !== undefined) athletePatch.student_id = body.student_id
+      if (body.sport !== undefined) athletePatch.sport = body.sport
+      if (body.department !== undefined) athletePatch.department = body.department
+      if (yearLevel !== undefined) athletePatch.year_level = yearLevel
+
+      if (Object.keys(athletePatch).length > 0) {
+        const { error: updateError } = await supabase
+          .from('athletes')
+          .update(athletePatch)
+          .eq('id', req.params.id)
+        if (updateError) return res.status(400).json({ error: updateError.message })
+      }
+
+      // full_name lives on profiles, and department is mirrored there (the
+      // athlete row is the source of truth; profiles carries a copy for the
+      // lists that only join profiles).
+      const profilePatch: Record<string, unknown> = {}
+      if (body.full_name !== undefined) profilePatch.full_name = body.full_name
+      if (body.department !== undefined) profilePatch.department = body.department
+      if (Object.keys(profilePatch).length > 0) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profilePatch)
+          .eq('id', current.profile_id)
+        if (profileError) return res.status(400).json({ error: profileError.message })
+      }
+
+      const { data: updated, error: refetchError } = await supabase
+        .from('athletes')
+        .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url)')
+        .eq('id', req.params.id)
+        .single()
+      if (refetchError) return res.status(500).json({ error: refetchError.message })
+
+      await supabase.from('audit_logs').insert({
+        actor_id: req.user!.id,
+        action: 'athlete_updated',
+        entity_type: 'athlete',
+        entity_id: req.params.id,
+        details: { ...athletePatch, ...profilePatch },
+      })
+
+      res.json(updated)
+    } catch (err: unknown) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
+      }
+      res
+        .status(400)
+        .json({ error: err instanceof Error ? err.message : 'Could not update athlete' })
+    }
+  },
+)
+
+// Permanently remove an athlete. Deleting the auth user cascades through
+// profiles -> athletes -> team_members, player_game_stats,
+// player_season_stats, leaderboard_visibility and verification_documents.
+// Migration 071 makes the remaining references (team captaincy, scoring
+// attribution, audit actor) null out instead of blocking the delete.
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRole('Organizer', 'Admin', 'Coach'),
+  async (req: AuthRequest, res) => {
+    const { data: athlete, error: lookupError } = await supabase
+      .from('athletes')
+      .select(
+        'id, profile_id, sport, student_id, profile:profiles!athletes_profile_id_fkey(full_name, email)',
+      )
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (lookupError) return res.status(500).json({ error: lookupError.message })
+    if (!athlete) return res.status(404).json({ error: 'Athlete not found' })
+    if (await respondIfSportForbidden(req, res, athlete.sport)) return
+
+    const rawProfile = athlete.profile as
+      | { full_name?: string; email?: string }
+      | { full_name?: string; email?: string }[]
+      | null
+    const profile = (Array.isArray(rawProfile) ? rawProfile[0] : rawProfile) ?? {}
+
+    // Write the audit row BEFORE the delete: afterwards the athlete row is
+    // gone, and this is the only remaining record that they existed.
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: 'athlete_deleted',
+      entity_type: 'athlete',
+      entity_id: req.params.id,
+      details: {
+        student_id: athlete.student_id,
+        full_name: profile.full_name ?? null,
+        email: profile.email ?? null,
+        sport: athlete.sport,
+      },
+    })
+
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(athlete.profile_id)
+    if (deleteError) {
+      return res.status(400).json({
+        error: `Could not delete this athlete: ${deleteError.message}`,
+      })
+    }
+
+    res.json({ success: true, deleted: req.params.id })
   },
 )
 

@@ -17,6 +17,21 @@ const upload = spreadsheetUpload
 const departmentEnum = z.enum(['SBMA', 'SECA', 'SASE', 'SHS'])
 const sportEnum = z.enum(['basketball', 'volleyball', 'table-tennis'])
 
+/**
+ * Zod's bare message ("Required", "Invalid input") never says WHICH column
+ * is wrong, so a sheet missing the email header produced a wall of identical
+ * "Required" rows with nothing to act on. Name the column.
+ */
+function describeRowIssue(err: z.ZodError): string {
+  const issue = err.issues[0]
+  if (!issue) return 'Invalid row'
+  const field = issue.path.filter((seg) => typeof seg === 'string').join('.')
+  if (!field) return issue.message
+  return issue.message === 'Required'
+    ? `Missing required column "${field}".`
+    : `${field}: ${issue.message}`
+}
+
 const importRowSchema = z.object({
   full_name: z.string().trim().min(1),
   student_id: z.string().trim().min(1),
@@ -96,7 +111,7 @@ router.post(
           sport: normalized.sport || body.sport,
         })
         if (!parsed.success) {
-          errors.push({ row: idx + 1, error: parsed.error.issues[0]?.message ?? 'Invalid row' })
+          errors.push({ row: idx + 1, error: describeRowIssue(parsed.error) })
           continue
         }
 
@@ -268,7 +283,7 @@ router.post(
           preview.push({
             row: idx + 1,
             valid: false,
-            error: parsed.error.issues[0]?.message ?? 'Invalid row',
+            error: describeRowIssue(parsed.error),
             full_name: normalized.full_name ? String(normalized.full_name) : undefined,
             student_id: normalized.student_id ? String(normalized.student_id) : undefined,
             department: normalized.department || undefined,
