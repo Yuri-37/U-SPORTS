@@ -16,7 +16,7 @@ import { createHash } from 'crypto'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { type Options, type RateLimitInfo } from 'express-rate-limit'
 import { errorHandler } from './middleware/errorHandler'
 
 import authRouter from './routes/auth'
@@ -75,65 +75,100 @@ app.use(
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Rate limiting (high ceiling in dev — Live Scoring + realtime can spike GET /state)
-const apiRateLimitMax =
-  process.env.NODE_ENV === 'production'
-    ? 300
-    : Number(process.env.API_RATE_LIMIT_MAX) > 0
-      ? Number(process.env.API_RATE_LIMIT_MAX)
-      : 10_000
-
-// Pure per-IP keying is wrong for this deployment: a campus sits behind one
-// public NAT address, so every student and organizer on school wifi would
-// share a single budget, and live scoring exhausts it on match day. Signed-in
-// requests are therefore keyed per session, anonymous ones per IP.
+// ── Rate limiting ────────────────────────────────────────────────────────────
 //
+// Sized from what the apps actually send, not guessed. Measured against the
+// real stack: one scoring action fans out into 5 realtime events, and every
+// open mobile live screen reloads through this API once per event, on top of
+// fixed polling (GET /scoring/:id/state every 2.5s while the match screen is
+// open; GET /events/:id/matches every 2s while any match in the event is
+// live). A phone following a fully stat-tracked game therefore sends roughly
+// 1,300-2,600 requests per 15 minutes. The old per-account budget of 300 was
+// spent within a few minutes of live play.
+//
+// Both limits are tunable from the environment in every mode (production used
+// to ignore API_RATE_LIMIT_MAX entirely), and the first rejection per key per
+// window is logged, so a limit that bites shows up in the Render logs instead
+// of as unexplained "Too many requests" on students' phones.
+const WINDOW_MS = 15 * 60 * 1000
+const isProduction = process.env.NODE_ENV === 'production'
+const envLimit = (name: string): number | undefined => {
+  const n = Number(process.env[name])
+  return Number.isFinite(n) && n > 0 ? n : undefined
+}
+
+// Per signed-in session: ~2x the heaviest client measured above.
+const apiRateLimitMax = envLimit('API_RATE_LIMIT_MAX') ?? (isProduction ? 5_000 : 10_000)
+
+// Per IP, all traffic. A campus sits behind one public NAT address, so this
+// has to carry everyone on school wifi at once -- 100,000 covers ~40 phones
+// following live games simultaneously. Its job is to stop a single host from
+// dodging the per-session limit with a fresh junk token on every request;
+// anonymous traffic (guests on public pages) is bounded by this alone, since
+// such a host would get exactly this budget anyway.
+const apiIpRateLimitMax = envLimit('API_IP_RATE_LIMIT_MAX') ?? (isProduction ? 100_000 : 1_000_000)
+
+function bearerToken(req: express.Request): string | null {
+  const auth = req.headers.authorization
+  return auth?.startsWith('Bearer ') && auth.length > 7 ? auth.slice(7) : null
+}
+
 // The WHOLE token is hashed. A prefix is not enough: a JWT opens with its
 // header, which is identical for every user of the project (same alg, kid,
 // typ), followed by the fixed "iss" claim -- keying on the first few dozen
 // characters put every signed-in user into one shared bucket.
 function sessionOrIpKey(req: express.Request): string {
-  const auth = req.headers.authorization
-  if (auth?.startsWith('Bearer ') && auth.length > 7) {
-    return 'tok:' + createHash('sha256').update(auth.slice(7)).digest('base64url')
-  }
+  const token = bearerToken(req)
+  if (token) return 'tok:' + createHash('sha256').update(token).digest('base64url')
   return 'ip:' + (req.ip ?? 'unknown')
 }
 
-// Per-session keys alone let one host dodge the limit by sending a fresh junk
-// token with every request, and each of those still costs an auth round trip
-// before it is rejected. This per-IP ceiling bounds that. It sits far above
-// the per-session budget so a campus sharing one address is not throttled by
-// it in normal use; raise API_IP_RATE_LIMIT_MAX if a large event ever does.
-const apiIpRateLimitMax =
-  Number(process.env.API_IP_RATE_LIMIT_MAX) > 0
-    ? Number(process.env.API_IP_RATE_LIMIT_MAX)
-    : process.env.NODE_ENV === 'production'
-      ? 10_000
-      : 100_000
+// Names what the limiter actually counts. Limits run before authentication,
+// so a token here is unverified -- never call it "signed in", and never log it.
+function rejectAndLog(name: string, keyedBy: 'ip' | 'session-or-ip'): Options['handler'] {
+  return (req, res, _next, options) => {
+    const info = (req as express.Request & { rateLimit?: RateLimitInfo }).rateLimit
+    if (info && info.used === info.limit + 1) {
+      const who =
+        keyedBy === 'session-or-ip' && bearerToken(req) ? 'one session token' : `ip ${req.ip}`
+      const path = req.originalUrl.split('?')[0]
+      console.warn(
+        `[rate-limit] ${name} (${info.limit}/15min) reached by ${who} at ${req.method} ${path}`,
+      )
+    }
+    res.status(options.statusCode).json(options.message)
+  }
+}
+
+const tooMany = { error: 'Too many requests, please try again later.' }
 
 const ipCeiling = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: WINDOW_MS,
   max: apiIpRateLimitMax,
-  message: { error: 'Too many requests, please try again later.' },
+  message: tooMany,
+  handler: rejectAndLog('per-IP ceiling', 'ip'),
 })
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const sessionLimiter = rateLimit({
+  windowMs: WINDOW_MS,
   max: apiRateLimitMax,
-  message: { error: 'Too many requests, please try again later.' },
+  message: tooMany,
   keyGenerator: sessionOrIpKey,
+  skip: (req) => !bearerToken(req),
+  handler: rejectAndLog('per-session limit', 'session-or-ip'),
 })
-app.use('/api/', ipCeiling, limiter)
+app.use('/api/', ipCeiling, sessionLimiter)
 
 // Stricter limit for auth endpoints. Both routes behind it require a session
 // (change-password, accept-privacy-notice), so this is per session too: per
 // IP, the 21st athlete on campus wifi to accept the privacy notice on
 // onboarding day would be locked out of the app for 15 minutes.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: WINDOW_MS,
   max: 20,
+  message: tooMany,
   keyGenerator: sessionOrIpKey,
+  handler: rejectAndLog('auth limit', 'session-or-ip'),
 })
 app.use('/api/auth/', authLimiter)
 
