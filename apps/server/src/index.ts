@@ -137,8 +137,17 @@ const authLimiter = rateLimit({
 })
 app.use('/api/auth/', authLimiter)
 
-// Health check
-app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
+// Health check. `commit` answers "is my fix actually live?" with a plain GET:
+// Render sets RENDER_GIT_COMMIT on every deploy, and it never reports to
+// GitHub, so without this the only way to tell was to probe behaviour. The
+// repo is public, so the hash reveals nothing. Null when run locally.
+app.get('/health', (_req, res) =>
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? null,
+  }),
+)
 
 // Routes
 app.use('/api/auth', authRouter)
