@@ -12,11 +12,12 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err)
 })
+import { createHash } from 'crypto'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import { ZodError } from 'zod'
 import rateLimit from 'express-rate-limit'
+import { errorHandler } from './middleware/errorHandler'
 
 import authRouter from './routes/auth'
 import eventsRouter from './routes/events'
@@ -82,28 +83,57 @@ const apiRateLimitMax =
       ? Number(process.env.API_RATE_LIMIT_MAX)
       : 10_000
 
+// Pure per-IP keying is wrong for this deployment: a campus sits behind one
+// public NAT address, so every student and organizer on school wifi would
+// share a single budget, and live scoring exhausts it on match day. Signed-in
+// requests are therefore keyed per session, anonymous ones per IP.
+//
+// The WHOLE token is hashed. A prefix is not enough: a JWT opens with its
+// header, which is identical for every user of the project (same alg, kid,
+// typ), followed by the fixed "iss" claim -- keying on the first few dozen
+// characters put every signed-in user into one shared bucket.
+function sessionOrIpKey(req: express.Request): string {
+  const auth = req.headers.authorization
+  if (auth?.startsWith('Bearer ') && auth.length > 7) {
+    return 'tok:' + createHash('sha256').update(auth.slice(7)).digest('base64url')
+  }
+  return 'ip:' + (req.ip ?? 'unknown')
+}
+
+// Per-session keys alone let one host dodge the limit by sending a fresh junk
+// token with every request, and each of those still costs an auth round trip
+// before it is rejected. This per-IP ceiling bounds that. It sits far above
+// the per-session budget so a campus sharing one address is not throttled by
+// it in normal use; raise API_IP_RATE_LIMIT_MAX if a large event ever does.
+const apiIpRateLimitMax =
+  Number(process.env.API_IP_RATE_LIMIT_MAX) > 0
+    ? Number(process.env.API_IP_RATE_LIMIT_MAX)
+    : process.env.NODE_ENV === 'production'
+      ? 10_000
+      : 100_000
+
+const ipCeiling = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: apiIpRateLimitMax,
+  message: { error: 'Too many requests, please try again later.' },
+})
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: apiRateLimitMax,
   message: { error: 'Too many requests, please try again later.' },
-  // Default keying is per-IP, which is wrong for this deployment: a campus
-  // sits behind one public NAT address, so every student and organizer on
-  // school wifi shares a single budget -- and live scoring plus realtime
-  // polling exhausts it quickly on match day. Key by access token when one
-  // is present so the limit is per-account, falling back to IP for
-  // unauthenticated traffic (where per-IP is the correct unit anyway).
-  keyGenerator: (req) => {
-    const auth = req.headers.authorization
-    if (auth?.startsWith('Bearer ')) return 'tok:' + auth.slice(7, 64)
-    return req.ip ?? 'unknown'
-  },
+  keyGenerator: sessionOrIpKey,
 })
-app.use('/api/', limiter)
+app.use('/api/', ipCeiling, limiter)
 
-// Stricter limit for auth endpoints
+// Stricter limit for auth endpoints. Both routes behind it require a session
+// (change-password, accept-privacy-notice), so this is per session too: per
+// IP, the 21st athlete on campus wifi to accept the privacy notice on
+// onboarding day would be locked out of the app for 15 minutes.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  keyGenerator: sessionOrIpKey,
 })
 app.use('/api/auth/', authLimiter)
 
@@ -140,30 +170,7 @@ app.get('/', (_req, res) => {
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }))
 
 // Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err.stack)
-  if (res.headersSent) return
-
-  // Zod validation errors reaching here mean a handler parsed without its own
-  // try/catch. That is a bad request, not a server fault -- reporting it as
-  // 500 sends the caller chasing an outage instead of fixing their payload.
-  if (err instanceof ZodError) {
-    return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
-  }
-
-  // body-parser attaches a status (400 for malformed JSON, 413 for a body over
-  // the limit) and so do several middlewares. Reporting those as 500 tells the
-  // caller the server broke when in fact their request did.
-  const status = (err as { status?: number; statusCode?: number }).status ??
-    (err as { statusCode?: number }).statusCode
-  if (typeof status === 'number' && status >= 400 && status < 500) {
-    return res.status(status).json({
-      error: status === 400 ? 'Malformed request body' : err.message || 'Request rejected',
-    })
-  }
-
-  res.status(500).json({ error: 'Internal server error' })
-})
+app.use(errorHandler)
 
 app
   .listen(PORT, () => {

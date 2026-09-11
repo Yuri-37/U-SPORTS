@@ -251,12 +251,20 @@ router.post(
       }
     }
 
-    // The lock check above ran several awaits ago, so it cannot be trusted on
-    // its own: two organizers pressing Start at tip-off both read a free lock
-    // and both reach this write, and last-write-wins hands them both the lock
-    // the feature exists to make exclusive. Make the claim itself conditional
-    // -- only take the lock if it is still unheld, or already ours -- and let
-    // the database settle the race. Zero rows back means someone else won.
+    // The checks above ran several awaits ago, so they cannot be trusted on
+    // their own. Two organizers pressing Start at tip-off both read a free
+    // lock and both reach this write, and last-write-wins hands them both the
+    // lock the feature exists to make exclusive. Likewise /end can complete
+    // the match in that window, and an unconditional write would flip it back
+    // to live -- reopening a finished match. So the write re-states both rules
+    // and the database settles the race:
+    //   - never on a completed match;
+    //   - on a live match, only if the lock is free or already ours. A lock
+    //     left on a non-live match (transfer-lock allows that) is ignored,
+    //     exactly as the pre-check above ignores it.
+    // Postgres re-evaluates this WHERE against the winner's committed row, so
+    // the second Start sees status 'live' plus someone else's lock and
+    // matches nothing. Zero rows back means we lost.
     const { data: claimed, error: claimError } = await supabase
       .from('matches')
       // scored_by is never cleared (unlike scoring_locked_by, which /end resets) —
@@ -269,7 +277,8 @@ router.post(
         scored_by: req.user!.id,
       })
       .eq('id', req.params.matchId)
-      .or(`scoring_locked_by.is.null,scoring_locked_by.eq.${req.user!.id}`)
+      .neq('status', 'completed')
+      .or(`status.neq.live,scoring_locked_by.is.null,scoring_locked_by.eq.${req.user!.id}`)
       .select('id')
 
     if (claimError) return res.status(500).json({ error: claimError.message })
@@ -277,10 +286,16 @@ router.post(
     if (!claimed || claimed.length === 0) {
       const { data: current } = await supabase
         .from('matches')
-        .select('scoring_locked_by')
+        .select('status, scoring_locked_by')
         .eq('id', req.params.matchId)
         .maybeSingle()
-      const holderId = (current as { scoring_locked_by?: string } | null)?.scoring_locked_by
+      const now = current as { status?: string; scoring_locked_by?: string | null } | null
+      if (now?.status === 'completed') {
+        return res.status(409).json({
+          error: 'This match is completed. An admin must reopen it before it can be scored again.',
+        })
+      }
+      const holderId = now?.scoring_locked_by
       const { data: locker } = holderId
         ? await supabase.from('profiles').select('full_name').eq('id', holderId).maybeSingle()
         : { data: null }
