@@ -14,6 +14,7 @@ import {
 } from '../utils/institutionLogoStorage'
 import { validateSeasonDates } from '../utils/seasonDates'
 import { fetchActiveSportSlugs, type AppSport } from '../utils/organizerSportAccess'
+import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 import {
   createStaffAuthUser,
   inviteEmailsEnabled,
@@ -203,6 +204,11 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       full_name,
       role,
       department,
+      // Records that this account's password was set by the keyed generator,
+      // so the reissue script can tell it from accounts still on the old
+      // public formula. Only in password mode -- an invited user sets their
+      // own, so it stays NULL.
+      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
     })
     if (profileError) throw new Error(profileError.message)
 
@@ -568,9 +574,13 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
     }
     const userId = account.userId
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, email, full_name, role: 'Admin' })
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: userId,
+      email,
+      full_name,
+      role: 'Admin',
+      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
+    })
     if (profileError) throw new Error(profileError.message)
 
     await supabase.from('audit_logs').insert({

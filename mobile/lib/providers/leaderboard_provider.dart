@@ -46,7 +46,7 @@ final leaderboardPlayersProvider = StreamProvider.autoDispose
       final rows = await Supabase.instance.client
           .from('player_season_stats')
           .select(
-            '*, athlete:athletes(id, student_id, sport, jersey_number, position, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url))',
+            '*, athlete:athletes(id, sport, jersey_number, position, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url))',
           )
           .eq('sport', args.sport)
           .eq('season_id', args.seasonId)

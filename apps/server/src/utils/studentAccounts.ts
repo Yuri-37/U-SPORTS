@@ -5,12 +5,9 @@
 // mailbox anyone can actually receive an invite at.
 export const STUDENT_EMAIL_DOMAIN = 'students.nu-dasma.edu.ph'
 
-/**
- * Deterministic, readable first password, used only while invite emails are
- * disabled (an admin reads it out or relays it). Derived from the student ID
- * rather than random characters so it can be dictated over a desk without
- * being misheard, and regenerated identically if it's lost.
- */
-export function generatedPassword(studentId: string): string {
-  return `UrSports-${studentId.replace(/\s+/g, '')}-2026!`
-}
+// The first password is still readable and reproducible from the student ID,
+// but no longer computable off-server: readablePassword.ts keys it with a
+// server-only secret. The old `UrSports-<studentid>-2026!` formula was
+// public (this repo) and the student ID is effectively public, so anyone
+// could sign in as any athlete who hadn't changed it. See firstPassword().
+export { firstPassword as generatedPassword } from './readablePassword'

@@ -1,5 +1,5 @@
-import { randomBytes } from 'crypto'
 import supabase from './supabase'
+import { ISSUED_PASSWORD_SCHEME, resetPassword } from './readablePassword'
 
 /**
  * Whether outbound account email (invites via
@@ -161,10 +161,19 @@ export async function resetAccountPassword(params: {
     return { mode: 'email' }
   }
 
-  const tempPassword = randomBytes(9).toString('base64url')
+  // Readable words a staff member can read aloud without it being misheard --
+  // "Brave-Otter-372", not "k7Fq2xPl". Keyed by the account id plus the
+  // current time so every reset is a fresh password nobody off-server can
+  // predict; it is shown once and not meant to be recomputed later (a lost
+  // one is handled by resetting again).
+  const tempPassword = resetPassword(params.profileId, Date.now())
   const { error } = await supabase.auth.admin.updateUserById(params.profileId, {
     password: tempPassword,
   })
   if (error) throw new Error(error.message)
+  await supabase
+    .from('profiles')
+    .update({ issued_password_scheme: ISSUED_PASSWORD_SCHEME })
+    .eq('id', params.profileId)
   return { mode: 'password', tempPassword }
 }

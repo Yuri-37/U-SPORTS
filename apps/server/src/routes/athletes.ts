@@ -12,6 +12,7 @@ import {
   type AccountCreationResult,
 } from '../utils/accountEmail'
 import { generatedPassword } from '../utils/studentAccounts'
+import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 import supabase from '../utils/supabase'
 
 const router = createRouter()
@@ -98,6 +99,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
       full_name: body.full_name,
       role: null,
       department: body.department,
+      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
     })
     if (profileError) return res.status(400).json({ error: profileError.message })
 

@@ -96,7 +96,7 @@ export default function GuestLeaderboards() {
         supabase
           .from('player_season_stats')
           .select(
-            '*, athlete:athletes(student_id, position, profile:profiles!athletes_profile_id_fkey(full_name))',
+            '*, athlete:athletes(position, profile:profiles!athletes_profile_id_fkey(full_name))',
           )
           .eq('sport', sport)
           .eq('season_id', effectiveSeasonId)

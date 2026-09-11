@@ -1281,8 +1281,8 @@ export default function OrganizerAthletes() {
               </div>
             </div>
             <p className="text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-2">
-              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto password —{' '}
-              <em>UrSports-studentid-2026!</em>
+              <span className="text-[var(--danger)]">*</span> Required &nbsp;·&nbsp; Auto password —
+              a readable phrase like <em>Brave-Otter-372</em>, shown once after import
             </p>
           </div>
 

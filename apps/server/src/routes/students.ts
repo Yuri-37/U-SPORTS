@@ -9,6 +9,7 @@ import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
 import { createAthleteAuthUser, inviteEmailsEnabled } from '../utils/accountEmail'
 import { generatedPassword, STUDENT_EMAIL_DOMAIN } from '../utils/studentAccounts'
+import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 
 const router = createRouter()
 
@@ -174,6 +175,7 @@ router.post(
           full_name: row.full_name,
           role: null,
           department: row.department,
+          issued_password_scheme: mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
         })
         if (profileError) {
           errors.push({ row: idx + 1, error: profileError.message })
