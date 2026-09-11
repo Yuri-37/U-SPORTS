@@ -1013,7 +1013,7 @@ router.post(
 
       const { data: match } = await supabase
         .from('matches')
-        .select('status, participant_a_id, participant_b_id')
+        .select('status, participant_a_id, participant_b_id, scoring_locked_by')
         .eq('id', matchId)
         .maybeSingle()
       if (!match) return res.status(404).json({ error: 'Match not found' })
@@ -1029,6 +1029,29 @@ router.post(
       }
       if (winnerId !== match.participant_a_id && winnerId !== match.participant_b_id) {
         return res.status(400).json({ error: 'Winner must be one of this match’s participants' })
+      }
+
+      // Every other scoring write is restricted to the lock holder, and the
+      // Scoring page only offers End Match to the holder -- but this route
+      // never checked. Anyone else in scope (a second organizer, an admin, or
+      // a stale tab whose owner had just lost the lock) could end a game
+      // someone else was scoring, choosing the winner with the score check
+      // overridden. Same 409 shape as /start, so the page shows its existing
+      // "is currently scoring this match" warning with the take-over option.
+      if (match.scoring_locked_by !== req.user!.id) {
+        if (!match.scoring_locked_by) {
+          return res.status(409).json({ error: 'Take the scoring lock before ending this match.' })
+        }
+        const { data: locker } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', match.scoring_locked_by)
+          .maybeSingle()
+        return res.status(409).json({
+          error: 'SCORING_LOCKED',
+          lockedBy: (locker as { full_name: string } | null)?.full_name ?? 'Another organizer',
+          lockedById: match.scoring_locked_by,
+        })
       }
 
       const { sport, seasonId: matchSeasonId } = await getMatchSportAndSeason(matchId)

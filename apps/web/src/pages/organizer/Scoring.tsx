@@ -646,14 +646,22 @@ export default function OrganizerScoring() {
       })
       navigate(`/organizer/match-review/${matchId}`)
     } catch (e: unknown) {
-      const data = (e as { response?: { data?: { error?: string; message?: string } } }).response
-        ?.data
+      const data = (
+        e as { response?: { data?: { error?: string; message?: string; lockedBy?: string } } }
+      ).response?.data
       // score_mismatch/score_not_decided are a soft block, not a hard error —
       // surface them as a second confirmation step instead of just an error
       // message, since a forfeit/injury default is a legitimate reason the
       // picked winner might not match the recorded score.
       if (!override && (data?.error === 'score_mismatch' || data?.error === 'score_not_decided')) {
         setEndMismatch(data.message ?? 'The recorded score does not match your selection.')
+      } else if (data?.error === 'SCORING_LOCKED') {
+        // Someone else holds the lock -- typically they took it while this
+        // page still showed End Match. Same warning Start shows, and reload so
+        // the page drops out of lock-holder mode.
+        setEndConfirm(false)
+        setLockWarning({ name: data.lockedBy ?? 'Another organizer' })
+        void loadState()
       } else {
         setError(data?.error ?? 'Failed to end match')
       }
