@@ -7,12 +7,19 @@
  *
  * apps/web/src/lib/validation/yearLevel.ts mirrors this for the dropdown and
  * client-side check; the server stays authoritative.
+ *
+ * The canonical stored form is the text people read -- "2nd Year", "Grade 11"
+ * -- not a short code. The web tables, both profile pages and the mobile app
+ * all print athletes.year_level as-is, and the mobile app can only change
+ * with a new APK; storing "11" or "2nd" showed up on those screens raw. It is
+ * also the form the existing college data already used, so the dropdown now
+ * recognises what it loads (migration 072 converts the rest).
  */
 
 export const SHS_DEPARTMENT = 'SHS'
 
-export const COLLEGE_YEAR_LEVELS = ['1st', '2nd', '3rd', '4th'] as const
-export const SHS_YEAR_LEVELS = ['11', '12'] as const
+export const COLLEGE_YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'] as const
+export const SHS_YEAR_LEVELS = ['Grade 11', 'Grade 12'] as const
 
 export function yearLevelsForDepartment(department: string): readonly string[] {
   return department === SHS_DEPARTMENT ? SHS_YEAR_LEVELS : COLLEGE_YEAR_LEVELS
@@ -35,7 +42,7 @@ export function normalizeYearLevel(raw: string, department: string): string | nu
   const n = Number(digits[0])
 
   if (department === SHS_DEPARTMENT) {
-    return n === 11 || n === 12 ? String(n) : null
+    return n === 11 || n === 12 ? `Grade ${n}` : null
   }
   return n >= 1 && n <= 4 ? COLLEGE_YEAR_LEVELS[n - 1] : null
 }

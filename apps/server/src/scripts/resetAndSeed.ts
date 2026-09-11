@@ -122,8 +122,10 @@ const LAST = [
 ]
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
-// SHS (Senior High) only runs Grade 11/Grade 12 -- there is no 3rd/4th year there.
-const SHS_YEAR_LEVELS = ['1st Year', '2nd Year']
+// SHS (Senior High) only runs Grade 11/Grade 12 -- there is no 3rd/4th year
+// there. Stored in the canonical form utils/yearLevel.ts defines; the old
+// '1st Year'/'2nd Year' spelling for SHS is rejected by the Edit form's rules.
+const SHS_YEAR_LEVELS = ['Grade 11', 'Grade 12']
 const yearLevelsFor = (department: string) =>
   department === 'SHS' ? SHS_YEAR_LEVELS : YEAR_LEVELS
 

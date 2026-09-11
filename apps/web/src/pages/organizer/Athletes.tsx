@@ -7,7 +7,11 @@ import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import { studentEmailZ } from '../../lib/validation/forms'
-import { yearLevelOptions, yearLevelsForDepartment } from '../../lib/validation/yearLevel'
+import {
+  yearLevelForEdit,
+  yearLevelOptions,
+  yearLevelsForDepartment,
+} from '../../lib/validation/yearLevel'
 import { describeApiError } from '../../lib/apiError'
 
 const DEPARTMENT_OPTIONS = [
@@ -138,6 +142,7 @@ export default function OrganizerAthletes() {
   const [editDepartment, setEditDepartment] = useState<string>('SBMA')
   const [editSport, setEditSport] = useState<Sport | ''>('')
   const [editYearLevel, setEditYearLevel] = useState('')
+  const [editYearLevelIssue, setEditYearLevelIssue] = useState('')
   const [editBusy, setEditBusy] = useState(false)
   const [editError, setEditError] = useState('')
 
@@ -210,7 +215,13 @@ export default function OrganizerAthletes() {
     setEditStudentId(a.student_id ?? '')
     setEditDepartment(a.department ?? 'SBMA')
     setEditSport((a.sport as Sport) ?? '')
-    setEditYearLevel(a.year_level ?? '')
+    const level = yearLevelForEdit(a.year_level, a.department ?? 'SBMA')
+    setEditYearLevel(level ?? '')
+    setEditYearLevelIssue(
+      level === null
+        ? `The saved year level "${a.year_level}" isn't valid for ${a.department}. Choose one, or leave it not set.`
+        : '',
+    )
     setEditError('')
   }
 
@@ -1076,6 +1087,7 @@ export default function OrganizerAthletes() {
                 // Same rule as the add form: a level valid for SHS is never
                 // valid for a college department, so clear it on switch.
                 if (!yearLevelsForDepartment(next).includes(editYearLevel)) setEditYearLevel('')
+                setEditYearLevelIssue('')
               }}
               options={DEPARTMENT_OPTIONS.map((d) => ({ value: d.value, label: d.label }))}
             />
@@ -1089,8 +1101,12 @@ export default function OrganizerAthletes() {
           <Select
             label="Year level (optional)"
             value={editYearLevel}
-            onChange={(e) => setEditYearLevel(e.target.value)}
+            onChange={(e) => {
+              setEditYearLevel(e.target.value)
+              setEditYearLevelIssue('')
+            }}
             options={yearLevelOptions(editDepartment)}
+            error={editYearLevelIssue || undefined}
           />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" disabled={editBusy} onClick={() => setEditTarget(null)}>
