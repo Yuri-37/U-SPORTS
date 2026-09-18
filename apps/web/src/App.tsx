@@ -63,11 +63,17 @@ export default function App() {
 
     // Super admins are excluded from root/auth redirects — / always lands on
     // the guest hub for them. Other authenticated roles go to their dashboards.
+    // Exception: the reset-password / accept-invite pages create a transient
+    // session on purpose, and the person must stay there to set a password.
+    // Without this, a signed-in non-admin was bounced straight off the reset
+    // form to their dashboard.
+    const isPasswordFlow =
+      location.pathname === '/auth/reset-password' || location.pathname === '/auth/accept-invite'
     if (
       session &&
       scopedProfile &&
       scopedProfile.role !== 'Admin' &&
-      (location.pathname === '/' || location.pathname.startsWith('/auth'))
+      (location.pathname === '/' || (location.pathname.startsWith('/auth') && !isPasswordFlow))
     ) {
       const returnTo = safeInternalPath((location.state as { from?: string } | null)?.from)
       navigate(returnTo ?? defaultPostLoginPath(scopedProfile.role), { replace: true })
@@ -108,7 +114,18 @@ export default function App() {
   // above) — an organizer signed in on that same tab must never have the
   // live scoreboard silently replaced by this on reload.
   const isJumbotron = location.pathname.startsWith('/jumbotron')
-  if (session && scopedProfile && !scopedProfile.privacy_accepted_at && !isJumbotron) {
+  // /auth/* flows (reset-password, accept-invite) deliberately create a
+  // transient session just to set a password. The privacy gate must not
+  // intercept those — otherwise resetting or accepting an invite dead-ends on
+  // the notice instead of the password form.
+  const isAuthFlow = location.pathname.startsWith('/auth')
+  if (
+    session &&
+    scopedProfile &&
+    !scopedProfile.privacy_accepted_at &&
+    !isJumbotron &&
+    !isAuthFlow
+  ) {
     return <PrivacyNoticeGate profile={scopedProfile} />
   }
 

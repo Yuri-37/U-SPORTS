@@ -10,9 +10,6 @@ import { passwordZ } from '../../lib/validation/forms'
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
   const { institution } = useInstitutionStore()
-  // Supabase's client auto-parses the recovery link's URL fragment
-  // (detectSessionInUrl: true in lib/supabase.ts) and fires this event once
-  // that transient session is established — there's nothing to do until then.
   const [ready, setReady] = useState(false)
   const [checking, setChecking] = useState(true)
   const [password, setPassword] = useState('')
@@ -23,14 +20,70 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
-    })
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
-      setChecking(false)
-    })
-    return () => sub.subscription.unsubscribe()
+    let active = true
+    let cleanup = () => {}
+
+    const run = async () => {
+      const query = new URLSearchParams(window.location.search)
+      const tokenHash = query.get('token_hash')
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const linkError = hash.get('error_description') || hash.get('error')
+
+      // New reset links carry a token_hash in the query, and we redeem it here
+      // in JavaScript. A mail scanner (e.g. Outlook "Safe Links") that
+      // pre-opens the link only fetches the page HTML and never runs this, so
+      // the one-time token survives for the real person who clicks. We also
+      // clear any existing login FIRST: this page must reflect the reset link
+      // alone. The old code trusted any persisted session, so a signed-in user
+      // clicking a dead link still saw the form and "updated" their live
+      // session — appearing to work while doing the wrong thing.
+      if (tokenHash) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          type: 'recovery',
+          token_hash: tokenHash,
+        })
+        // Strip the token from the URL so a refresh or back-button can't replay it.
+        window.history.replaceState({}, document.title, '/auth/reset-password')
+        if (!active) return
+        setReady(!verifyError)
+        setChecking(false)
+        return
+      }
+
+      // A failed/expired redirect leaves an error in the URL fragment. Show the
+      // expired message — never fall back to a pre-existing login session.
+      if (linkError) {
+        if (!active) return
+        setReady(false)
+        setChecking(false)
+        return
+      }
+
+      // Back-compat for links already sent in the older implicit-flow format:
+      // the session arrives in the URL fragment and fires PASSWORD_RECOVERY.
+      // A plain existing login (no recovery event) must NOT unlock the form.
+      let recovered = false
+      const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          recovered = true
+          if (!active) return
+          setReady(true)
+          setChecking(false)
+        }
+      })
+      cleanup = () => sub.subscription.unsubscribe()
+      // If no recovery context materialises, this wasn't a valid reset link.
+      setTimeout(() => {
+        if (active && !recovered) setChecking(false)
+      }, 3000)
+    }
+
+    void run()
+    return () => {
+      active = false
+      cleanup()
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {

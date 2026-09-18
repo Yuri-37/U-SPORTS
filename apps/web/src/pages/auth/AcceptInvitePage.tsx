@@ -7,12 +7,11 @@ import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
 import { passwordZ } from '../../lib/validation/forms'
 
-// Where invited accounts (staff today, athletes in a later phase — see
-// utils/staffInvite.ts) land after clicking the invite email link. Supabase's
-// client auto-redeems the link's URL fragment (detectSessionInUrl: true in
-// lib/supabase.ts) into a session before this ever mounts — unlike password
-// recovery there's no PASSWORD_RECOVERY event for invites, so this just
-// checks for a session directly, same as any other post-redirect page.
+// Where invited accounts land after clicking the invite email link. The link
+// carries a token_hash in the query, which we redeem here in JavaScript — the
+// same approach as ResetPasswordPage, and for the same reasons: a mail scanner
+// that pre-opens the link can't consume a token it never runs JS to redeem,
+// and a pre-existing login can never be mistaken for the invite session.
 export default function AcceptInvitePage() {
   const navigate = useNavigate()
   const { institution } = useInstitutionStore()
@@ -26,14 +25,57 @@ export default function AcceptInvitePage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') setReady(true)
-    })
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
-      setChecking(false)
-    })
-    return () => sub.subscription.unsubscribe()
+    let active = true
+    let cleanup = () => {}
+
+    const run = async () => {
+      const query = new URLSearchParams(window.location.search)
+      const tokenHash = query.get('token_hash')
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const linkError = hash.get('error_description') || hash.get('error')
+
+      if (tokenHash) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          type: 'invite',
+          token_hash: tokenHash,
+        })
+        window.history.replaceState({}, document.title, '/auth/accept-invite')
+        if (!active) return
+        setReady(!verifyError)
+        setChecking(false)
+        return
+      }
+
+      if (linkError) {
+        if (!active) return
+        setReady(false)
+        setChecking(false)
+        return
+      }
+
+      // Back-compat for older implicit-flow invite links (session in the URL
+      // fragment, fires SIGNED_IN). A plain existing login must not count.
+      let redeemed = false
+      const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+          redeemed = true
+          if (!active) return
+          setReady(true)
+          setChecking(false)
+        }
+      })
+      cleanup = () => sub.subscription.unsubscribe()
+      setTimeout(() => {
+        if (active && !redeemed) setChecking(false)
+      }, 3000)
+    }
+
+    void run()
+    return () => {
+      active = false
+      cleanup()
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
