@@ -8,12 +8,19 @@ interface TourState {
   stepIndex: number
   phase: TourPhase
   canAdvance: boolean
+  /**
+   * Tours to run, in order, after the current one completes. Set when a Super
+   * Admin chooses to do the whole setup in one go — the admin tour hands off
+   * to ['organizer', 'coach']. Empty for a normal single-tour run.
+   */
+  queue: TourId[]
   /** Session-only — an exited tour shouldn't re-prompt before the server write lands. */
   dismissedThisSession: Set<TourId>
   start: (id: TourId, opts?: { fromStep?: number }) => void
   next: () => void
   prev: () => void
   setCanAdvance: (ok: boolean) => void
+  setQueue: (ids: TourId[]) => void
   pause: () => void
   resume: () => void
   exit: (reason: 'completed' | 'skipped') => void
@@ -37,9 +44,12 @@ export const useTourStore = create<TourState>()((set, get) => ({
   stepIndex: 0,
   phase: 'idle',
   canAdvance: true,
+  queue: [],
   dismissedThisSession: new Set(),
 
   start: (id, opts) => {
+    // Note: deliberately does NOT reset `queue` — chaining (see TourOverlay's
+    // exitTour) shifts the queue and then calls start() for the next tour.
     set({ activeTourId: id, stepIndex: opts?.fromStep ?? 0, phase: 'active', canAdvance: true })
   },
 
@@ -52,6 +62,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
   },
 
   setCanAdvance: (ok) => set({ canAdvance: ok }),
+  setQueue: (ids) => set({ queue: ids }),
 
   pause: () => set((s) => (s.activeTourId ? { phase: 'paused' } : s)),
   resume: () => set((s) => (s.activeTourId ? { phase: 'active' } : s)),
@@ -65,6 +76,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       activeTourId: null,
       stepIndex: 0,
       phase: 'idle',
+      queue: [],
       dismissedThisSession: id ? new Set(s.dismissedThisSession).add(id) : s.dismissedThisSession,
     }))
   },

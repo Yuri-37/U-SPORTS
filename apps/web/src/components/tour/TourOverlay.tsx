@@ -102,7 +102,8 @@ export default function TourOverlay() {
     (reason: 'completed' | 'skipped') => {
       const finishedId = activeTourId
       const finishedDef = finishedId ? TOURS[finishedId] : null
-      exit(reason)
+      // Persist the finished tour regardless of what happens next, so each
+      // leg of a chained run is recorded and won't auto-start again.
       if (finishedId && finishedDef) {
         void persistTourCompletion(finishedId, finishedDef.version, reason).then((res) => {
           if (res?.data?.tours_completed && profile) {
@@ -110,11 +111,25 @@ export default function TourOverlay() {
           }
         })
       }
+
+      // Chained run: a Super Admin chose to do the whole setup in one sitting,
+      // so on completion move to the next queued tour instead of ending.
+      // Read the queue live (not via closure) — it's set on the same click
+      // that triggers this. Skipping never chains; it ends the run.
+      const q = useTourStore.getState().queue
+      if (reason === 'completed' && q.length > 0) {
+        const [nextId, ...rest] = q
+        useTourStore.getState().setQueue(rest)
+        start(nextId)
+        return
+      }
+
+      exit(reason)
       if (previouslyFocusedRef.current instanceof HTMLElement) {
         previouslyFocusedRef.current.focus({ preventScroll: true })
       }
     },
-    [activeTourId, exit, profile, setProfile],
+    [activeTourId, exit, profile, setProfile, start],
   )
 
   // ─── auto-start, once per session, after the dashboard has had a moment to paint ──

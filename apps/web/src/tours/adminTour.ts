@@ -10,10 +10,14 @@ import {
   navAnchor,
 } from './anchors'
 import PlaceholderGeneratorStep from '../components/tour/steps/PlaceholderGeneratorStep'
+import HandoffChoiceStep from '../components/tour/steps/HandoffChoiceStep'
 
 export const adminTour: TourDefinition = {
   id: 'admin',
-  version: 1,
+  // v2: the handoff step now offers to continue into the Organizer + Coach
+  // tours in one sitting — bumped so the new option shows to admins who
+  // already finished v1.
+  version: 2,
   label: 'Super Admin: set up a season',
   description: 'Assign staff, choose sports, and generate a starting roster of teams and events.',
   roles: ['Admin'],
@@ -92,7 +96,7 @@ export const adminTour: TourDefinition = {
     {
       id: 'handoff',
       title: "You're set up",
-      body: 'This detailed setup is the responsibility of the Organizer and Coach. You can leave this to them or complete it yourself.',
+      render: (ctx) => React.createElement(HandoffChoiceStep, { ctx }),
     },
   ],
 }

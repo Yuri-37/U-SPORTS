@@ -15,7 +15,8 @@ import {
 
 export const organizerTour: TourDefinition = {
   id: 'organizer',
-  version: 1,
+  // v2: added the live-scoring walkthrough step.
+  version: 2,
   label: 'Organizer: run a season',
   description: 'Where athletes, teams, events, and live scoring live, and how they connect.',
   roles: ['Organizer'],
@@ -82,6 +83,14 @@ export const organizerTour: TourDefinition = {
       title: 'Create an event',
       body: 'Same rule as Teams — season first, then the sport and format narrow to match.',
       interactive: true,
+    },
+    {
+      // Centered card on purpose: live scoring opens from an event's Matches
+      // tab only once a match is actually live, so there's nothing to point at
+      // or start during a walkthrough — this just shows what it is.
+      id: 'live-scoring',
+      title: 'Scoring a match live',
+      body: "When a match goes live, this is where you run it — tap a player to add points, rebounds, or fouls and the scoreboard updates instantly everywhere at once: the venue jumbotron, athletes' phones, and the public hub. Only one organizer holds the scoring lock at a time, so two people can't score the same game by accident. You open it from an event's Matches tab the moment a match starts — nothing to score yet here, this is just the lay of the land.",
     },
     {
       id: 'analytics-nav',

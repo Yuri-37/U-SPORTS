@@ -873,7 +873,7 @@ export default function AthleteDashboard() {
               </h2>
               <button
                 type="button"
-                onClick={() => navigate('/athlete/profile')}
+                onClick={() => navigate('/athlete/events')}
                 className="text-xs text-[#0066FF] hover:underline focus-visible:outline-none"
               >
                 Full history →

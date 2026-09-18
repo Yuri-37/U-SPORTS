@@ -87,6 +87,23 @@ type TeamImportGroup = {
   error?: string
 }
 
+// Per-sport playing positions offered in the roster editor. Full readable
+// labels (not codes) — the stored value is shown as-is on athlete profiles,
+// the Athletes list, and the guest/mobile profile, so it must read well there.
+// Table tennis has no positions; its rows show no position control.
+const POSITIONS_BY_SPORT: Record<string, string[]> = {
+  basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
+  volleyball: [
+    'Outside Hitter',
+    'Opposite Hitter',
+    'Middle Blocker',
+    'Setter',
+    'Libero',
+    'Defensive Specialist',
+  ],
+  'table-tennis': [],
+}
+
 export default function OrganizerTeams() {
   const { organizer, profile } = useAuthStore()
 
@@ -202,6 +219,7 @@ export default function OrganizerTeams() {
   const [savingLineupId, setSavingLineupId] = useState<string | null>(null)
 
   const [savingJerseyId, setSavingJerseyId] = useState<string | null>(null)
+  const [savingPositionId, setSavingPositionId] = useState<string | null>(null)
 
   // Keyed by athlete_id, not membership id — jersey_number lives on the
   // athlete row, one value regardless of which team roster it's edited from.
@@ -830,6 +848,30 @@ export default function OrganizerTeams() {
       }
     } finally {
       setSavingJerseyId(null)
+    }
+  }
+
+  // Position, like jersey number, lives on the athlete row (one value per
+  // athlete) and saves through the same roster-details route. A select fires
+  // one PATCH per choice, so no debounce/draft is needed. The saved value then
+  // shows on the athlete's dashboard, profile, the Athletes list, and the
+  // public/guest and mobile profiles, which all read athletes.position.
+  const handleSetPosition = async (athleteId: string, value: string) => {
+    setSavingPositionId(athleteId)
+    try {
+      await api.patch(`/athletes/${athleteId}/roster-details`, { position: value })
+      await refreshEditTeam()
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e)) {
+        const d = e.response?.data
+        const apiErr =
+          d && typeof d === 'object' && 'error' in d ? String((d as { error: string }).error) : null
+        setEditError(apiErr ?? 'Could not update position')
+      } else {
+        setEditError('Could not update position')
+      }
+    } finally {
+      setSavingPositionId(null)
     }
   }
 
@@ -2157,6 +2199,23 @@ export default function OrganizerTeams() {
                                 {m.lineup_slot}
                               </span>
                               <span className="flex-1 truncate font-medium">{memberLabel(m)}</span>
+                              {m.athlete_id && POSITIONS_BY_SPORT[sport]?.length ? (
+                                <select
+                                  className="w-32 shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] px-1.5 py-1 text-xs text-[var(--text-primary)]"
+                                  value={m.athlete?.position ?? ''}
+                                  disabled={savingPositionId === m.athlete_id}
+                                  onChange={(e) => void handleSetPosition(m.athlete_id, e.target.value)}
+                                  title="Position"
+                                  aria-label={`Position for ${memberLabel(m)}`}
+                                >
+                                  <option value="">Position…</option>
+                                  {POSITIONS_BY_SPORT[sport].map((p) => (
+                                    <option key={p} value={p}>
+                                      {p}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : null}
                               {m.athlete_id ? (
                                 <input
                                   type="text"
@@ -2235,6 +2294,23 @@ export default function OrganizerTeams() {
                                   <Badge size="sm" variant="info">
                                     Tryout
                                   </Badge>
+                                ) : null}
+                                {m.athlete_id && POSITIONS_BY_SPORT[sport]?.length ? (
+                                  <select
+                                    className="w-32 shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] px-1.5 py-1 text-xs text-[var(--text-primary)]"
+                                    value={m.athlete?.position ?? ''}
+                                    disabled={savingPositionId === m.athlete_id}
+                                    onChange={(e) => void handleSetPosition(m.athlete_id, e.target.value)}
+                                    title="Position"
+                                    aria-label={`Position for ${memberLabel(m)}`}
+                                  >
+                                    <option value="">Position…</option>
+                                    {POSITIONS_BY_SPORT[sport].map((p) => (
+                                      <option key={p} value={p}>
+                                        {p}
+                                      </option>
+                                    ))}
+                                  </select>
                                 ) : null}
                                 {m.athlete_id ? (
                                   <input
