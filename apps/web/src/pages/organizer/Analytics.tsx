@@ -466,7 +466,7 @@ export default function OrganizerAnalytics() {
         }
       : sport === 'volleyball'
         ? {
-            Kills: p.stats?.kills ?? 0,
+            Attack: p.stats?.attacks ?? 0,
             Aces: p.stats?.aces ?? 0,
           }
         : {
@@ -573,7 +573,7 @@ export default function OrganizerAnalytics() {
                   />
                   <Bar
                     dataKey={
-                      sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Kills' : 'Winners'
+                      sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Attack' : 'Winners'
                     }
                     fill="#0066FF"
                     radius={[4, 4, 0, 0]}

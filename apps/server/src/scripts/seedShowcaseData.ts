@@ -510,14 +510,14 @@ async function main() {
             athlete_id: rosters.A[0].athleteId,
             sport: sportKey,
             stats: {
-              kills: 14,
+              attacks: 14,
               aces: 3,
               digs: 5,
               blocks: 2,
               assists: 1,
+              receives: 4,
               errors: 2,
               serve_errors: 1,
-              attacks: 22,
             },
           },
           {
@@ -525,14 +525,14 @@ async function main() {
             athlete_id: rosters.A[1].athleteId,
             sport: sportKey,
             stats: {
-              kills: 2,
+              attacks: 2,
               aces: 1,
               digs: 10,
               blocks: 0,
               assists: 18,
+              receives: 12,
               errors: 1,
               serve_errors: 0,
-              attacks: 3,
             },
           },
           {
@@ -540,14 +540,14 @@ async function main() {
             athlete_id: rosters.B[0].athleteId,
             sport: sportKey,
             stats: {
-              kills: 9,
+              attacks: 9,
               aces: 1,
               digs: 6,
               blocks: 3,
               assists: 2,
+              receives: 5,
               errors: 4,
               serve_errors: 2,
-              attacks: 19,
             },
           },
           {
@@ -555,14 +555,14 @@ async function main() {
             athlete_id: rosters.B[1].athleteId,
             sport: sportKey,
             stats: {
-              kills: 1,
+              attacks: 1,
               aces: 0,
               digs: 8,
               blocks: 1,
               assists: 15,
+              receives: 11,
               errors: 2,
               serve_errors: 1,
-              attacks: 2,
             },
           },
         ],
@@ -675,7 +675,7 @@ async function main() {
         set3: 8,
         sets_won: 1,
       })
-      await addScoringAction(liveMatchId, rosters.A[0].athleteId, teamAId, sportKey, 'kill', 1, 3, {
+      await addScoringAction(liveMatchId, rosters.A[0].athleteId, teamAId, sportKey, 'attack', 1, 3, {
         a: 10,
         b: 8,
       })

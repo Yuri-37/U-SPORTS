@@ -71,11 +71,11 @@ export function playerStatCells(
     return [
       { label: 'GP', value: String(gp) },
       { label: 'PTS', value: String(Math.round(n('pts_scored'))), emphasis: true },
-      { label: 'Kills', value: String(Math.round(n('kills'))) },
+      { label: 'Att', value: String(Math.round(n('attacks'))) },
       { label: 'Aces', value: String(Math.round(n('aces'))) },
-      { label: 'Digs', value: String(Math.round(n('digs'))) },
       { label: 'Blocks', value: String(Math.round(n('blocks'))) },
-      { label: 'Kill%', value: pct(n('kills'), n('attacks')) },
+      { label: 'Exc Dig', value: String(Math.round(n('digs'))) },
+      { label: 'Exc Set', value: String(Math.round(n('assists'))) },
     ]
   }
   if (sport === 'table-tennis') {
@@ -174,10 +174,10 @@ export function seasonStatHighlights(
   }
   if (sport === 'volleyball') {
     return [
-      { label: 'Kills', value: String(Math.round(n('kills'))) },
+      { label: 'Attack', value: String(Math.round(n('attacks'))) },
       { label: 'Aces', value: String(Math.round(n('aces'))) },
-      { label: 'Digs', value: String(Math.round(n('digs'))) },
-      { label: 'Blocks', value: String(Math.round(n('blocks'))) },
+      { label: 'Exc Dig', value: String(Math.round(n('digs'))) },
+      { label: 'Exc Set', value: String(Math.round(n('assists'))) },
     ]
   }
   if (sport === 'table-tennis') {

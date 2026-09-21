@@ -59,16 +59,16 @@ VALUES
   TRUE,
   '{
     "gp": {"label": "GP", "type": "integer", "description": "Games Played"},
-    "kills": {"label": "Kills", "type": "integer"},
-    "kill_pct": {"label": "Kill%", "type": "percentage", "derived": true},
+    "pts_scored": {"label": "PTS", "type": "integer"},
+    "attacks": {"label": "Att", "type": "integer", "description": "Attack points"},
     "aces": {"label": "Aces", "type": "integer"},
-    "digs": {"label": "Digs", "type": "integer"},
     "blocks": {"label": "Blocks", "type": "integer"},
-    "assists": {"label": "Assists", "type": "integer"},
+    "digs": {"label": "Exc Dig", "type": "integer", "description": "Excellent digs"},
+    "assists": {"label": "Exc Set", "type": "integer", "description": "Excellent sets"},
+    "receives": {"label": "Rcv", "type": "integer", "description": "Receives"},
     "errors": {"label": "Errors", "type": "integer"},
-    "serve_errors": {"label": "Serve Err", "type": "integer"},
-    "reception_pct": {"label": "Reception%", "type": "percentage"},
-    "attacks": {"label": "Attacks", "type": "integer"}
+    "serve_errors": {"label": "Srv Err", "type": "integer"},
+    "reception_errors": {"label": "Rcv Err", "type": "integer"}
   }',
   '["S", "L", "OH", "OPP", "MB", "DS"]',
   2

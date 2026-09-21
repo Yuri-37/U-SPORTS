@@ -1346,15 +1346,20 @@ const ALLOWED_ACTIONS: Record<string, readonly string[]> = {
   ],
   volleyball: [
     'point_1',
-    'kill',
+    'attack',
     'ace',
     'block',
     'dig',
+    'receive',
     'assist',
     'error',
     'serve_error',
     'reception_error',
     'timeout',
+    // Legacy alias for 'attack' (kills and attack attempts were merged into one
+    // "attack" stat). Still accepted so a scorer whose tab was loaded before the
+    // change can finish the match; migration 075 renamed the historical rows.
+    'kill',
   ],
   'table-tennis': ['point_1', 'tt_winner', 'tt_ace', 'tt_error', 'timeout'],
 }
@@ -1428,7 +1433,8 @@ function pointEffect(
   }
   if (sport === 'volleyball') {
     if (
-      actionType === 'kill' ||
+      actionType === 'attack' ||
+      actionType === 'kill' || // legacy alias of 'attack'
       actionType === 'ace' ||
       actionType === 'block' ||
       actionType === 'point_1'
@@ -1905,10 +1911,10 @@ const STAT_MAX_BOUNDS: Record<string, Record<string, number>> = {
   },
   volleyball: {
     pts_scored: 80,
-    kills: 80,
     attacks: 80,
     aces: 40,
     digs: 80,
+    receives: 80,
     blocks: 40,
     assists: 80,
     errors: 40,

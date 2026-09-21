@@ -14,7 +14,7 @@ const INSIGHT_THRESHOLD = 0.1
 
 const KEY_STATS: Record<string, string[]> = {
   basketball: ['total_points', 'total_rebounds', 'total_assists', 'total_steals'],
-  volleyball: ['kills', 'aces', 'digs', 'blocks'],
+  volleyball: ['attacks', 'aces', 'digs', 'blocks'],
   // `sets_won` was never written into a player's stat blob, so that rule could
   // never fire. Winners are recorded per rally and are a real per-player stat.
   'table-tennis': ['pts_scored', 'winners'],
@@ -26,9 +26,11 @@ export const STAT_LABELS: Record<string, string> = {
   total_assists: 'APG',
   total_steals: 'SPG',
   turnovers: 'TOPG',
-  kills: 'Kills',
+  attacks: 'Attack',
   aces: 'Aces',
-  digs: 'Digs',
+  digs: 'Excellent Digs',
+  assists: 'Excellent Sets',
+  receives: 'Receives',
   blocks: 'Blocks',
   pts_scored: 'Points Scored',
   winners: 'Winners',
@@ -42,7 +44,7 @@ const STANDOUT_THRESHOLDS: Record<string, { key: string; min: number; label: str
     { key: 'total_assists', min: 5, label: 'assists' },
   ],
   volleyball: [
-    { key: 'kills', min: 5, label: 'kills' },
+    { key: 'attacks', min: 5, label: 'attack points' },
     { key: 'aces', min: 3, label: 'aces' },
   ],
   'table-tennis': [{ key: 'pts_scored', min: 11, label: 'points scored' }],
@@ -139,9 +141,10 @@ function debutSecondaryClause(
   }
   if (sport === 'volleyball') {
     const parts: string[] = []
-    if (triggerKey !== 'kills' && stats.kills) parts.push(`${stats.kills} kills`)
+    if (triggerKey !== 'attacks' && stats.attacks)
+      parts.push(`${stats.attacks} attack point${stats.attacks === 1 ? '' : 's'}`)
     if (triggerKey !== 'aces' && stats.aces) parts.push(`${stats.aces} aces`)
-    if (stats.digs) parts.push(`${stats.digs} digs`)
+    if (stats.digs) parts.push(`${stats.digs} excellent digs`)
     if (stats.blocks) parts.push(`${stats.blocks} blocks`)
     return parts.length ? ` with ${parts.slice(0, 2).join(' and ')}` : ''
   }

@@ -47,10 +47,10 @@ List<({String label, String value})> seasonStatHighlights(String sport, Map<Stri
       ];
     case 'volleyball':
       return [
-        (label: 'Kills', value: '${n('kills').toInt()}'),
+        (label: 'Attack', value: '${n('attacks').toInt()}'),
         (label: 'Aces', value: '${n('aces').toInt()}'),
-        (label: 'Digs', value: '${n('digs').toInt()}'),
-        (label: 'Blocks', value: '${n('blocks').toInt()}'),
+        (label: 'Exc Dig', value: '${n('digs').toInt()}'),
+        (label: 'Exc Set', value: '${n('assists').toInt()}'),
       ];
     case 'table-tennis':
       return [

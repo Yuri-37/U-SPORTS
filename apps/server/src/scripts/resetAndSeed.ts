@@ -552,14 +552,16 @@ async function main() {
     if (sport === 'volleyball') {
       if (!starter) {
         return {
-          kills: between(1, 3), attacks: between(2, 6), aces: between(0, 1),
+          attacks: between(1, 3), aces: between(0, 1),
           digs: between(1, 3), blocks: between(4, 5), assists: between(0, 2),
+          receives: between(1, 4),
           errors: between(0, 2), serve_errors: between(0, 1), reception_errors: between(0, 1),
         }
       }
       return {
-        kills: between(5, 14), attacks: between(11, 24), aces: between(0, 3),
+        attacks: between(5, 14), aces: between(0, 3),
         digs: between(2, 10), blocks: between(4, 7), assists: between(0, 18),
+        receives: between(2, 12),
         errors: between(1, 4), serve_errors: between(0, 2), reception_errors: between(0, 2),
       }
     }
@@ -595,12 +597,15 @@ async function main() {
       }
     }
     if (sport === 'volleyball') {
-      const kills = scale('kills')
+      // Every point-scoring volleyball action (attack, ace, block) feeds
+      // pts_scored, same as the live scoring path.
+      const attacks = scale('attacks')
       const aces = scale('aces')
+      const blocks = scale('blocks')
       return {
-        pts_scored: kills + aces,
-        kills, attacks: Math.max(kills, scale('attacks')), aces,
-        digs: scale('digs'), blocks: scale('blocks'), assists: scale('assists'),
+        pts_scored: attacks + aces + blocks,
+        attacks, aces, blocks,
+        digs: scale('digs'), receives: scale('receives'), assists: scale('assists'),
         errors: scale('errors'), serve_errors: scale('serve_errors'), reception_errors: scale('reception_errors'),
       }
     }
@@ -609,7 +614,7 @@ async function main() {
 
   const DEBUT_STATS: Record<Sport, Record<string, number>> = {
     basketball: { total_points: 24, fg_made: 9, fg_attempted: 16, three_made: 2, three_attempted: 5, ft_made: 4, ft_attempted: 5, total_rebounds: 7, off_rebounds: 2, total_assists: 6, total_steals: 3, total_blocks: 1, turnovers: 2, fouls: 2 },
-    volleyball: { pts_scored: 12, kills: 9, attacks: 15, aces: 2, digs: 4, blocks: 1, assists: 3, errors: 2, serve_errors: 1, reception_errors: 0 },
+    volleyball: { pts_scored: 12, attacks: 9, aces: 2, blocks: 1, digs: 4, assists: 3, receives: 6, errors: 2, serve_errors: 1, reception_errors: 0 },
     'table-tennis': { pts_scored: 33, winners: 12, aces: 3, errors: 4 },
   }
 

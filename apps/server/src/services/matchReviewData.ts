@@ -246,25 +246,30 @@ export function actionTypeToStatKeys(
     },
     volleyball: {
       point_1: [['pts_scored', 1]],
-      kill: [
-        ['kills', 1],
-        ['pts_scored', 1],
+      // `attacks` counts attack points. Kills and attack attempts used to be two
+      // separate stats; they are one "attack" stat now, so an attack error feeds
+      // `errors` only — it is no longer an attack attempt.
+      attack: [
         ['attacks', 1],
+        ['pts_scored', 1],
+      ],
+      // Legacy alias of `attack`, kept so historical rows still aggregate.
+      kill: [
+        ['attacks', 1],
+        ['pts_scored', 1],
       ],
       ace: [
         ['aces', 1],
         ['pts_scored', 1],
       ],
       dig: [['digs', 1]],
+      receive: [['receives', 1]],
       block: [
         ['blocks', 1],
         ['pts_scored', 1],
       ],
       assist: [['assists', 1]],
-      error: [
-        ['errors', 1],
-        ['attacks', 1],
-      ],
+      error: [['errors', 1]],
       serve_error: [
         ['serve_errors', 1],
         ['errors', 1],

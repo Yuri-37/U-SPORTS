@@ -42,7 +42,7 @@ type SeasonScheduleMatch = {
 }
 
 type StatDrilldown =
-  'games' | 'ppg' | 'rpg' | 'apg' | 'kills' | 'aces' | 'digs' | 'pts_scored' | 'winners'
+  'games' | 'ppg' | 'rpg' | 'apg' | 'attacks' | 'aces' | 'digs' | 'pts_scored' | 'winners'
 
 type UpcomingMatchRow = {
   id: string
@@ -162,12 +162,12 @@ const MATCH_STAT_LABELS: Record<string, Record<string, string>> = {
   },
   volleyball: {
     pts_scored: 'Points scored',
-    kills: 'Kills',
-    attacks: 'Attacks',
+    attacks: 'Attack',
     aces: 'Aces',
-    digs: 'Digs',
     blocks: 'Blocks',
-    assists: 'Sets',
+    digs: 'Excellent digs',
+    assists: 'Excellent sets',
+    receives: 'Receives',
     errors: 'Errors',
     serve_errors: 'Serve errors',
     reception_errors: 'Reception errors',
@@ -199,12 +199,12 @@ const MATCH_STAT_ORDER: Record<string, string[]> = {
   ],
   volleyball: [
     'pts_scored',
-    'kills',
     'attacks',
     'aces',
-    'digs',
     'blocks',
+    'digs',
     'assists',
+    'receives',
     'errors',
     'serve_errors',
     'reception_errors',
@@ -1239,9 +1239,9 @@ export default function AthleteDashboard() {
               {athlete.sport === 'volleyball' && (
                 <>
                   <StatCard
-                    label="Kills"
-                    value={selectedSeasonStats.stats?.kills ?? 0}
-                    onClick={() => setStatDrilldown('kills')}
+                    label="Attack"
+                    value={selectedSeasonStats.stats?.attacks ?? 0}
+                    onClick={() => setStatDrilldown('attacks')}
                     interactiveHint="Tap for game log"
                   />
                   <StatCard
@@ -1251,7 +1251,7 @@ export default function AthleteDashboard() {
                     interactiveHint="Tap for game log"
                   />
                   <StatCard
-                    label="Digs"
+                    label="Excellent digs"
                     value={selectedSeasonStats.stats?.digs ?? 0}
                     onClick={() => setStatDrilldown('digs')}
                     interactiveHint="Tap for game log"
@@ -1308,12 +1308,12 @@ export default function AthleteDashboard() {
                 ? `Rebounds per game — ${seasonDetailTitle}`
                 : statDrilldown === 'apg'
                   ? `Assists per game — ${seasonDetailTitle}`
-                  : statDrilldown === 'kills'
-                    ? `Kills by game — ${seasonDetailTitle}`
+                  : statDrilldown === 'attacks'
+                    ? `Attack by game — ${seasonDetailTitle}`
                     : statDrilldown === 'aces'
                       ? `Aces by game — ${seasonDetailTitle}`
                       : statDrilldown === 'digs'
-                        ? `Digs by game — ${seasonDetailTitle}`
+                        ? `Excellent digs by game — ${seasonDetailTitle}`
                         : statDrilldown === 'pts_scored'
                           ? `Points by game — ${seasonDetailTitle}`
                           : statDrilldown === 'winners'
@@ -1481,10 +1481,10 @@ export default function AthleteDashboard() {
                         header: 'AST',
                         pick: (s: Record<string, number>) => Math.round(s.total_assists ?? 0),
                       }
-                    : statDrilldown === 'kills'
+                    : statDrilldown === 'attacks'
                       ? {
-                          header: 'Kills',
-                          pick: (s: Record<string, number>) => Math.round(s.kills ?? 0),
+                          header: 'Att',
+                          pick: (s: Record<string, number>) => Math.round(s.attacks ?? 0),
                         }
                       : statDrilldown === 'aces'
                         ? {
@@ -1493,7 +1493,7 @@ export default function AthleteDashboard() {
                           }
                         : statDrilldown === 'digs'
                           ? {
-                              header: 'Digs',
+                              header: 'Exc Dig',
                               pick: (s: Record<string, number>) => Math.round(s.digs ?? 0),
                             }
                           : statDrilldown === 'pts_scored'

@@ -82,11 +82,12 @@ const BASKETBALL_MISSES = [
 ] as const
 
 const VOLLEYBALL_STATS = [
-  { key: 'kill', label: 'Kill', title: 'Kill — wins the rally' },
+  { key: 'attack', label: 'Attack', title: 'Attack — wins the rally' },
   { key: 'ace', label: 'Ace', title: 'Service ace — wins the rally' },
   { key: 'block', label: 'Block', title: 'Blocked for a point' },
-  { key: 'dig', label: 'Dig', title: 'Dig (no point)' },
-  { key: 'assist', label: 'Set', title: 'Set assist (no point)' },
+  { key: 'dig', label: 'Exc Dig', title: 'Excellent dig (no point)' },
+  { key: 'assist', label: 'Exc Set', title: 'Excellent set (no point)' },
+  { key: 'receive', label: 'Receive', title: 'Receive — clean reception (no point)' },
   { key: 'error', label: 'Err', title: 'Attack error — point to the opponent' },
   { key: 'serve_error', label: 'Srv Err', title: 'Service error — point to the opponent' },
   { key: 'reception_error', label: 'Rcv Err', title: 'Reception error — point to the opponent' },
@@ -1877,6 +1878,7 @@ export default function OrganizerScoring() {
             participantBId={participantBId}
             currentPeriod={currentPeriod}
             periodLabel={periodConfigFor(sport).label}
+            sport={sport}
             recentActions={recentActions}
             scoringLockedBy={match?.scoring_locked_by ?? null}
             clockLockedBy={match?.clock_locked_by ?? null}

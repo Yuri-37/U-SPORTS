@@ -15,7 +15,7 @@ const INSIGHT_THRESHOLD = 0.10 // 10% delta triggers an insight
 
 const KEY_STATS: Record<string, string[]> = {
   basketball: ['total_points', 'total_rebounds', 'total_assists', 'fg_made'],
-  volleyball: ['kills', 'aces', 'digs', 'blocks'],
+  volleyball: ['attacks', 'aces', 'digs', 'blocks'],
   'table-tennis': ['pts_scored', 'sets_won'],
 }
 
@@ -23,9 +23,11 @@ const STAT_LABELS: Record<string, string> = {
   total_points: 'PPG',
   total_rebounds: 'RPG',
   total_assists: 'APG',
-  kills: 'Kills',
+  attacks: 'Attack',
   aces: 'Aces',
-  digs: 'Digs',
+  digs: 'Excellent Digs',
+  assists: 'Excellent Sets',
+  receives: 'Receives',
   blocks: 'Blocks',
   pts_scored: 'Points Scored',
   sets_won: 'Sets Won',

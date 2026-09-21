@@ -125,11 +125,11 @@ List<LeaderboardStatCell> playerStatCells(String sport, Map<String, dynamic>? st
     return [
       LeaderboardStatCell(label: 'GP', value: '$gp'),
       LeaderboardStatCell(label: 'PTS', value: '${n('pts_scored').toInt()}', emphasis: true),
-      LeaderboardStatCell(label: 'Kills', value: '${n('kills').toInt()}'),
+      LeaderboardStatCell(label: 'Att', value: '${n('attacks').toInt()}'),
       LeaderboardStatCell(label: 'Aces', value: '${n('aces').toInt()}'),
-      LeaderboardStatCell(label: 'Digs', value: '${n('digs').toInt()}'),
       LeaderboardStatCell(label: 'Blocks', value: '${n('blocks').toInt()}'),
-      LeaderboardStatCell(label: 'Kill%', value: pct(n('kills'), n('attacks'))),
+      LeaderboardStatCell(label: 'Exc Dig', value: '${n('digs').toInt()}'),
+      LeaderboardStatCell(label: 'Exc Set', value: '${n('assists').toInt()}'),
     ];
   }
   if (sport == 'table-tennis') {

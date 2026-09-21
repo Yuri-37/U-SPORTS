@@ -20,7 +20,6 @@ export function buildSeasonAggregateInsights(
     athlete_id: string
     games_played: number
     stats?: Record<string, number> | null
-    kill_pct?: number | null
     athlete?: { profile?: { full_name?: string | null } | null } | null
   }[],
   teamStats: {
@@ -113,41 +112,41 @@ export function buildSeasonAggregateInsights(
   if (sport === 'volleyball' && leaderboard.length > 0) {
     const qualifying = leaderboard.filter((p) => p.games_played >= MIN_GP_PLAYER)
     if (qualifying.length > 0) {
-      const byKills = [...qualifying].sort(
-        (a, b) => (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0),
+      const byAttack = [...qualifying].sort(
+        (a, b) => (b.stats?.attacks ?? 0) - (a.stats?.attacks ?? 0),
       )[0]
-      const nm = byKills.athlete?.profile?.full_name ?? 'An attacker'
+      const nm = byAttack.athlete?.profile?.full_name ?? 'An attacker'
       out.push({
-        id: 'vb-kills',
+        id: 'vb-attacks',
         tone: 'positive',
         parts: [
-          { type: 'link', value: nm, href: playerHref(byKills.athlete_id) },
+          { type: 'link', value: nm, href: playerHref(byAttack.athlete_id) },
           {
             type: 'text',
-            value: ` leads recorded kills (${byKills.stats?.kills ?? 0}) among logged athletes.`,
+            value: ` leads recorded attack points (${byAttack.stats?.attacks ?? 0}) among logged athletes.`,
           },
         ],
       })
-    }
-    const byEff = [...leaderboard]
-      .filter((p) => p.games_played >= MIN_GP_PLAYER && (p.stats?.kill_pct ?? p.kill_pct ?? 0) > 0)
-      .sort(
-        (a, b) => (b.stats?.kill_pct ?? b.kill_pct ?? 0) - (a.stats?.kill_pct ?? a.kill_pct ?? 0),
-      )[0]
-    if (byEff) {
-      const pct = byEff.stats?.kill_pct ?? byEff.kill_pct ?? 0
-      const nm = byEff.athlete?.profile?.full_name ?? 'One hitter'
-      out.push({
-        id: 'vb-eff',
-        tone: 'positive',
-        parts: [
-          { type: 'link', value: nm, href: playerHref(byEff.athlete_id) },
-          {
-            type: 'text',
-            value: ` holds the top kill efficiency among logged contributors (${pct}% kill rate).`,
-          },
-        ],
-      })
+      // Kill efficiency used to sit here. Kills and attack attempts are now one
+      // "attack" stat, so there is no attempts denominator left to divide by;
+      // excellent digs is the defensive counterpart that is actually recorded.
+      const byDigs = [...qualifying]
+        .filter((p) => (p.stats?.digs ?? 0) > 0)
+        .sort((a, b) => (b.stats?.digs ?? 0) - (a.stats?.digs ?? 0))[0]
+      if (byDigs) {
+        const digName = byDigs.athlete?.profile?.full_name ?? 'One defender'
+        out.push({
+          id: 'vb-digs',
+          tone: 'positive',
+          parts: [
+            { type: 'link', value: digName, href: playerHref(byDigs.athlete_id) },
+            {
+              type: 'text',
+              value: ` leads excellent digs (${byDigs.stats?.digs ?? 0}) among logged athletes.`,
+            },
+          ],
+        })
+      }
     }
   }
 

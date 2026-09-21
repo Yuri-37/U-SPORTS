@@ -32,9 +32,11 @@ const ACTION_LABELS: Record<string, string> = {
   miss_1: 'Missed free throw',
   miss_2: 'Missed 2PT',
   miss_3: 'Missed 3PT',
-  kill: 'Kill',
+  attack: 'Attack',
+  kill: 'Attack', // legacy alias, logged before kills/attacks were merged
   ace: 'Ace',
-  dig: 'Dig',
+  dig: 'Excellent dig',
+  receive: 'Receive',
   error: 'Attack error',
   serve_error: 'Service error',
   reception_error: 'Reception error',
@@ -45,9 +47,19 @@ const ACTION_LABELS: Record<string, string> = {
   substitution: 'Substitution',
 }
 
-function actionLabel(row: ScoringActionRow): string {
+/** Actions whose name differs by sport — `assist` is an assist in basketball but
+ *  an excellent set in volleyball. */
+const SPORT_ACTION_LABELS: Record<string, Record<string, string>> = {
+  volleyball: { assist: 'Excellent set' },
+}
+
+function actionLabel(row: ScoringActionRow, sport: string): string {
   if (row.action_type.startsWith('point_')) return `+${row.value} pts`
-  return ACTION_LABELS[row.action_type] ?? row.action_type
+  return (
+    SPORT_ACTION_LABELS[sport]?.[row.action_type] ??
+    ACTION_LABELS[row.action_type] ??
+    row.action_type
+  )
 }
 
 interface Props {
@@ -61,6 +73,7 @@ interface Props {
   participantBId: string
   currentPeriod: number
   periodLabel: string
+  sport: string
   recentActions: ScoringActionRow[]
   scoringLockedBy: string | null
   clockLockedBy: string | null
@@ -82,6 +95,7 @@ export default function MatchActivityFeed({
   participantBId,
   currentPeriod,
   periodLabel,
+  sport,
   recentActions,
   scoringLockedBy,
   clockLockedBy,
@@ -123,9 +137,9 @@ export default function MatchActivityFeed({
       const side = row.participant_id === participantAId ? nameA : nameB
       const actor = row.recorded_by ? await resolveActorName(row.recorded_by) : 'Someone'
       const period = row.quarter_or_set ? ` (${periodLabel} ${row.quarter_or_set})` : ''
-      pushLine(`${prefix}${actor} — ${actionLabel(row)} for ${side}${period}`)
+      pushLine(`${prefix}${actor} — ${actionLabel(row, sport)} for ${side}${period}`)
     },
-    [participantAId, nameA, nameB, periodLabel, resolveActorName, pushLine],
+    [participantAId, nameA, nameB, periodLabel, sport, resolveActorName, pushLine],
   )
 
   // Seed from the already-fetched recent actions (from loadState()) — no duplicate fetch.

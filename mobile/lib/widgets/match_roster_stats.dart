@@ -29,12 +29,12 @@ List<({String label, String key})> _statKeys(String sport) {
     case 'volleyball':
       return const [
         (label: 'PTS', key: 'pts_scored'),
-        (label: 'Kills', key: 'kills'),
         (label: 'Att', key: 'attacks'),
         (label: 'Aces', key: 'aces'),
-        (label: 'Digs', key: 'digs'),
         (label: 'Blocks', key: 'blocks'),
-        (label: 'Sets', key: 'assists'),
+        (label: 'Exc Dig', key: 'digs'),
+        (label: 'Exc Set', key: 'assists'),
+        (label: 'Rcv', key: 'receives'),
         (label: 'Err', key: 'errors'),
         (label: 'Srv Err', key: 'serve_errors'),
         (label: 'Rcv Err', key: 'reception_errors'),
