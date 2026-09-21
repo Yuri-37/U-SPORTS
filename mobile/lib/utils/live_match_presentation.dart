@@ -84,3 +84,17 @@ LiveScoreView liveScorePresentation(
   }
   return (sa: sa, sb: sb);
 }
+
+/// The one number that represents a side's standing in a match that is under
+/// way or finished: points for basketball, sets won for volleyball, games won
+/// for table tennis.
+///
+/// `total` is a generated column over the basketball period columns only, so
+/// reading it for the other two sports rendered every volleyball and table
+/// tennis result as 0 - 0.
+num matchResultScore(String sport, Map<String, dynamic>? score) {
+  if (score == null) return 0;
+  if (sport == 'volleyball') return _nz(score['sets_won']);
+  if (sport == 'table-tennis') return _nz(score['games_won']);
+  return _basketballTotal(score);
+}

@@ -3,22 +3,62 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../providers/coach_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/format_helpers.dart';
+import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
+import '../widgets/coach_roster_edit_sheet.dart';
+
+/// Opens the courtside roster sheet for one player. Only reachable when
+/// [canManageTeamProvider] says this user coaches the team; the API re-checks
+/// that on every write.
+Future<void> _openRosterEdit(
+  BuildContext context,
+  WidgetRef ref,
+  String teamId,
+  String sport,
+  _RosterEntry player,
+) async {
+  final result = await showModalBottomSheet<RosterEditResult>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => CoachRosterEditSheet(
+      teamId: teamId,
+      sport: sport,
+      athleteId: player.athleteId,
+      membershipId: player.membershipId,
+      name: player.name,
+      jerseyNumber: player.jerseyNumber,
+      position: player.position,
+      isStarting: player.lineupSlot != null,
+    ),
+  );
+  if (result?.changed ?? false) {
+    ref.invalidate(_teamDetailProvider(teamId));
+    // The coach home shows jersey/starting counts off the same data.
+    ref.invalidate(coachTeamsProvider);
+  }
+}
 
 class _RosterEntry {
   _RosterEntry({
     required this.athleteId,
+    required this.membershipId,
     required this.name,
     required this.position,
     required this.jerseyNumber,
     this.lineupSlot,
   });
   final String athleteId;
+
+  /// The team_members row — what the lineup endpoint keys on, as opposed to
+  /// the athlete itself.
+  final String membershipId;
   final String name;
   final String? position;
   final String? jerseyNumber;
@@ -40,6 +80,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
   final rows = await Supabase.instance.client
       .from('team_members')
       .select('''
+        id,
         lineup_slot,
         athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name)),
         team:teams(
@@ -74,6 +115,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
       final prof = ath['profile'] as Map<String, dynamic>?;
       roster.add(_RosterEntry(
         athleteId: ath['id'] as String,
+        membershipId: row['id'] as String? ?? '',
         name: (prof?['full_name'] as String?) ?? 'Athlete',
         position: (ath['position'] as String?)?.trim(),
         jerseyNumber: ath['jersey_number']?.toString(),
@@ -141,6 +183,9 @@ class TeamDetailScreen extends ConsumerWidget {
     final teamAsync = ref.watch(_teamDetailProvider(teamId));
     final statsAsync = ref.watch(_teamStatsProvider(teamId));
     final matchesAsync = ref.watch(_teamMatchesProvider(teamId));
+    // Coaches of this team get the roster edit affordance; everyone else sees
+    // the same page they always have.
+    final canEditRoster = ref.watch(canManageTeamProvider(teamId));
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -250,6 +295,15 @@ class TeamDetailScreen extends ConsumerWidget {
                                 Text('#${p.jerseyNumber}',
                                     style: TextStyle(fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context))),
                               ],
+                              if (canEditRoster) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  tooltip: 'Edit jersey, position and lineup',
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  onPressed: () =>
+                                      _openRosterEdit(context, ref, teamId, team.sport, p),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -289,8 +343,11 @@ class TeamDetailScreen extends ConsumerWidget {
                           oppScore = s;
                         }
                       }
+                      // `total` only adds up the basketball period columns, so
+                      // reading it directly showed every volleyball and table
+                      // tennis result as 0 - 0.
                       final scoreLine = (status == 'completed' || status == 'live') && myScore != null && oppScore != null
-                          ? '${myScore['total'] ?? 0} - ${oppScore['total'] ?? 0}'
+                          ? '${matchResultScore(team.sport, myScore)} - ${matchResultScore(team.sport, oppScore)}'
                           : null;
                       final eventId = m['event_id'] as String?;
                       return Padding(

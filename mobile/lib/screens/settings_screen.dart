@@ -8,7 +8,7 @@ import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_section.dart';
 
-enum SettingsShell { guest, athlete }
+enum SettingsShell { guest, athlete, coach }
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, required this.shell});
@@ -21,6 +21,7 @@ class SettingsScreen extends ConsumerWidget {
     final title = switch (shell) {
       SettingsShell.guest => 'Settings',
       SettingsShell.athlete => 'Athlete settings',
+      SettingsShell.coach => 'Coach settings',
     };
 
     return Scaffold(
@@ -72,7 +73,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
-          if (shell == SettingsShell.athlete) ...[
+          // Signed-in users (athlete or coach) can change their own password.
+          if (shell != SettingsShell.guest) ...[
             const Divider(height: 32),
             Text('Security',
                 style: Theme.of(context)

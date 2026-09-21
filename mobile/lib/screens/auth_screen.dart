@@ -60,21 +60,30 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (!mounted) return;
       final role = (profile?['role'] as String?)?.trim();
 
-      // Staff (Admin/Organizer/Coach — plus legacy super_admin/organizer) must use the web platform.
-      const staffRoles = {
+      // Admins and organizers must use the web platform — the app has no
+      // scoring, bracket or account-management surface for them. Coaches are
+      // signed in here and land on their own roster/schedule home.
+      const webOnlyRoles = {
         'Admin',
         'Organizer',
-        'Coach',
         'super_admin',
         'organizer'
       };
-      if (role != null && staffRoles.contains(role)) {
+      if (role != null && webOnlyRoles.contains(role)) {
         await ref.read(pushNotificationsServiceProvider).unregisterToken();
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
         setState(() {
-          _error = 'Organizer/Admin/Coach accounts must use the web platform.';
+          _error = 'Organizer and Admin accounts must use the web platform.';
         });
+        return;
+      }
+
+      if (role == 'Coach') {
+        ref.invalidate(profileProvider);
+        ref.invalidate(athleteRowProvider);
+        if (!mounted) return;
+        context.go('/coach/teams');
         return;
       }
 

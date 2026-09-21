@@ -53,6 +53,21 @@ class ApiClient {
     return jsonDecode(res.body);
   }
 
+  Future<dynamic> patchJson(String path, {Map<String, dynamic>? body}) async {
+    final token = await _bearer();
+    final res = await http.patch(
+      _uri(path),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: body == null ? null : jsonEncode(body),
+    );
+    _throwIfError(res);
+    if (res.body.isEmpty) return null;
+    return jsonDecode(res.body);
+  }
+
   /// Uploads a single file as multipart/form-data under field name `file` —
   /// used for avatar upload (see POST /profile/avatar). `http.MultipartRequest`
   /// sets its own Content-Type with the correct boundary, so none is passed

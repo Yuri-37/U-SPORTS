@@ -13,16 +13,27 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  /// The last tab is role-dependent: athletes get their dashboard (branch 3),
+  /// coaches their teams (branch 4). Both sit behind one bottom-nav slot, so
+  /// the displayed index and the branch index are not the same number.
+  static int _branchFor(int displayIndex, String role) {
+    if (displayIndex < 3) return displayIndex;
+    return role == 'Coach' ? 4 : 3;
+  }
+
+  static int _displayFor(int branchIndex) => branchIndex >= 3 ? 3 : branchIndex;
+
   void _onTap(BuildContext context, int index, String role) {
-    // Guests have no "Profile" branch to switch to — send them to login
-    // instead of a dashboard they can't see.
-    if (index == 3 && role != 'athlete') {
+    // Guests have no last branch to switch to — send them to login instead of
+    // a dashboard they can't see.
+    if (index == 3 && role != 'athlete' && role != 'Coach') {
       context.go('/auth/login');
       return;
     }
+    final branch = _branchFor(index, role);
     navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
+      branch,
+      initialLocation: branch == navigationShell.currentIndex,
     );
   }
 
@@ -47,7 +58,7 @@ class AppShell extends ConsumerWidget {
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 11,
           unselectedFontSize: 10,
-          currentIndex: navigationShell.currentIndex,
+          currentIndex: _displayFor(navigationShell.currentIndex),
           onTap: (i) => _onTap(context, i, role),
           items: [
             const BottomNavigationBarItem(
@@ -66,9 +77,14 @@ class AppShell extends ConsumerWidget {
               label: 'Events',
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline),
-              activeIcon: const Icon(Icons.person),
-              label: role == 'guest' ? 'Sign in' : 'Profile',
+              icon: Icon(
+                  role == 'Coach' ? Icons.groups_outlined : Icons.person_outline),
+              activeIcon: Icon(role == 'Coach' ? Icons.groups : Icons.person),
+              label: switch (role) {
+                'Coach' => 'My Teams',
+                'guest' => 'Sign in',
+                _ => 'Profile',
+              },
             ),
           ],
         ),

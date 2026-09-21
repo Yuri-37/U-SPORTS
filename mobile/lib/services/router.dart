@@ -9,6 +9,7 @@ import 'push_notifications_service.dart';
 import '../screens/athlete/athlete_dashboard_screen.dart';
 import '../screens/auth_screen.dart';
 import '../screens/bracket_screen.dart';
+import '../screens/coach/coach_home_screen.dart';
 import '../screens/event_detail_screen.dart';
 import '../screens/events_screen.dart';
 import '../screens/forgot_password_screen.dart';
@@ -72,15 +73,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         role = 'guest'; // profile stays null — fail-open, unchanged
       }
 
-      // Staff (Admin/Organizer/Coach — plus legacy super_admin/organizer) must use the web platform.
-      const staffRoles = {
+      // Admins and organizers still belong on the web platform — the app has
+      // no scoring, bracket or account-management surface, so signing them in
+      // here would strand them in a shell that cannot do their job.
+      //
+      // Coaches are the exception (see CoachHomeScreen): what they need
+      // courtside is their roster and schedule, which this app already shows.
+      const webOnlyRoles = {
         'Admin',
         'Organizer',
-        'Coach',
         'super_admin',
         'organizer'
       };
-      if (staffRoles.contains(role)) {
+      if (webOnlyRoles.contains(role)) {
         await ref.read(pushNotificationsServiceProvider).unregisterToken();
         await Supabase.instance.client.auth.signOut();
         return '/auth/login';
@@ -100,8 +105,16 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (path == '/settings') {
         if (role == 'athlete') return '/athlete/settings';
+        if (role == 'Coach') return '/coach/settings';
         return null;
       }
+
+      // Coach surface. Anyone else who lands on it goes to the public hub.
+      if (path.startsWith('/coach/')) {
+        if (role != 'Coach') return '/';
+        return null;
+      }
+
 
       if (path.startsWith('/notifications')) {
         if (role != 'athlete') return '/';
@@ -142,6 +155,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
                 path: '/athlete/dashboard',
                 builder: (ctx, _) => const AthleteDashboardScreen()),
+          ]),
+          // Branch 4 shares the last nav slot with branch 3 — athletes see
+          // their dashboard there, coaches their teams (see AppShell).
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/coach/teams',
+                builder: (ctx, _) => const CoachHomeScreen()),
           ]),
         ],
       ),
@@ -198,6 +218,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/athlete/settings',
         builder: (ctx, _) => const SettingsScreen(shell: SettingsShell.athlete),
+      ),
+      GoRoute(
+        path: '/coach/settings',
+        builder: (ctx, _) => const SettingsScreen(shell: SettingsShell.coach),
       ),
     ],
   );
