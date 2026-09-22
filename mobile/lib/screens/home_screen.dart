@@ -41,6 +41,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      // A Container does not clip to its own decoration radius by default, so
+      // the offset corner block used to poke a hard square into the rounded
+      // corner. Clipping keeps every decorative layer inside the card shape.
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppTheme.schoolPrimary, AppTheme.schoolPrimary.withValues(alpha: 0.75)],
@@ -52,7 +56,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       // The dot grid and corner block mirror web's inverted hero treatment —
       // texture that reads as paper rather than as a pattern.
+      //
+      // `alignment` matters here: a non-positioned child of a Stack gets loose
+      // constraints, so this Column shrink-wraps to its widest child. Without
+      // an explicit alignment the Stack would default to topStart and pin that
+      // shrink-wrapped column to the LEFT edge, which is what made the hero
+      // look off-centre.
       child: Stack(
+        alignment: Alignment.topCenter,
         children: [
           Positioned.fill(
             child: ClipRRect(
@@ -126,10 +137,114 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(tagline, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38, fontStyle: FontStyle.italic)),
                 ),
+              const SizedBox(height: 22),
+              _frostedStatCard(),
+              const SizedBox(height: 18),
+              _quickActions(),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  /// Frosted card sitting on the gradient, holding the two figures that
+  /// actually matter on arrival: what is being played now, and what is open.
+  /// The inset top highlight is what makes it read as glass rather than as a
+  /// flat translucent rectangle.
+  Widget _frostedStatCard() {
+    final live = ref.watch(hubLiveProvider).valueOrNull?.matches.length ?? 0;
+    final open = ref.watch(hubRecentEventsProvider).valueOrNull?.length ?? 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.18),
+            Colors.white.withValues(alpha: 0.06),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text('PLAYING NOW', style: AppTheme.labelMono(Colors.white70)),
+                const SizedBox(height: 8),
+                Text('$live', style: AppTheme.display(size: 30, color: Colors.white)),
+              ],
+            ),
+          ),
+          Container(width: 1, height: 44, color: Colors.white.withValues(alpha: 0.2)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text('OPEN EVENTS', style: AppTheme.labelMono(Colors.white70)),
+                const SizedBox(height: 8),
+                Text('$open', style: AppTheme.display(size: 30, color: Colors.white)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Four equal quick actions across the hero. Labels are solid white rather
+  /// than translucent — on a gradient, low-opacity text is the first thing to
+  /// become unreadable.
+  Widget _quickActions() {
+    final actions = <({IconData icon, String label, String route})>[
+      (icon: Icons.emoji_events_outlined, label: 'Standings', route: '/leaderboards'),
+      (icon: Icons.calendar_today_outlined, label: 'Events', route: '/events'),
+      (icon: Icons.sports_basketball_outlined, label: 'Sports', route: '/sport/basketball'),
+      (icon: Icons.groups_outlined, label: 'Teams', route: '/leaderboards'),
+    ];
+
+    return Row(
+      children: actions.map((a) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push(a.route),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    children: [
+                      Icon(a.icon, color: Colors.white, size: 22),
+                      const SizedBox(height: 7),
+                      Text(
+                        a.label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

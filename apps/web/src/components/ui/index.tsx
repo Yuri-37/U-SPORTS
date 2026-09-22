@@ -214,10 +214,13 @@ export function Badge({ children, variant = 'default', size = 'md', className }:
   const variants = {
     default:
       'bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]',
-    success: 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20',
-    warning: 'bg-[#FFB800]/10 text-[#FFB800] border border-[#FFB800]/20',
-    danger: 'bg-[#FF3355]/10 text-[#FF3355] border border-[#FF3355]/20',
-    info: 'bg-[#0066FF]/10 text-[#0066FF] border border-[#0066FF]/20',
+    // Tint stays vivid; the TEXT uses the per-theme ink so a badge is legible
+    // on a light tint as well as a dark one (the vivid hue as text over
+    // near-white measured about 3:1).
+    success: 'bg-[var(--success)]/10 text-[var(--success-ink)] border border-[var(--success)]/20',
+    warning: 'bg-[#FFB800]/10 text-[var(--warning-ink)] border border-[#FFB800]/25',
+    danger: 'bg-[#FF3355]/10 text-[var(--danger-ink)] border border-[#FF3355]/25',
+    info: 'bg-[#0066FF]/10 text-[var(--info-ink)] border border-[#0066FF]/25',
     school: 'bg-[var(--school-primary)] text-[var(--school-secondary)]',
   }
   const sizes = { sm: 'px-1.5 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' }

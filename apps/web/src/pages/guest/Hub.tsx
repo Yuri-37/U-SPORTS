@@ -288,7 +288,7 @@ export default function GuestHub() {
             {liveMatches.length > 0 && (
               <p className="mt-8 flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                 <span className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-dot" />
-                <span className="text-xl font-bold text-[var(--school-primary)] dark:text-[var(--school-secondary)]">
+                <span className="text-xl font-bold text-[var(--brand-ink)]">
                   {liveMatches.length}
                 </span>
                 {liveMatches.length === 1 ? 'game' : 'games'} being played right now
@@ -536,7 +536,7 @@ export default function GuestHub() {
                 />
               </div>
               <span
-                className={`${i === 0 ? 'mt-8' : 'mt-auto pt-8'} text-sm font-medium text-[var(--school-primary)] dark:text-[var(--school-secondary)] group-hover:underline`}
+                className={`${i === 0 ? 'mt-8' : 'mt-auto pt-8'} text-sm font-medium text-[var(--brand-ink)] group-hover:underline`}
               >
                 View standings →
               </span>
@@ -605,7 +605,9 @@ export default function GuestHub() {
                   <div className="space-y-2.5 text-sm">
                     {champ && (
                       <p className="flex items-center gap-2">
-                        <Trophy className="w-4 h-4 shrink-0 text-[var(--school-secondary)]" />
+                        {/* Gold is a navy-surface color; on a white card it
+                            washes out, so the trophy uses the readable amber. */}
+                        <Trophy className="w-4 h-4 shrink-0 text-[var(--warning)]" />
                         <span className="text-[var(--text-muted)]">{placementRankLabel(1)}</span>
                         <span className="font-semibold text-[var(--text-primary)] truncate">
                           {championLabels[champ.participantId] ?? '—'}
@@ -722,7 +724,7 @@ function SectionLabel({
           dot === 'danger' ? 'bg-[var(--danger)] animate-pulse-dot' : 'bg-[var(--school-primary)]'
         }`}
       />
-      <span className="label-mono text-[var(--school-primary)] dark:text-[var(--school-secondary)]">
+      <span className="label-mono text-[var(--brand-ink)]">
         {children}
       </span>
     </span>

@@ -51,7 +51,7 @@ function HeroTickerCopy({ a }: { a: Announcement }) {
       <span
         className={cn(
           'text-sm font-bold tracking-widest uppercase',
-          isCritical ? 'text-[var(--danger)]' : 'text-[var(--warning)]',
+          isCritical ? 'text-[var(--danger-ink)]' : 'text-[var(--warning-ink)]',
         )}
       >
         {announcementHeading(a)}
@@ -175,7 +175,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
             <span
               className={cn(
                 'font-semibold mr-2',
-                a.urgency === 'critical' ? 'text-[var(--danger)]' : 'text-[var(--warning)]',
+                a.urgency === 'critical' ? 'text-[var(--danger-ink)]' : 'text-[var(--warning-ink)]',
               )}
             >
               {announcementHeading(a)}

@@ -168,6 +168,30 @@ code, pre, .mono {
   --school-primary-rgb: 0, 45, 98;
   --accent-rgb: 0, 102, 255;
 
+  /*
+    Brand color that is SAFE AS TEXT on the page background.
+
+    This exists because --school-secondary (gold) is only readable on the navy
+    it was picked for: on a near-white page it lands around 1.4:1, well under
+    the 4.5:1 minimum. Gold stays available for text on navy/inverted
+    surfaces; anything sitting on the page background uses this token instead.
+    Never use Tailwind's `dark:` variant to swap it -- this app themes off
+    [data-theme], and `dark:` follows the OS preference, so the two disagree
+    the moment a viewer's OS and in-app theme differ.
+  */
+  --brand-ink: #002d62;
+
+  /*
+    Status colors used AS TEXT on a 10% tint of themselves (badges, banners).
+    The vivid values these replace are tuned for a dark tint; over near-white
+    they land around 3:1 and read as washed-out neon. These darkened inks
+    clear 5:1 on a light tint while staying recognisably the same hue.
+  */
+  --danger-ink: #b3172f;
+  --warning-ink: #8a5a00;
+  --info-ink: #0047b3;
+  --success-ink: #0f6c4b;
+
   /* Brand-tinted elevation. Generic gray shadows read flat against navy. */
   --shadow-card: 0 1px 2px rgba(var(--school-primary-rgb), 0.06);
   --shadow-lift: 0 4px 14px rgba(var(--school-primary-rgb), 0.14);
@@ -179,6 +203,19 @@ code, pre, .mono {
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-lift: 0 4px 14px rgba(0, 0, 0, 0.55);
   --shadow-lift-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+
+  /*
+    Navy is unreadable on near-black, so brand text lifts to a soft blue tint
+    of it -- about 9:1 here. Deliberately desaturated: a saturated/neon blue
+    vibrates against a dark background and is tiring to read.
+  */
+  --brand-ink: #8fb2ff;
+
+  /* On a dark tint the vivid originals are the readable choice. */
+  --danger-ink: #ff3355;
+  --warning-ink: #ffb800;
+  --info-ink: #4c9fff;
+  --success-ink: #22c55e;
 }
 
 /* Display face -- hero and public section headings only, never dashboard UI. */

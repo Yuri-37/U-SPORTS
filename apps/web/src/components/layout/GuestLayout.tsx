@@ -246,7 +246,7 @@ function FooterColumn({
           <li key={l.to}>
             <NavLink
               to={l.to}
-              className="text-sm text-[var(--text-secondary)] hover:text-[var(--school-primary)] dark:hover:text-[var(--school-secondary)] transition-colors"
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--brand-ink)] transition-colors"
             >
               {l.label}
             </NavLink>
