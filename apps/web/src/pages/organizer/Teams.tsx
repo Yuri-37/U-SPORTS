@@ -104,6 +104,20 @@ const POSITIONS_BY_SPORT: Record<string, string[]> = {
   'table-tennis': [],
 }
 
+/**
+ * A stored position isn't guaranteed to be one of the canonical names above --
+ * roster imports and older data can carry an abbreviated code ("SF") instead.
+ * A <select> with a `value` that matches none of its <option>s just shows
+ * nothing selected, silently misrepresenting an athlete who already has a
+ * position on file as having none. Folding the raw stored value in as an
+ * extra option (when it isn't already canonical) keeps what's shown honest.
+ */
+function positionSelectOptions(sport: string, current: string): string[] {
+  const canonical = POSITIONS_BY_SPORT[sport] ?? []
+  if (!current || canonical.includes(current)) return canonical
+  return [current, ...canonical]
+}
+
 export default function OrganizerTeams() {
   const { organizer, profile } = useAuthStore()
 
@@ -2209,7 +2223,7 @@ export default function OrganizerTeams() {
                                   aria-label={`Position for ${memberLabel(m)}`}
                                 >
                                   <option value="">Position…</option>
-                                  {POSITIONS_BY_SPORT[sport].map((p) => (
+                                  {positionSelectOptions(sport, m.athlete?.position ?? '').map((p) => (
                                     <option key={p} value={p}>
                                       {p}
                                     </option>
@@ -2305,7 +2319,7 @@ export default function OrganizerTeams() {
                                     aria-label={`Position for ${memberLabel(m)}`}
                                   >
                                     <option value="">Position…</option>
-                                    {POSITIONS_BY_SPORT[sport].map((p) => (
+                                    {positionSelectOptions(sport, m.athlete?.position ?? '').map((p) => (
                                       <option key={p} value={p}>
                                         {p}
                                       </option>

@@ -136,6 +136,17 @@ class _CoachRosterEditSheetState extends ConsumerState<CoachRosterEditSheet> {
   @override
   Widget build(BuildContext context) {
     final options = positionsBySport[widget.sport] ?? const <String>[];
+    // A stored position isn't guaranteed to be one of the canonical names --
+    // roster imports and older data can carry an abbreviated code ("SF")
+    // instead. DropdownButtonFormField requires its current value to match
+    // one of its items exactly or it throws, so the athlete's existing value
+    // is folded in as an extra option whenever it isn't already canonical.
+    // This also means a coach can see exactly what's on file today, not just
+    // a value that happens to fit the modern list.
+    final dropdownOptions = [
+      if (_position.isNotEmpty && !options.contains(_position)) _position,
+      ...options,
+    ];
 
     return Padding(
       padding: EdgeInsets.only(
@@ -180,7 +191,7 @@ class _CoachRosterEditSheetState extends ConsumerState<CoachRosterEditSheet> {
               ),
               items: [
                 const DropdownMenuItem(value: '', child: Text('No position')),
-                ...options.map((p) => DropdownMenuItem(value: p, child: Text(p))),
+                ...dropdownOptions.map((p) => DropdownMenuItem(value: p, child: Text(p))),
               ],
               onChanged:
                   _saving ? null : (v) => setState(() => _position = v ?? ''),
