@@ -54,8 +54,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppTheme.cardShadow(Theme.of(context).brightness),
       ),
-      // The dot grid and corner block mirror web's inverted hero treatment —
-      // texture that reads as paper rather than as a pattern.
+      // The dot grid mirrors web's inverted hero treatment — texture that
+      // reads as paper rather than as a pattern. (Web's offset corner block is
+      // deliberately not carried over: on a narrow centred card it read as a
+      // stray rectangle instead of as part of a composition.)
       //
       // `alignment` matters here: a non-positioned child of a Stack gets loose
       // constraints, so this Column shrink-wraps to its widest child. Without
@@ -69,18 +71,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: CustomPaint(painter: _DotGridPainter()),
-            ),
-          ),
-          Positioned(
-            right: -18,
-            top: -18,
-            child: Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(22),
-              ),
             ),
           ),
           Column(
@@ -139,8 +129,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               const SizedBox(height: 22),
               _frostedStatCard(),
-              const SizedBox(height: 18),
-              _quickActions(),
             ],
           ),
         ],
@@ -197,54 +185,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  /// Four equal quick actions across the hero. Labels are solid white rather
-  /// than translucent — on a gradient, low-opacity text is the first thing to
-  /// become unreadable.
-  Widget _quickActions() {
-    final actions = <({IconData icon, String label, String route})>[
-      (icon: Icons.emoji_events_outlined, label: 'Standings', route: '/leaderboards'),
-      (icon: Icons.calendar_today_outlined, label: 'Events', route: '/events'),
-      (icon: Icons.sports_basketball_outlined, label: 'Sports', route: '/sport/basketball'),
-      (icon: Icons.groups_outlined, label: 'Teams', route: '/leaderboards'),
-    ];
-
-    return Row(
-      children: actions.map((a) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Material(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => context.push(a.route),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Column(
-                    children: [
-                      Icon(a.icon, color: Colors.white, size: 22),
-                      const SizedBox(height: 7),
-                      Text(
-                        a.label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -325,7 +265,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Material(
                   borderRadius: BorderRadius.circular(14),
-                  color: AppTheme.accent,
+                  color: AppTheme.schoolPrimary,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () => context.push('/auth/login'),
