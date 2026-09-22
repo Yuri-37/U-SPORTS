@@ -155,3 +155,203 @@ code, pre, .mono {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
+
+/* ===========================================================================
+   Design system additions -- structural/experiential layer.
+   Brand stays the hero: every shadow, glow, underline and gradient below is
+   tinted with --school-primary. --accent-default (electric blue) is a
+   supporting player only, used for hover states and secondary highlights.
+   =========================================================================== */
+
+:root {
+  /* Brand RGB triplets, so shadows/glows can be tinted at arbitrary alpha. */
+  --school-primary-rgb: 0, 45, 98;
+  --accent-rgb: 0, 102, 255;
+
+  /* Brand-tinted elevation. Generic gray shadows read flat against navy. */
+  --shadow-card: 0 1px 2px rgba(var(--school-primary-rgb), 0.06);
+  --shadow-lift: 0 4px 14px rgba(var(--school-primary-rgb), 0.14);
+  --shadow-lift-lg: 0 12px 32px rgba(var(--school-primary-rgb), 0.18);
+}
+
+[data-theme='dark'] {
+  /* On dark, tinting by navy is invisible -- fall back to true black depth. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 4px 14px rgba(0, 0, 0, 0.55);
+  --shadow-lift-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
+
+/* Display face -- hero and public section headings only, never dashboard UI. */
+.font-display {
+  font-family: 'Calistoga', 'Barlow Condensed', serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+/* Monospace section label (the small uppercase kicker above a heading). */
+.label-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* --- Motion -------------------------------------------------------------- */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(1.75rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered children: set on the parent, children pick up an index delay. */
+.stagger > * { animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* Hero graphic: a dashed ring turning slowly behind the floating cards. */
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-ring-spin { animation: ring-spin 60s linear infinite; }
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-float      { animation: float-y 5s ease-in-out infinite; }
+.animate-float-slow { animation: float-y 4s ease-in-out infinite 0.6s; }
+
+/* Badge dot. Distinct from .animate-pulse-live (opacity only, for LIVE tags). */
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.3); opacity: 0.7; }
+}
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* --- Texture ------------------------------------------------------------- */
+
+/* Dot grid for inverted sections. Subtle enough to read as paper, not pattern. */
+.texture-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+/* Same grid tinted for light sections. */
+.texture-dots-brand {
+  background-image: radial-gradient(rgba(var(--school-primary-rgb), 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Ambient corner glow. Pair with `relative overflow-hidden` on the parent. */
+.glow-brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 50% at 85% 10%,
+    rgba(var(--school-primary-rgb), 0.1) 0%,
+    transparent 70%
+  );
+}
+
+/* --- Card lift ----------------------------------------------------------- */
+
+/*
+  One hover treatment for every card in the app, so a card behaves the same
+  whether it sits on the public hub or inside a dashboard. The gradient wash
+  is a ::before so it can cross-fade without repainting the card background.
+*/
+.card-lift {
+  position: relative;
+  transition:
+    box-shadow 0.3s ease-out,
+    transform 0.3s ease-out,
+    border-color 0.3s ease-out;
+}
+.card-lift::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  background: linear-gradient(
+    to bottom right,
+    rgba(var(--school-primary-rgb), 0.04),
+    transparent 60%
+  );
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+}
+.card-lift:hover::before { opacity: 1; }
+
+/* --- Nav underline ------------------------------------------------------- */
+
+/* Grows from the centre in the brand color; 2px, rounded, never layout-shifts. */
+.nav-underline {
+  position: relative;
+}
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: 50%;
+  bottom: -0.35rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--school-primary);
+  transition: left 0.25s ease-out, right 0.25s ease-out;
+}
+[data-theme='dark'] .nav-underline::after { background: var(--school-secondary); }
+.nav-underline:hover::after,
+.nav-underline[data-active='true']::after {
+  left: 0;
+  right: 0;
+}
+
+/* --- Focus -------------------------------------------------------------- */
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--school-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-theme='dark'] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--school-secondary);
+}
+
+/* --- Reduced motion ------------------------------------------------------ */
+
+/*
+  Structure and hierarchy must survive with motion switched off, so entrance
+  animations resolve to their FINAL state rather than being cancelled (which
+  would leave anything animating in stuck at opacity 0). Continuous decorative
+  motion just stops.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .stagger > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-ring-spin,
+  .animate-float,
+  .animate-float-slow,
+  .animate-pulse-dot {
+    animation: none;
+  }
+  .card-lift:hover { transform: none; }
+}

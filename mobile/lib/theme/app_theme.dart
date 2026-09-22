@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Values mirror web's CSS custom properties exactly
 /// (`apps/web/src/styles/index.css`) so the two clients read as the same
@@ -21,11 +22,69 @@ class AppTheme {
   static Color schoolPrimary = const Color(0xFF002D62);
   static Color schoolSecondary = const Color(0xFFFFD700);
 
+  /// Display face for headings, matching web's .font-display in
+  /// apps/web/src/styles/index.css. google_fonts
+  /// falls back to the platform font if it can't be fetched, so a first launch
+  /// without connectivity still renders -- just not in Calistoga.
+  static TextStyle display({
+    required double size,
+    required Color color,
+    double height = 1.05,
+  }) =>
+      GoogleFonts.calistoga(
+        fontSize: size,
+        color: color,
+        height: height,
+        letterSpacing: -0.02 * size,
+      );
+
+  /// Monospace section label -- web's .label-mono.
+  static TextStyle labelMono(Color color) => GoogleFonts.jetBrainsMono(
+        fontSize: 11,
+        color: color,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.6,
+      );
+
+  /// Body/UI scale shared by both brightnesses. Mirrors web: DM Sans, with
+  /// the relaxed line-height the spec asks for on running text.
+  static TextTheme _textTheme(Color primary, Color secondary) {
+    final base = GoogleFonts.dmSansTextTheme();
+    return base
+        .copyWith(
+          displayLarge: display(size: 40, color: primary),
+          displayMedium: display(size: 32, color: primary),
+          headlineLarge: display(size: 28, color: primary),
+          headlineMedium: display(size: 24, color: primary),
+          titleLarge: base.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+          ),
+          titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          bodyLarge: base.bodyLarge?.copyWith(height: 1.6),
+          bodyMedium: base.bodyMedium?.copyWith(height: 1.6),
+          labelSmall: base.labelSmall?.copyWith(letterSpacing: 1.2),
+        )
+        .apply(bodyColor: primary, displayColor: primary);
+  }
+
+  /// Brand-tinted elevation. A neutral gray shadow reads flat against navy.
+  static List<BoxShadow> cardShadow(Brightness b) => [
+        BoxShadow(
+          color: b == Brightness.dark
+              ? Colors.black.withValues(alpha: 0.45)
+              : schoolPrimary.withValues(alpha: 0.10),
+          blurRadius: 14,
+          offset: const Offset(0, 4),
+        ),
+      ];
+
   static ThemeData dark() {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: bgPrimary,
+      textTheme: _textTheme(Colors.white, const Color(0xFF8888A0)),
       colorScheme: ColorScheme.dark(
         primary: accent,
         secondary: schoolPrimary,
@@ -53,7 +112,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
+          backgroundColor: schoolPrimary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -92,6 +151,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+      textTheme: _textTheme(const Color(0xFF0F172A), const Color(0xFF475569)),
       colorScheme: ColorScheme.light(
         primary: accent,
         secondary: schoolPrimary,
@@ -119,7 +179,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
+          backgroundColor: schoolPrimary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

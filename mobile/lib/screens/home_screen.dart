@@ -47,43 +47,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.cardShadow(Theme.of(context).brightness),
       ),
-      child: Column(
+      // The dot grid and corner block mirror web's inverted hero treatment —
+      // texture that reads as paper rather than as a pattern.
+      child: Stack(
         children: [
-          if (logoUrl != null && logoUrl.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              // A fixed 48x48 square forced BoxFit.contain to shrink a wide
-              // (non-square) logo down to fit that width, rendering it tiny.
-              // Widen the box so contain has room to keep the logo readable.
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: CachedNetworkImage(imageUrl: logoUrl.trim(), height: 48, width: 160, fit: BoxFit.contain),
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: CustomPaint(painter: _DotGridPainter()),
+            ),
+          ),
+          Positioned(
+            right: -18,
+            top: -18,
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(22),
               ),
             ),
-          Text(
-            'U-SPORTS · LIVE PLATFORM',
-            style: TextStyle(
-              color: AppTheme.schoolSecondary,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-              letterSpacing: 1.4,
-            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            (abbr?.isNotEmpty == true ? abbr! : 'U-Sports').toUpperCase(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
+          Column(
+            children: [
+              if (logoUrl != null && logoUrl.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  // A fixed 48x48 square forced BoxFit.contain to shrink a wide
+                  // (non-square) logo down to fit that width, rendering it tiny.
+                  // Widen the box so contain has room to keep the logo readable.
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: CachedNetworkImage(imageUrl: logoUrl.trim(), height: 48, width: 160, fit: BoxFit.contain),
+                  ),
+                ),
+              // Pill label, same component language as web's SectionLabel.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: AppTheme.schoolSecondary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Text('LIVE PLATFORM', style: AppTheme.labelMono(AppTheme.schoolSecondary)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                abbr?.isNotEmpty == true ? abbr! : 'U-Sports',
+                textAlign: TextAlign.center,
+                style: AppTheme.display(size: 42, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+              ),
+              if (tagline != null && tagline.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(tagline, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38, fontStyle: FontStyle.italic)),
+                ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(name, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 16)),
-          if (tagline != null && tagline.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(tagline, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38, fontStyle: FontStyle.italic)),
-            ),
         ],
       ),
     );
@@ -265,9 +309,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'Recent champions',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                          style: AppTheme.display(
+                            size: 22,
+                            height: 1.2,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -334,9 +378,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'Live now',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                          style: AppTheme.display(
+                            size: 22,
+                            height: 1.2,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -372,9 +416,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 Text(
                   'Events',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                  style: AppTheme.display(
+                    size: 22,
+                    height: 1.2,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -442,9 +486,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 20),
             Text(
               'Browse by Sport',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+              style: AppTheme.display(
+                size: 22,
+                height: 1.2,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -506,4 +550,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+}
+
+/// The hero's dot grid. Mirrors web's `.texture-dots`: white at very low
+/// alpha on a 22px pitch, so it suggests texture without competing with the
+/// text sitting on top of it.
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.07);
+    const pitch = 22.0;
+    for (double y = pitch / 2; y < size.height; y += pitch) {
+      for (double x = pitch / 2; x < size.width; x += pitch) {
+        canvas.drawCircle(Offset(x, y), 1.1, paint);
+      }
+    }
+  }
+
+  // Nothing about the grid depends on state, so it never needs repainting.
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

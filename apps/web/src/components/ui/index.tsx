@@ -22,17 +22,22 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  // `active:scale-[0.98]` gives every button the same tactile press.
   const base =
-    'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed select-none'
+    'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none'
   const variants = {
-    primary: 'bg-[#0066FF] hover:bg-[#0052CC] text-white shadow-lg shadow-blue-900/30',
+    // The primary action carries the school's own color, not the electric-blue
+    // accent it used to hardcode -- the accent is a supporting highlight
+    // (hovers, badges, links), never the thing a brand is recognised by.
+    primary:
+      'bg-[var(--school-primary)] text-white shadow-[var(--shadow-lift)] hover:shadow-[var(--shadow-lift-lg)] hover:brightness-110',
     secondary:
       'bg-[var(--surface-elevated)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]',
     danger: 'bg-[#FF3355] hover:bg-[#CC2244] text-white shadow-lg shadow-red-900/30',
     ghost:
       'bg-transparent hover:bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
     outline:
-      'bg-transparent border border-[var(--border-subtle)] hover:border-[var(--text-muted)] text-[var(--text-primary)]',
+      'bg-transparent border border-[var(--school-primary)]/35 hover:border-[var(--school-primary)] text-[var(--text-primary)]',
     success: 'bg-[var(--success)] hover:opacity-90 text-white shadow-lg shadow-green-900/30',
   }
   const sizes = {
@@ -59,17 +64,33 @@ interface CardProps {
   className?: string
   elevated?: boolean
   onClick?: () => void
+  /**
+   * Opt a non-clickable card into the hover lift — for a card that is itself a
+   * link target or a feature tile. Clickable cards (`onClick`) get it already.
+   */
+  interactive?: boolean
   /** Rarely needed — e.g. `data-tour` anchors for the guided tour system. */
   [dataAttr: `data-${string}`]: string | undefined
 }
 
-export function Card({ children, className, elevated, onClick, ...rest }: CardProps) {
+export function Card({
+  children,
+  className,
+  elevated,
+  onClick,
+  interactive,
+  ...rest
+}: CardProps) {
+  // Anything you can act on lifts on hover; a static panel in a dense
+  // dashboard stays put, so a mouse crossing a stat grid doesn't ripple.
+  const lifts = Boolean(onClick) || interactive
   return (
     <div
       className={cn(
-        'rounded-xl border border-[var(--border-subtle)] p-4',
+        'rounded-xl border border-[var(--border-subtle)] p-4 shadow-[var(--shadow-card)]',
         elevated ? 'bg-[var(--surface-elevated)]' : 'bg-[var(--surface-card)]',
-        onClick && 'cursor-pointer hover:border-[var(--accent-default)]/35 transition-colors',
+        lifts && 'card-lift hover:border-[var(--school-primary)]/30',
+        onClick && 'cursor-pointer',
         className,
       )}
       onClick={onClick}
