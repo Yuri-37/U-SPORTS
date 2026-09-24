@@ -9,7 +9,6 @@ import '../../utils/error_helpers.dart';
 import '../../utils/format_helpers.dart';
 import '../../utils/live_match_presentation.dart';
 import '../../utils/sport_helpers.dart';
-import '../../widgets/offline_banner.dart';
 
 /// The coach's home: the teams they are assigned to, what is being played now,
 /// and what is next. Everything a coach needs courtside is a read; the few
@@ -35,63 +34,56 @@ class CoachHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const OfflineBanner(),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(coachTeamsProvider);
-                ref.invalidate(coachMatchesProvider);
-                await ref.read(coachTeamsProvider.future);
-              },
-              child: teamsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _ErrorState(message: friendlyError(e)),
-                data: (teams) {
-                  final matches =
-                      matchesAsync.valueOrNull ?? const <Map<String, dynamic>>[];
-                  final live = matches.where((m) => m['status'] == 'live').toList();
-                  // The provider sorts newest-first; soonest-first reads better
-                  // for a schedule.
-                  final upcoming = matches
-                      .where((m) => m['status'] == 'scheduled')
-                      .toList()
-                      .reversed
-                      .toList();
-                  final recent =
-                      matches.where((m) => m['status'] == 'completed').take(3).toList();
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(coachTeamsProvider);
+          ref.invalidate(coachMatchesProvider);
+          await ref.read(coachTeamsProvider.future);
+        },
+        child: teamsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => _ErrorState(message: friendlyError(e)),
+          data: (teams) {
+            final matches =
+                matchesAsync.valueOrNull ?? const <Map<String, dynamic>>[];
+            final live = matches.where((m) => m['status'] == 'live').toList();
+            // The provider sorts newest-first; soonest-first reads better
+            // for a schedule.
+            final upcoming = matches
+                .where((m) => m['status'] == 'scheduled')
+                .toList()
+                .reversed
+                .toList();
+            final recent =
+                matches.where((m) => m['status'] == 'completed').take(3).toList();
 
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (teams.isEmpty) const _NoTeamsState(),
-                      if (live.isNotEmpty) ...[
-                        const _SectionTitle('Playing now'),
-                        ...live.map((m) => _MatchTile(match: m, highlight: true)),
-                        const SizedBox(height: 20),
-                      ],
-                      if (upcoming.isNotEmpty) ...[
-                        const _SectionTitle('Next up'),
-                        ...upcoming.take(3).map((m) => _MatchTile(match: m)),
-                        const SizedBox(height: 20),
-                      ],
-                      if (teams.isNotEmpty) ...[
-                        _SectionTitle('Teams (${teams.length})'),
-                        ...teams.map((t) => _TeamCard(team: t)),
-                      ],
-                      if (recent.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const _SectionTitle('Recent results'),
-                        ...recent.map((m) => _MatchTile(match: m)),
-                      ],
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (teams.isEmpty) const _NoTeamsState(),
+                if (live.isNotEmpty) ...[
+                  const _SectionTitle('Playing now'),
+                  ...live.map((m) => _MatchTile(match: m, highlight: true)),
+                  const SizedBox(height: 20),
+                ],
+                if (upcoming.isNotEmpty) ...[
+                  const _SectionTitle('Next up'),
+                  ...upcoming.take(3).map((m) => _MatchTile(match: m)),
+                  const SizedBox(height: 20),
+                ],
+                if (teams.isNotEmpty) ...[
+                  _SectionTitle('Teams (${teams.length})'),
+                  ...teams.map((t) => _TeamCard(team: t)),
+                ],
+                if (recent.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const _SectionTitle('Recent results'),
+                  ...recent.map((m) => _MatchTile(match: m)),
+                ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
