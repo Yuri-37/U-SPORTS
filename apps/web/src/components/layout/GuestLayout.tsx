@@ -13,7 +13,6 @@ const GUEST_NAV = [
   { to: '/guest', label: 'Hub', Icon: Globe, end: true },
   { to: '/guest/leaderboards', label: 'Standings', Icon: Trophy, end: false },
   { to: '/guest/events', label: 'Events', Icon: Calendar, end: false },
-  { to: '/app', label: 'App', Icon: Smartphone, end: false },
 ] as const
 
 export default function GuestLayout() {
@@ -94,6 +93,21 @@ export default function GuestLayout() {
 
         <div className="flex items-center gap-2 shrink-0">
           <DarkModeToggle />
+          {/* Not a nav section like Hub/Standings/Events -- a one-off "get this"
+              link, so it sits with the actions. Icon-only on small screens;
+              hidden on the app page itself. */}
+          {location.pathname !== '/app' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => navigate('/app')}
+              icon={<Smartphone className="w-3.5 h-3.5" />}
+              aria-label="Get the app"
+            >
+              <span className="hidden sm:inline">Get the app</span>
+            </Button>
+          )}
           {isAuthed && role === 'Admin' && (
             <Button
               size="sm"
