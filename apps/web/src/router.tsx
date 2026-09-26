@@ -55,6 +55,7 @@ const GuestEvents = React.lazy(() => import('./pages/guest/Events'))
 const GuestEventDetail = React.lazy(() => import('./pages/guest/EventDetail'))
 const GuestAthleteProfile = React.lazy(() => import('./pages/guest/AthleteProfile'))
 const GuestTeamDetail = React.lazy(() => import('./pages/guest/TeamDetail'))
+const AppDetails = React.lazy(() => import('./pages/guest/AppDetails'))
 
 // Jumbotron
 const JumbotronPage = React.lazy(() => import('./pages/jumbotron/JumbotronPage'))
@@ -93,6 +94,7 @@ const router = createBrowserRouter([
           { path: 'guest/events/:id', element: <GuestEventDetail /> },
           { path: 'guest/athletes/:id', element: <GuestAthleteProfile /> },
           { path: 'guest/teams/:id', element: <GuestTeamDetail /> },
+          { path: 'app', element: <AppDetails /> },
           { path: 'student', element: <Navigate to="/guest" replace /> },
         ],
       },

@@ -53,7 +53,8 @@ export default function App() {
       location.pathname.startsWith('/auth') ||
       location.pathname.startsWith('/jumbotron') ||
       location.pathname === '/super-admin/login' ||
-      location.pathname === '/privacy-notice'
+      location.pathname === '/privacy-notice' ||
+      location.pathname === '/app'
 
     if (!session && !isPublicRoute) {
       const from = `${location.pathname}${location.search}`

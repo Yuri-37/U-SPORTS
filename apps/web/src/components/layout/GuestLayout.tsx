@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router'
-import { Trophy, Calendar, LogIn, Globe, LayoutDashboard, MapPin } from 'lucide-react'
+import { Trophy, Calendar, LogIn, Globe, LayoutDashboard, MapPin, Smartphone } from 'lucide-react'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { useAuthStore } from '../../stores/authStore'
 import { Button } from '../ui'
@@ -13,6 +13,7 @@ const GUEST_NAV = [
   { to: '/guest', label: 'Hub', Icon: Globe, end: true },
   { to: '/guest/leaderboards', label: 'Standings', Icon: Trophy, end: false },
   { to: '/guest/events', label: 'Events', Icon: Calendar, end: false },
+  { to: '/app', label: 'App', Icon: Smartphone, end: false },
 ] as const
 
 export default function GuestLayout() {
@@ -208,6 +209,7 @@ function GuestFooter() {
             { to: '/guest', label: 'Hub' },
             { to: '/guest/events', label: 'Events' },
             { to: '/guest/leaderboards', label: 'Standings' },
+            { to: '/app', label: 'Mobile app' },
           ]}
         />
         <FooterColumn
