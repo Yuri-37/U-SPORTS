@@ -725,6 +725,10 @@ export default function OrganizerScoring() {
         : sortedMembers.filter((m) => m.athlete?.id)
 
     const lineupForSubs = side === 'a' ? activeLineupA : activeLineupB
+    // Same gap as the Timeout button: the "subs X/6" counter could read past
+    // its own cap because nothing ever stopped the Sub button once reached.
+    const subsAtLimit =
+      gameLimits != null && (volleyballInfo?.subsUsed[side] ?? 0) >= gameLimits.subsPerSet
 
     const doStat = (actionType: string, value = 1) => {
       // Foul-out is a warning, not a block — confirm rather than silently record.
@@ -797,11 +801,13 @@ export default function OrganizerScoring() {
                       <button
                         type="button"
                         aria-label={`Substitute ${fullName}`}
+                        title={subsAtLimit ? 'Substitution limit reached for this set' : undefined}
+                        disabled={subsAtLimit}
                         onClick={() => {
                           setSubModal({ side, outId: aid })
                           setSubInId('')
                         }}
-                        className="flex items-center justify-center px-1.5 border-l border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]"
+                        className="flex items-center justify-center px-1.5 border-l border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[var(--surface-card)] disabled:hover:text-[var(--text-muted)]"
                       >
                         <Shuffle className="w-3.5 h-3.5 shrink-0" />
                       </button>
@@ -1616,38 +1622,60 @@ export default function OrganizerScoring() {
                 { id: participantAId, name: nameA, side: 'a' as const },
                 { id: participantBId, name: nameB, side: 'b' as const },
               ] as const
-            ).map((team) => (
-              <div key={team.side} className="flex flex-col gap-1.5 min-w-0">
-                <p className="text-sm font-medium truncate" title={team.name}>
-                  {team.name}
-                </p>
-                {sport === 'volleyball' && volleyballInfo && gameLimits && (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    subs {volleyballInfo.subsUsed[team.side] ?? 0}/{gameLimits.subsPerSet}
-                    {(volleyballInfo.subsUsed[team.side] ?? 0) >= gameLimits.subsPerSet && (
-                      <span className="text-[var(--danger)] ml-1">limit reached</span>
-                    )}
-                    {' · '}timeouts {volleyballInfo.timeouts[team.side] ?? 0}/
-                    {gameLimits.timeoutsPerSetVB}
+            ).map((team) => {
+              // The counters used to just display "X/Y" with the button always
+              // clickable, so an organizer could click straight past the
+              // configured cap — the server now rejects it, but the button
+              // should stop offering an action it will only reject.
+              const timeoutsUsed =
+                sport === 'volleyball'
+                  ? (volleyballInfo?.timeouts[team.side] ?? 0)
+                  : (tableTennisInfo?.timeouts[team.side] ?? 0)
+              const timeoutLimit =
+                sport === 'volleyball'
+                  ? gameLimits?.timeoutsPerSetVB
+                  : gameLimits?.timeoutsPerMatchTT
+              const timeoutLimitReached =
+                timeoutLimit != null && timeoutsUsed >= timeoutLimit
+
+              return (
+                <div key={team.side} className="flex flex-col gap-1.5 min-w-0">
+                  <p className="text-sm font-medium truncate" title={team.name}>
+                    {team.name}
                   </p>
-                )}
-                {sport === 'table-tennis' && tableTennisInfo && gameLimits && (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    timeouts {tableTennisInfo.timeouts[team.side] ?? 0}/
-                    {gameLimits.timeoutsPerMatchTT}
-                  </p>
-                )}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={!isLockHolder || actionBusy}
-                  onClick={() => void handleAction(team.id, 'timeout')}
-                >
-                  Timeout
-                </Button>
-              </div>
-            ))}
+                  {sport === 'volleyball' && volleyballInfo && gameLimits && (
+                    <p className="text-xs text-[var(--text-muted)]">
+                      subs {volleyballInfo.subsUsed[team.side] ?? 0}/{gameLimits.subsPerSet}
+                      {(volleyballInfo.subsUsed[team.side] ?? 0) >= gameLimits.subsPerSet && (
+                        <span className="text-[var(--danger)] ml-1">limit reached</span>
+                      )}
+                      {' · '}timeouts {timeoutsUsed}/{gameLimits.timeoutsPerSetVB}
+                      {timeoutLimitReached && (
+                        <span className="text-[var(--danger)] ml-1">limit reached</span>
+                      )}
+                    </p>
+                  )}
+                  {sport === 'table-tennis' && tableTennisInfo && gameLimits && (
+                    <p className="text-xs text-[var(--text-muted)]">
+                      timeouts {timeoutsUsed}/{gameLimits.timeoutsPerMatchTT}
+                      {timeoutLimitReached && (
+                        <span className="text-[var(--danger)] ml-1">limit reached</span>
+                      )}
+                    </p>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full"
+                    disabled={!isLockHolder || actionBusy || timeoutLimitReached}
+                    title={timeoutLimitReached ? 'Timeout limit reached' : undefined}
+                    onClick={() => void handleAction(team.id, 'timeout')}
+                  >
+                    Timeout
+                  </Button>
+                </div>
+              )
+            })}
           </div>
         </Card>
       )}

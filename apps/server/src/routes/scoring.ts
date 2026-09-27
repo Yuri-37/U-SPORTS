@@ -394,6 +394,31 @@ router.post(
         return res.status(403).json({ error: 'You do not have scoring lock for this match' })
       }
 
+      // Timeouts were logged and displayed ("timeouts 4/2") but never capped --
+      // the client only disabled the button for a non-lock-holder, so the same
+      // organizer could click straight past the configured limit (2 per set in
+      // volleyball, 1 per match in table tennis) forever. Also require the
+      // scoring lock here: `effect.scores` is false for a timeout, so the check
+      // above skipped it, meaning anyone scoped to the sport -- not just
+      // whoever holds the lock -- could log timeouts on someone else's match.
+      if (body.actionType === 'timeout') {
+        if (match.scoring_locked_by !== req.user!.id) {
+          return res.status(403).json({ error: 'You do not have scoring lock for this match' })
+        }
+        if (sport === 'volleyball' || sport === 'table-tennis') {
+          const limit =
+            sport === 'volleyball' ? GAME_LIMITS.timeoutsPerSetVB : GAME_LIMITS.timeoutsPerMatchTT
+          // Volleyball timeouts reset each set; table tennis is one per match.
+          const scopePeriod = sport === 'volleyball' ? period : null
+          const used = await countActionsByParticipant(matchId, 'timeout', scopePeriod)
+          if ((used[body.participantId] ?? 0) >= limit) {
+            return res.status(400).json({
+              error: `Timeout limit reached: ${limit} per ${sport === 'volleyball' ? 'set' : 'match'}`,
+            })
+          }
+        }
+      }
+
       // Stat magnitude is decided by the server. A scoring action is worth exactly
       // its point value; a non-scoring stat counts once. The client's `value` is
       // never trusted (it previously let `{point_3, value: 250}` inflate a player).
@@ -2202,6 +2227,19 @@ router.patch(
 
     const teamId = side === 'a' ? match.participant_a_id : match.participant_b_id
     if (!teamId) return res.status(400).json({ error: 'Participant not set' })
+
+    // Substitutions were logged and displayed ("subs 4/6" with a "limit
+    // reached" label once over) but never actually blocked -- the Sub button
+    // stayed clickable past the configured cap (6 per team per set).
+    if (lineupSport === 'volleyball') {
+      const period = Number(match.current_period ?? 1)
+      const used = await countActionsByParticipant(matchId, 'substitution', period)
+      if ((used[teamId] ?? 0) >= GAME_LIMITS.subsPerSet) {
+        return res
+          .status(400)
+          .json({ error: `Substitution limit reached: ${GAME_LIMITS.subsPerSet} per set` })
+      }
+    }
 
     // Validate both athletes are on the team's roster
     const { data: members } = await supabase
