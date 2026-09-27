@@ -12,6 +12,7 @@ import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/match_roster_stats.dart';
 import '../widgets/tournament_bracket_view.dart';
+import '../widgets/ui/brand_page.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.eventId, this.initialTab = 0});
@@ -171,6 +172,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                     final isLive = status == 'live';
                     final isCompleted = status == 'completed';
 
+                    final statusColor = isLive
+                        ? LayoutTokens.danger(context)
+                        : isCompleted
+                            ? LayoutTokens.success(context)
+                            : AppTheme.brandInk(context);
+                    final b = Theme.of(context).brightness;
+
                     return ListView(
                       controller: scroll,
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -180,7 +188,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                           child: Container(
                             width: 40, height: 4,
                             decoration: BoxDecoration(
-                              color: LayoutTokens.mutedText(context),
+                              color: LayoutTokens.borderSubtle(context),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -194,22 +202,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                             Text(sportLabel(sport), style: TextStyle(color: LayoutTokens.secondaryText(context), fontSize: 13)),
                             const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isLive
-                                    ? AppTheme.danger.withValues(alpha: 0.15)
-                                    : isCompleted
-                                        ? LayoutTokens.success(context).withValues(alpha: 0.12)
-                                        : AppTheme.accent.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
+                                color: statusColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 matchStatusLabel(status),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: isLive ? AppTheme.danger : isCompleted ? LayoutTokens.success(context) : AppTheme.accent,
-                                ),
+                                style: AppTheme.overline(statusColor).copyWith(fontSize: 11),
                               ),
                             ),
                           ],
@@ -220,8 +220,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                           decoration: BoxDecoration(
                             color: LayoutTokens.cardBackground(context),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: LayoutTokens.borderSubtle(context)),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: AppTheme.cardShadow(b),
+                            border: b == Brightness.dark ? Border.all(color: LayoutTokens.borderSubtle(context)) : null,
                           ),
                           child: Row(
                             children: [
@@ -230,7 +231,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                                   children: [
                                     Text(nameA, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 10),
-                                    Text('$totalA', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: isCompleted && totalA > totalB ? LayoutTokens.success(context) : Theme.of(context).colorScheme.onSurface), textAlign: TextAlign.center),
+                                    Text('$totalA',
+                                        style: AppTheme.display(
+                                            size: 44,
+                                            color: isCompleted && totalA > totalB ? LayoutTokens.success(context) : LayoutTokens.primaryText(context)),
+                                        textAlign: TextAlign.center),
                                   ],
                                 ),
                               ),
@@ -243,7 +248,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                                   children: [
                                     Text(nameB, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 10),
-                                    Text('$totalB', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: isCompleted && totalB > totalA ? LayoutTokens.success(context) : Theme.of(context).colorScheme.onSurface), textAlign: TextAlign.center),
+                                    Text('$totalB',
+                                        style: AppTheme.display(
+                                            size: 44,
+                                            color: isCompleted && totalB > totalA ? LayoutTokens.success(context) : LayoutTokens.primaryText(context)),
+                                        textAlign: TextAlign.center),
                                   ],
                                 ),
                               ),
@@ -253,7 +262,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         // Per-period breakdown
                         if (periods.isNotEmpty) ...[
                           const SizedBox(height: 16),
-                          Text('Period breakdown', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: LayoutTokens.secondaryText(context))),
+                          Text('Period breakdown', style: AppTheme.overline(LayoutTokens.mutedText(context))),
                           const SizedBox(height: 8),
                           ...periods.map((p) {
                             final pa = byPeriod[p]?[pidA] ?? 0;
@@ -300,12 +309,35 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
     final brAsync = ref.watch(bracketsForEventProvider(widget.eventId));
     final mtAsync = ref.watch(matchesForEventProvider(widget.eventId));
 
+    void back() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/');
+      }
+    }
+
     return evAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text(friendlyError(e)))),
+      loading: () => BrandPage.fixed(
+        title: 'Event',
+        showBack: true,
+        onBack: back,
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => BrandPage.fixed(
+        title: 'Event',
+        showBack: true,
+        onBack: back,
+        body: SheetMessage(text: friendlyError(e)),
+      ),
       data: (event) {
         if (event == null) {
-          return const Scaffold(body: Center(child: Text('Event not found')));
+          return BrandPage.fixed(
+            title: 'Event',
+            showBack: true,
+            onBack: back,
+            body: const SheetMessage(text: 'Event not found'),
+          );
         }
         final sport = event['sport'] as String? ?? '';
         final name = event['name'] as String? ?? 'Event';
@@ -319,103 +351,52 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
         });
         final standings = deriveFullEventStandings(brackets);
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/');
-                }
-              },
+        return BrandPage.fixed(
+          title: name,
+          subtitle: '${sportEmoji(sport)}  ${sportLabel(sport)} · ${formatEnumLabel(event['format'] as String? ?? '')}',
+          showBack: true,
+          onBack: back,
+          actions: [
+            HeroPill(
+              text: eventPublicLifecycleLabel(status),
+              dotColor: status == 'in_progress' ? AppTheme.danger : AppTheme.schoolSecondary,
             ),
-            bottom: TabBar(
-              controller: _tabs,
-              tabs: [
-                const Tab(text: 'Bracket'),
-                Tab(text: 'Matches (${matches.length})'),
-              ],
-            ),
+          ],
+          bottom: BrandTabBar(
+            controller: _tabs,
+            tabs: ['Bracket', 'Matches (${matches.length})'],
           ),
           body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(sportEmoji(sport), style: const TextStyle(fontSize: 22)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${sportLabel(sport)} · ${formatEnumLabel(event['format'] as String? ?? '')}',
-                            style: TextStyle(color: LayoutTokens.secondaryText(context), fontSize: 13),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            eventPublicLifecycleLabel(status),
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.accent),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (desc != null && desc.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(desc, style: const TextStyle(fontSize: 13)),
-                      ),
-                    if (standings != null && status == 'completed') ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: LayoutTokens.cardBackground(context),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: LayoutTokens.borderSubtle(context)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (var i = 0; i < standings.length && i < 2; i++) ...[
-                              if (i > 0) const SizedBox(height: 10),
-                              _PodiumRow(
-                                rank: standings[i].rank,
-                                name: _slotLabel(standings[i].participantId),
-                                onTap: _tapHandlerFor(standings[i].participantId),
-                              ),
-                            ],
-                            if (standings.length > 2) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                child: Divider(height: 1, color: LayoutTokens.borderSubtle(context)),
-                              ),
-                              for (var i = 2; i < standings.length; i++)
-                                _StandingsRow(
-                                  rank: standings[i].rank,
-                                  name: _slotLabel(standings[i].participantId),
-                                  onTap: _tapHandlerFor(standings[i].participantId),
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+              if (desc != null && desc.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                  child: Text(
+                    desc,
+                    style: TextStyle(fontSize: 13.5, height: 1.5, color: LayoutTokens.secondaryText(context)),
+                  ),
                 ),
-              ),
+              if (standings != null && status == 'completed')
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: SheetGroup(
+                    children: [
+                      for (var i = 0; i < standings.length && i < 2; i++)
+                        _PodiumRow(
+                          rank: standings[i].rank,
+                          name: _slotLabel(standings[i].participantId),
+                          onTap: _tapHandlerFor(standings[i].participantId),
+                        ),
+                      for (var i = 2; i < standings.length; i++)
+                        _StandingsRow(
+                          rank: standings[i].rank,
+                          name: _slotLabel(standings[i].participantId),
+                          onTap: _tapHandlerFor(standings[i].participantId),
+                        ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: TabBarView(
                   controller: _tabs,
@@ -428,10 +409,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                       child: brackets.isEmpty
                           ? ListView(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              children: [
-                                const SizedBox(height: 32),
-                                Center(child: Text('No bracket generated yet.', style: TextStyle(color: LayoutTokens.mutedText(context)))),
-                              ],
+                              children: const [SheetMessage(text: 'No bracket generated yet.')],
                             )
                           : InteractiveViewer(
                               boundaryMargin: const EdgeInsets.all(48),
@@ -457,48 +435,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                       },
                       child: matches.isEmpty
                           ? ListView(
-                              children: [
-                                const SizedBox(height: 32),
-                                Center(child: Text('No matches scheduled.', style: TextStyle(color: LayoutTokens.mutedText(context)))),
-                              ],
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: const [SheetMessage(text: 'No matches scheduled.')],
                             )
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: matches.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemBuilder: (ctx, i) {
-                                final m = matches[i];
-                                final a = _participantIdForMatch(m, brackets, 'a');
-                                final bId = _participantIdForMatch(m, brackets, 'b');
-                                final na = _slotLabel(a);
-                                final nb = _slotLabel(bId);
-                                final st = m['status'] as String? ?? '';
-                                final mid = m['id'] as String;
-                                return Material(
-                                  color: LayoutTokens.cardBackground(context),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(color: LayoutTokens.borderSubtle(context)),
-                                  ),
-                                  child: ListTile(
-                                    title: Text('$na vs $nb'),
-                                    subtitle: Text(
-                                      '${matchStatusLabel(st)}${m['scheduled_at'] != null ? ' · ${formatDateTime(m['scheduled_at'] as String?)}' : ''}',
-                                    ),
-                                    trailing: st == 'live'
-                                        ? TextButton(
-                                            onPressed: () => _showMatchSheet(context, mid),
-                                            child: const Text('Live'),
-                                          )
-                                        : st == 'scheduled' || st == 'completed'
-                                            ? IconButton(
-                                                icon: const Icon(Icons.info_outline),
-                                                onPressed: () => _showMatchSheet(context, mid),
-                                              )
-                                            : null,
-                                  ),
-                                );
-                              },
+                          : ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                              children: [
+                                SheetGroup(
+                                  children: [
+                                    for (final m in matches) _matchRow(context, m, brackets, sport),
+                                  ],
+                                ),
+                              ],
                             ),
                     ),
                   ],
@@ -508,6 +457,45 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
           ),
         );
       },
+    );
+  }
+
+  Widget _matchRow(
+    BuildContext context,
+    Map<String, dynamic> m,
+    List<Map<String, dynamic>> brackets,
+    String sport,
+  ) {
+    final na = _slotLabel(_participantIdForMatch(m, brackets, 'a'));
+    final nb = _slotLabel(_participantIdForMatch(m, brackets, 'b'));
+    final st = m['status'] as String? ?? '';
+    final mid = m['id'] as String;
+    final canOpen = st == 'live' || st == 'scheduled' || st == 'completed';
+    return SheetTile(
+      leading: IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport), size: 40),
+      title: '$na vs $nb',
+      subtitle:
+          '${matchStatusLabel(st)}${m['scheduled_at'] != null ? ' · ${formatDateTime(m['scheduled_at'] as String?)}' : ''}',
+      onTap: canOpen ? () => _showMatchSheet(context, mid) : null,
+      trailing: st == 'live'
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: LayoutTokens.danger(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Live',
+                style: TextStyle(
+                  color: LayoutTokens.danger(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            )
+          : canOpen
+              ? Icon(Icons.info_outline_rounded, color: LayoutTokens.mutedText(context))
+              : null,
     );
   }
 }
@@ -522,46 +510,25 @@ class _PodiumRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isChampion = rank == 1;
-    final rankColor = isChampion ? AppTheme.warning : LayoutTokens.mutedText(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: rankColor.withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: Icon(isChampion ? Icons.emoji_events : Icons.military_tech, color: rankColor, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  placementRankLabel(rank),
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: LayoutTokens.secondaryText(context)),
-                ),
-                Text(
-                  name,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (onTap != null) Icon(Icons.chevron_right, size: 20, color: LayoutTokens.mutedText(context)),
-        ],
+    final rankColor = isChampion ? LayoutTokens.warning(context) : LayoutTokens.mutedText(context);
+    return SheetTile(
+      leading: IconTile(
+        icon: isChampion ? Icons.emoji_events_rounded : Icons.military_tech_rounded,
+        color: rankColor,
+        size: 42,
       ),
+      title: name,
+      subtitle: placementRankLabel(rank),
+      onTap: onTap,
+      trailing: onTap != null
+          ? Icon(Icons.chevron_right_rounded, size: 20, color: LayoutTokens.mutedText(context))
+          : null,
     );
   }
 }
 
-/// Everyone past champion/runner-up — a plain numbered, tappable row rather
-/// than the trophy/medal treatment above (mirrors web's EventPodiumStrip
-/// split between the two highlighted top cards and the list below them).
+/// Everyone past champion/runner-up — a numbered row rather than the
+/// trophy/medal treatment above (mirrors web's EventPodiumStrip split).
 class _StandingsRow extends StatelessWidget {
   const _StandingsRow({required this.rank, required this.name, this.onTap});
 
@@ -571,32 +538,20 @@ class _StandingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 32,
-              child: Text(
-                placementRankLabel(rank),
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context)),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                name,
-                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (onTap != null) Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
-          ],
+    return SheetTile(
+      leading: SizedBox(
+        width: 42,
+        child: Text(
+          placementRankLabel(rank),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: LayoutTokens.mutedText(context)),
         ),
       ),
+      title: name,
+      onTap: onTap,
+      trailing: onTap != null
+          ? Icon(Icons.chevron_right_rounded, size: 18, color: LayoutTokens.mutedText(context))
+          : null,
     );
   }
 }

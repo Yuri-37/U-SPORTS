@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/layout_tokens.dart';
 
 /// Self-service avatar upload/removal — mirrors the web `AvatarUpload`
 /// component. Wraps a CircleAvatar with a small camera badge; tapping opens
@@ -98,8 +99,8 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
             ),
             if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppTheme.danger),
-                title: const Text('Remove photo', style: TextStyle(color: AppTheme.danger)),
+                leading: Icon(Icons.delete_outline, color: LayoutTokens.danger(ctx)),
+                title: Text('Remove photo', style: TextStyle(color: LayoutTokens.danger(ctx))),
                 onTap: () {
                   Navigator.pop(ctx);
                   _remove();
@@ -113,23 +114,32 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Sits on the profile screen's navy hero, so it borrows HeroAvatar's
+    // frosted-white treatment rather than a solid brand fill — a navy circle
+    // on a navy gradient would have no visible edge.
     return GestureDetector(
       onTap: _busy ? null : _openSheet,
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: widget.radius,
-            backgroundColor: AppTheme.schoolPrimary,
-            backgroundImage: widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty
-                ? CachedNetworkImageProvider(widget.avatarUrl!)
-                : null,
+          Container(
+            width: widget.radius * 2,
+            height: widget.radius * 2,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+              image: widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty
+                  ? DecorationImage(image: CachedNetworkImageProvider(widget.avatarUrl!), fit: BoxFit.cover)
+                  : null,
+            ),
+            alignment: Alignment.center,
             child: widget.avatarUrl == null || widget.avatarUrl!.isEmpty
                 ? Text(
                     widget.fallbackInitial,
                     style: TextStyle(
-                      fontSize: widget.radius * 0.8,
-                      color: AppTheme.schoolSecondary,
-                      fontWeight: FontWeight.w900,
+                      fontSize: widget.radius * 0.7,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
                     ),
                   )
                 : null,
@@ -138,19 +148,19 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppTheme.schoolPrimary,
+                color: AppTheme.schoolSecondary,
                 shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2),
+                border: Border.all(color: Colors.white, width: 2),
               ),
               child: _busy
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ? SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.schoolPrimary),
                     )
-                  : const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                  : Icon(Icons.camera_alt, size: 13, color: AppTheme.schoolPrimary),
             ),
           ),
         ],

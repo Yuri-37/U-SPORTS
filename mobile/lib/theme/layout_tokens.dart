@@ -17,6 +17,12 @@ class LayoutTokens {
   /// `BracketView`, which hardcodes `bg-[#111118]` rather than a theme var.
   static const Color bracketCanvas = Color(0xFF111118);
 
+  /// The off-white sheet that overlaps each page's hero.
+  static Color sheet(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return dark ? const Color(0xFF0A0A0F) : const Color(0xFFEEF1F6);
+  }
+
   static Color cardBackground(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return dark ? const Color(0xFF16161E) : Colors.white;

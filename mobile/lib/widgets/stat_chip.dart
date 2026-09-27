@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 
 /// A single season-stat tile: big value over a small caption.
@@ -8,20 +10,24 @@ import '../theme/layout_tokens.dart';
 /// an aligned grid. Without that, each tile shrink-wraps to its own label and a
 /// short value ("2") sits visibly off-centre above a long one ("Match wins").
 class StatChip extends StatelessWidget {
-  const StatChip({super.key, required this.label, required this.value, this.minWidth = 76});
+  const StatChip({super.key, required this.label, required this.value, this.minWidth = 84, this.emphasis = false});
 
   final String label;
   final String value;
   final double minWidth;
 
+  /// The one stat a page wants to draw the eye to (e.g. points per game).
+  final bool emphasis;
+
   @override
   Widget build(BuildContext context) {
+    final ink = emphasis ? AppTheme.brandInk(context) : LayoutTokens.primaryText(context);
     return Container(
       constraints: BoxConstraints(minWidth: minWidth),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: LayoutTokens.chipBackground(context),
-        borderRadius: BorderRadius.circular(8),
+        color: emphasis ? ink.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.08) : LayoutTokens.chipBackground(context),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: LayoutTokens.borderSubtle(context)),
       ),
       child: Column(
@@ -31,17 +37,18 @@ class StatChip extends StatelessWidget {
           Text(
             value,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: AppTheme.display(size: 20, color: ink, height: 1),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
-            label,
+            label.toUpperCase(),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: LayoutTokens.mutedText(context)),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              color: LayoutTokens.mutedText(context),
+            ),
           ),
         ],
       ),

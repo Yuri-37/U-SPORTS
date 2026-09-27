@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
+import '../widgets/ui/brand_page.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -53,111 +53,86 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Forgot password'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_sent) ...[
+    return BrandPage.fixed(
+      title: 'Forgot password',
+      onBack: () => context.pop(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_sent) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: LayoutTokens.success(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: LayoutTokens.success(context).withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  'If an account exists for ${_emailCtrl.text.trim()}, a password reset link has been sent. Check your inbox (and spam folder) — it may take a few minutes.',
+                  style: TextStyle(color: LayoutTokens.success(context), fontSize: 13.5, height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: TextButton(
+                  onPressed: () => context.go('/auth/login'),
+                  child: const Text('Back to sign in'),
+                ),
+              ),
+            ] else ...[
+              Text(
+                'Enter your email and we\'ll send you a link to reset your password. If your account was created without a working email on file, ask your organizer to reset it for you instead.',
+                style: TextStyle(fontSize: 14, height: 1.5, color: LayoutTokens.secondaryText(context)),
+              ),
+              const SizedBox(height: 22),
+              if (_error != null)
                 Container(
                   padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: LayoutTokens.success(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color:
-                            LayoutTokens.success(context).withValues(alpha: 0.3)),
+                    color: LayoutTokens.danger(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: LayoutTokens.danger(context).withValues(alpha: 0.3)),
                   ),
-                  child: Text(
-                    'If an account exists for ${_emailCtrl.text.trim()}, a password reset link has been sent. Check your inbox (and spam folder) — it may take a few minutes.',
-                    style: TextStyle(
-                        color: LayoutTokens.success(context), fontSize: 13),
-                  ),
+                  child: Text(_error!, style: TextStyle(color: LayoutTokens.danger(context), fontSize: 13)),
                 ),
-                const SizedBox(height: 20),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.go('/auth/login'),
-                    child: Text(
-                      'Back to sign in',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: LayoutTokens.secondaryText(context)),
-                    ),
-                  ),
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'yourname@nu-dasma.edu.ph',
+                  prefixIcon: Icon(Icons.mail_outline, size: 20),
                 ),
-              ] else ...[
-                Text(
-                  'Enter your email and we\'ll send you a link to reset your password. If your account was created without a working email on file, ask your organizer to reset it for you instead.',
-                  style: TextStyle(
-                      fontSize: 14, color: LayoutTokens.secondaryText(context)),
-                ),
-                const SizedBox(height: 22),
-                if (_error != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: AppTheme.danger.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(_error!,
-                        style: const TextStyle(
-                            color: AppTheme.danger, fontSize: 13)),
-                  ),
-                TextField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: onSurface),
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'yourname@nu-dasma.edu.ph',
-                    prefixIcon: Icon(Icons.mail_outline,
-                        color: LayoutTokens.secondaryText(context)),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.send_rounded, size: 20),
-                              SizedBox(width: 8),
-                              Text('Send reset link',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
-                            ],
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
-                  ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.send_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text('Send reset link'),
+                          ],
+                        ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

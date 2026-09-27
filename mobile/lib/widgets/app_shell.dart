@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../theme/layout_tokens.dart';
 
 /// Persistent bottom nav shell for the four tab branches (Home, Standings,
 /// Events, Profile). Each branch keeps its own Navigator/state via
@@ -54,39 +55,49 @@ class AppShell extends ConsumerWidget {
       },
       child: Scaffold(
         body: navigationShell,
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          selectedFontSize: 11,
-          unselectedFontSize: 10,
-          currentIndex: _displayFor(navigationShell.currentIndex),
-          onTap: (i) => _onTap(context, i, role),
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.emoji_events_outlined),
-              activeIcon: Icon(Icons.emoji_events),
-              label: 'Standings',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today_outlined),
-              activeIcon: Icon(Icons.calendar_today),
-              label: 'Events',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                  role == 'Coach' ? Icons.groups_outlined : Icons.person_outline),
-              activeIcon: Icon(role == 'Coach' ? Icons.groups : Icons.person),
-              label: switch (role) {
-                'Coach' => 'My Teams',
-                'guest' => 'Sign in',
-                _ => 'Profile',
-              },
-            ),
-          ],
+        // A hairline and soft lift separate the bar from the sheet above it.
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: LayoutTokens.borderSubtle(context))),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            selectedIndex: _displayFor(navigationShell.currentIndex),
+            onDestinationSelected: (i) => _onTap(context, i, role),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.emoji_events_outlined),
+                selectedIcon: Icon(Icons.emoji_events_rounded),
+                label: 'Standings',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.calendar_today_outlined),
+                selectedIcon: Icon(Icons.calendar_today_rounded),
+                label: 'Events',
+              ),
+              NavigationDestination(
+                icon: Icon(role == 'Coach' ? Icons.groups_outlined : Icons.person_outline),
+                selectedIcon: Icon(role == 'Coach' ? Icons.groups_rounded : Icons.person_rounded),
+                label: switch (role) {
+                  'Coach' => 'My Teams',
+                  'guest' => 'Sign in',
+                  _ => 'Profile',
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

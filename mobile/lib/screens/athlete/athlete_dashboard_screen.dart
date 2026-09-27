@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../providers/notifications_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/layout_tokens.dart';
 import '../../utils/event_placements.dart';
@@ -15,8 +13,9 @@ import '../../utils/format_helpers.dart';
 import '../../utils/participant_labels.dart';
 import '../../utils/sport_helpers.dart';
 import '../../widgets/double_back_exit.dart';
-import '../../widgets/notification_bell_icon_button.dart';
 import '../../widgets/stat_chip.dart';
+import '../../widgets/ui/brand_page.dart';
+import '../../widgets/ui/hub_header_actions.dart';
 import '../../utils/error_helpers.dart';
 
 class AthleteDashboardScreen extends ConsumerWidget {
@@ -27,32 +26,28 @@ class AthleteDashboardScreen extends ConsumerWidget {
     final athleteAsync = ref.watch(athleteRowProvider);
 
     return DoubleBackToExit(
-      child: Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          NotificationBellIconButton(
-            badgeCount: ref.watch(athleteNotificationBadgeCountProvider),
-            onPressed: () => context.push('/notifications'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/athlete/settings'),
-          ),
-        ],
-      ),
-      body: athleteAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(friendlyError(e))),
+      child: athleteAsync.when(
+        loading: () => const BrandPage.fixed(
+          showBack: false,
+          title: 'Dashboard',
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => BrandPage.fixed(
+          showBack: false,
+          title: 'Dashboard',
+          body: SheetMessage(text: friendlyError(e)),
+        ),
         data: (athlete) {
           if (athlete == null) {
-            return const Center(child: Text('Athlete profile not found.'));
+            return const BrandPage.fixed(
+              showBack: false,
+              title: 'Dashboard',
+              body: SheetMessage(text: 'Athlete profile not found.'),
+            );
           }
           return _AthleteDashboardBody(athleteId: athlete.id, sport: athlete.sport);
         },
       ),
-    ),
     );
   }
 }
@@ -340,10 +335,6 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     final row = _stats.isNotEmpty ? _stats.first : null;
     final gp = (row?['games_played'] as num?)?.toInt() ?? 0;
     final rawStats = row?['stats'] as Map<String, dynamic>?;
@@ -351,7 +342,6 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final prof = ref.watch(profileProvider).valueOrNull;
     final athlete = ref.watch(athleteRowProvider).valueOrNull;
     final fullName = prof?.fullName ?? 'Athlete';
-    final initial = fullName.trim().isNotEmpty ? fullName.trim()[0].toUpperCase() : 'A';
     final avatarUrl = prof?.avatarUrl;
 
     // Personal info rows (web parity: name + ID, course/year, department, position/jersey).
@@ -365,184 +355,152 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
       if ((athlete?.jerseyNumber ?? '').trim().isNotEmpty) ('Jersey', '#${athlete!.jerseyNumber!.trim()}'),
     ];
 
-    return RefreshIndicator(
+    return BrandPage.scroll(
+      showBack: false,
+      title: 'Dashboard',
+      actions: const [HubHeaderActions()],
       onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+      hero: Column(
         children: [
-          if (_error != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppTheme.danger.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
-              ),
-              child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
-            ),
-          // Personal info card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: LayoutTokens.cardBackground(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: LayoutTokens.borderSubtle(context)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Uploaded photo when there is one, initial otherwise --
-                    // same fallback shape as AvatarUploadButton.
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: AppTheme.accent.withValues(alpha: 0.18),
-                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                          ? CachedNetworkImageProvider(avatarUrl)
-                          : null,
-                      child: avatarUrl == null || avatarUrl.isEmpty
-                          ? Text(initial,
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.accent))
-                          : null,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(fullName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Text(sportEmoji(widget.sport), style: const TextStyle(fontSize: 15)),
-                              const SizedBox(width: 6),
-                              Text(sportLabel(widget.sport),
-                                  style: TextStyle(fontSize: 13, color: LayoutTokens.secondaryText(context), fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (infoRows.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  ...infoRows.map((e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 96,
-                              child: Text(e.$1, style: TextStyle(fontSize: 13, color: LayoutTokens.mutedText(context))),
-                            ),
-                            Expanded(
-                              child: Text(e.$2, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            ),
-                          ],
-                        ),
-                      )),
-                ],
-              ],
-            ),
+          HeroAvatar(imageUrl: avatarUrl, name: fullName, radius: 34),
+          const SizedBox(height: 12),
+          Text(fullName, textAlign: TextAlign.center, style: AppTheme.display(size: 21, color: Colors.white)),
+          const SizedBox(height: 4),
+          Text(
+            '${sportEmoji(widget.sport)}  ${sportLabel(widget.sport)}',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 13, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 24),
-          const _SectionHeader('Season snapshot'),
-          if (row != null)
+          if (infoRows.isNotEmpty) ...[
+            const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
+              children: infoRows.map((e) => _heroTag('${e.$1}: ${e.$2}')).toList(),
+            ),
+          ],
+        ],
+      ),
+      children: [
+        if (_loading)
+          const Padding(padding: EdgeInsets.symmetric(vertical: 32), child: Center(child: CircularProgressIndicator()))
+        else ...[
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: LayoutTokens.danger(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: LayoutTokens.danger(context).withValues(alpha: 0.3)),
+                ),
+                child: Text(_error!, style: TextStyle(color: LayoutTokens.danger(context), fontSize: 13)),
+              ),
+            ),
+          const SectionHeader(title: 'Season snapshot', padding: EdgeInsets.only(bottom: 12)),
+          if (row != null)
+            SheetGroup(
+              padding: const EdgeInsets.all(16),
               children: [
-                StatChip(label: 'GP', value: '$gp'),
-                ...highlights.map((h) => StatChip(label: h.label, value: h.value)),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    StatChip(label: 'GP', value: '$gp'),
+                    for (var i = 0; i < highlights.length; i++)
+                      StatChip(label: highlights[i].label, value: highlights[i].value, emphasis: i == 0),
+                  ],
+                ),
               ],
             )
           else
-            const _EmptyNote(icon: Icons.query_stats, text: 'Stats appear after your first game.'),
-          const SizedBox(height: 24),
-          const _SectionHeader('Upcoming & live'),
+            const SheetMessage(icon: Icons.query_stats_rounded, text: 'Stats appear after your first game.'),
+          const SectionHeader(title: 'Upcoming & live'),
           if (_matches.isEmpty)
-            const _EmptyNote(icon: Icons.event_available, text: 'No matches scheduled yet.')
+            const SheetMessage(icon: Icons.event_available_rounded, text: 'No matches scheduled yet.')
           else
-            ..._matches.map((m) {
-              final ev = m['event'] as Map<String, dynamic>?;
-              final title = ev?['name'] as String? ?? 'Match';
-              final isLive = m['status'] == 'live';
-              return Card(
-                child: ListTile(
-                  leading: Text(sportEmoji(ev?['sport'] as String? ?? widget.sport), style: const TextStyle(fontSize: 22)),
-                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                    'vs ${_opponentLabel(m)}\n${matchStatusLabel(m['status'] as String? ?? '')} · ${formatDateTime(m['scheduled_at'] as String?)}',
-                    style: TextStyle(color: LayoutTokens.secondaryText(context)),
-                  ),
-                  isThreeLine: true,
-                  trailing: isLive
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('LIVE', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w900, fontSize: 10)),
-                        )
-                      : null,
-                  onTap: m['event_id'] != null ? () => context.push('/events/${m['event_id']}') : null,
-                ),
-              );
-            }),
-          const SizedBox(height: 24),
+            SheetGroup(children: [for (final m in _matches) _upcomingMatchRow(context, m)]),
           // The 🏆/🥈 note only means something once there are rows to carry a
           // badge, so it stays hidden while the section is empty.
-          _SectionHeader(
-            'Match history',
-            subtitle: _pastMatches.isEmpty
-                ? null
-                : 'Completed bracket games. 🏆/🥈 means your team placed in that event.',
+          SectionHeader(
+            title: 'Match history',
+            trailing: _pastMatches.isEmpty ? null : const Icon(Icons.emoji_events_outlined, size: 18),
           ),
+          if (_pastMatches.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Completed bracket games. 🏆/🥈 means your team placed in that event.',
+                style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context)),
+              ),
+            ),
           if (_pastMatches.isEmpty)
-            const _EmptyNote(icon: Icons.history, text: 'No completed games yet.')
+            const SheetMessage(icon: Icons.history_rounded, text: 'No completed games yet.')
           else
-            ..._pastMatches.map((m) {
-              final ev = m['event'] as Map<String, dynamic>?;
-              final title = ev?['name'] as String? ?? 'Match';
-              final evId = m['event_id'] as String?;
-              final rank = evId != null ? _finishes[evId] : null;
-              return Card(
-                child: ListTile(
-                  leading: Text(sportEmoji(ev?['sport'] as String? ?? widget.sport), style: const TextStyle(fontSize: 22)),
-                  title: Row(
-                    children: [
-                      Flexible(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                      if (rank != null) ...[
-                        const SizedBox(width: 8),
-                        _PlacementBadge(rank: rank),
-                      ],
-                    ],
-                  ),
-                  subtitle: Text(
-                    'vs ${_opponentLabel(m)}\n${formatDateTime(m['scheduled_at'] as String?)}',
-                    style: TextStyle(color: LayoutTokens.secondaryText(context)),
-                  ),
-                  isThreeLine: true,
-                  onTap: evId != null ? () => context.push('/events/$evId') : null,
-                ),
-              );
-            }),
-          const SizedBox(height: 24),
-          _SectionHeader(
-            'My team',
-            subtitle: _teams.isEmpty ? null : 'Your squad and the coaching staff assigned to it.',
+            SheetGroup(children: [for (final m in _pastMatches) _pastMatchRow(context, m)]),
+          SectionHeader(
+            title: 'My team',
+            trailing: _teams.isEmpty
+                ? null
+                : Text('Coaching staff', style: TextStyle(fontSize: 11, color: LayoutTokens.mutedText(context))),
           ),
           if (_teams.isEmpty)
-            const _EmptyNote(
-              icon: Icons.groups_outlined,
-              text: 'An organizer will add you to a roster.',
-            )
+            const SheetMessage(icon: Icons.groups_outlined, text: 'An organizer will add you to a roster.')
           else
-            ..._teams.map((g) => _TeamCard(group: g)),
+            for (final g in _teams) _TeamCard(group: g),
         ],
+      ],
+    );
+  }
+
+  Widget _heroTag(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
       ),
+      child: Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+    );
+  }
+
+  Widget _upcomingMatchRow(BuildContext context, Map<String, dynamic> m) {
+    final ev = m['event'] as Map<String, dynamic>?;
+    final title = ev?['name'] as String? ?? 'Match';
+    final sport = ev?['sport'] as String? ?? widget.sport;
+    final isLive = m['status'] == 'live';
+    return SheetTile(
+      leading: IconTile(emoji: sportEmoji(sport), color: isLive ? LayoutTokens.danger(context) : sportTint(context, sport)),
+      title: title,
+      subtitle:
+          'vs ${_opponentLabel(m)} · ${matchStatusLabel(m['status'] as String? ?? '')} · ${formatDateTime(m['scheduled_at'] as String?)}',
+      titleMaxLines: 1,
+      onTap: m['event_id'] != null ? () => context.push('/events/${m['event_id']}') : null,
+      trailing: isLive
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(color: LayoutTokens.danger(context).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+              child: Text('LIVE', style: AppTheme.overline(LayoutTokens.danger(context)).copyWith(fontSize: 10.5)),
+            )
+          : null,
+    );
+  }
+
+  Widget _pastMatchRow(BuildContext context, Map<String, dynamic> m) {
+    final ev = m['event'] as Map<String, dynamic>?;
+    final title = ev?['name'] as String? ?? 'Match';
+    final sport = ev?['sport'] as String? ?? widget.sport;
+    final evId = m['event_id'] as String?;
+    final rank = evId != null ? _finishes[evId] : null;
+    return SheetTile(
+      leading: IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport)),
+      title: title,
+      subtitle: 'vs ${_opponentLabel(m)} · ${formatDateTime(m['scheduled_at'] as String?)}',
+      onTap: evId != null ? () => context.push('/events/$evId') : null,
+      trailing: rank != null ? _PlacementBadge(rank: rank) : null,
     );
   }
 
@@ -557,69 +515,6 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
 
   String _opponentLabel(Map<String, dynamic> m) {
     return participantDisplayLabel(_labels, _opponentId(m), fallbackPrefix: 'Team');
-  }
-}
-
-/// Section title with an optional explanatory line. Callers pass `subtitle:
-/// null` while a section is empty, so the dashboard doesn't stack a caption
-/// explaining rows that aren't there on top of a message saying there are none.
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title, {this.subtitle});
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context)),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Empty-section placeholder. Sitting in a bordered tile rather than as bare
-/// muted text keeps a dashboard full of not-yet-populated sections reading as
-/// structure instead of a wall of sentences.
-class _EmptyNote extends StatelessWidget {
-  const _EmptyNote({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      decoration: BoxDecoration(
-        color: LayoutTokens.cardBackground(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: LayoutTokens.borderSubtle(context)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: LayoutTokens.mutedText(context)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 13, color: LayoutTokens.mutedText(context)),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -646,46 +541,22 @@ class _TeamCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final sorted = group.members.toList()
       ..sort((a, b) => ((a['full_name'] as String?) ?? '').toLowerCase().compareTo(((b['full_name'] as String?) ?? '').toLowerCase()));
+    final tint = sportTint(context, group.sport);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: LayoutTokens.cardBackground(context),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: LayoutTokens.borderSubtle(context)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tapping the header opens the full team page (record, roster, matches) —
-            // the same destination the leaderboard and event screens already link to.
-            InkWell(
-              onTap: () => context.push('/teams/${group.teamId}'),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Text(sportEmoji(group.sport), style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(group.teamName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                          Text(sportLabel(group.sport), style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Coaches
-            Row(
+      child: SheetGroup(
+        children: [
+          // Tapping the header opens the full team page (record, roster, matches) —
+          // the same destination the leaderboard and event screens already link to.
+          SheetTile(
+            leading: IconTile(emoji: sportEmoji(group.sport), color: tint),
+            title: group.teamName,
+            subtitle: sportLabel(group.sport),
+            onTap: () => context.push('/teams/${group.teamId}'),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.sports, size: 16, color: LayoutTokens.mutedText(context)),
@@ -700,54 +571,32 @@ class _TeamCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (sorted.isNotEmpty) ...[
-              Divider(height: 20, color: LayoutTokens.borderSubtle(context)),
-              ...sorted.asMap().entries.expand((entry) {
-                final isFirst = entry.key == 0;
-                final m = entry.value;
-                final name = m['full_name'] as String? ?? 'Teammate';
-                final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-                final pos = (m['position'] as String?)?.trim();
-                final jersey = m['jersey_number']?.toString().trim();
-                final meta = [
-                  if (jersey != null && jersey.isNotEmpty) '#$jersey',
-                  if (pos != null && pos.isNotEmpty) pos,
-                ].join(' · ');
-                final athleteId = m['id'] as String?;
-                return [
-                  if (!isFirst) Divider(height: 1, color: LayoutTokens.borderSubtle(context)),
-                  InkWell(
-                    onTap: athleteId != null ? () => context.push('/athletes/$athleteId') : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: AppTheme.accent.withValues(alpha: 0.12),
-                            child: Text(
-                              initial,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accent),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                          if (meta.isNotEmpty)
-                            Text(meta, style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context))),
-                          if (athleteId != null) ...[
-                            const SizedBox(width: 6),
-                            Icon(Icons.chevron_right, size: 16, color: LayoutTokens.mutedText(context)),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ];
-              }),
-            ],
-          ],
-        ),
+          ),
+          for (final m in sorted) _memberRow(context, m, tint),
+        ],
       ),
+    );
+  }
+
+  Widget _memberRow(BuildContext context, Map<String, dynamic> m, Color tint) {
+    final name = m['full_name'] as String? ?? 'Teammate';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final pos = (m['position'] as String?)?.trim();
+    final jersey = m['jersey_number']?.toString().trim();
+    final meta = [
+      if (jersey != null && jersey.isNotEmpty) '#$jersey',
+      if (pos != null && pos.isNotEmpty) pos,
+    ].join(' · ');
+    final athleteId = m['id'] as String?;
+    return SheetTile(
+      leading: CircleAvatar(
+        radius: 16,
+        backgroundColor: tint.withValues(alpha: 0.14),
+        child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: tint)),
+      ),
+      title: name,
+      subtitle: meta.isNotEmpty ? meta : null,
+      onTap: athleteId != null ? () => context.push('/athletes/$athleteId') : null,
     );
   }
 }
@@ -760,7 +609,7 @@ class _PlacementBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isChampion = rank == 1;
     // Gold/silver medal convention — matches the podium card on the event detail screen.
-    final color = isChampion ? AppTheme.warning : LayoutTokens.mutedText(context);
+    final color = isChampion ? LayoutTokens.warning(context) : LayoutTokens.mutedText(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

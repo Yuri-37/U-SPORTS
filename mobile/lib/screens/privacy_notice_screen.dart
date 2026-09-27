@@ -77,17 +77,21 @@ class _PrivacyNoticeScreenState extends ConsumerState<PrivacyNoticeScreen> {
                   padding: const EdgeInsets.all(20),
                   children: [
                     if (!widget.readOnly) ...[
-                      const Icon(Icons.shield_outlined, size: 40, color: AppTheme.accent),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Your Privacy on U-Sports',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: onSurface,
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandInk(context).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
                         ),
+                        child: Icon(Icons.shield_outlined, size: 30, color: AppTheme.brandInk(context)),
                       ),
                       const SizedBox(height: 16),
+                      Text(
+                        'Your Privacy on U-Sports',
+                        style: AppTheme.display(size: 24, color: onSurface, height: 1.2),
+                      ),
+                      const SizedBox(height: 18),
                     ],
                     for (final section in kPrivacyNoticeSections)
                       Padding(
@@ -124,21 +128,20 @@ class _PrivacyNoticeScreenState extends ConsumerState<PrivacyNoticeScreen> {
                     children: [
                       if (_error != null)
                         Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(14),
+                          margin: const EdgeInsets.only(bottom: 14),
                           decoration: BoxDecoration(
-                            color: AppTheme.danger.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                            color: LayoutTokens.danger(context).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: LayoutTokens.danger(context).withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             _error!,
-                            style: const TextStyle(color: AppTheme.danger, fontSize: 13),
+                            style: TextStyle(color: LayoutTokens.danger(context), fontSize: 13),
                           ),
                         ),
                       SizedBox(
                         width: double.infinity,
-                        height: 48,
                         child: FilledButton(
                           onPressed: _loading ? null : _agree,
                           child: _loading

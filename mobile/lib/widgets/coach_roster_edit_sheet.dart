@@ -218,10 +218,13 @@ class _CoachRosterEditSheetState extends ConsumerState<CoachRosterEditSheet> {
             child: FilledButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
                     )
                   : const Text('Save',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),

@@ -1,14 +1,14 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/stat_chip.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/ui/brand_page.dart';
 
 final _athletePublicProvider = FutureProvider.autoDispose.family<Map<String, dynamic>?, String>((ref, athleteId) async {
   // Post-migration 040: verification/medical clearance removed. Athletes are visible
@@ -67,170 +67,116 @@ class AthleteProfileScreen extends ConsumerWidget {
     final insAsync = ref.watch(_athleteInsightsProvider(athleteId));
     final teamsAsync = ref.watch(_athleteTeamsProvider(athleteId));
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/leaderboards');
-            }
-          },
-        ),
-        title: const Text('Athlete'),
-      ),
-      body: athleteAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(friendlyError(e))),
-        data: (athlete) {
-          if (athlete == null) {
-            return const Center(child: Text('Athlete not found or not public.'));
-          }
-          final prof = athlete['profile'] as Map<String, dynamic>?;
-          final name = prof?['full_name'] as String? ?? 'Athlete';
-          final avatar = prof?['avatar_url'] as String?;
-          final sport = athlete['sport'] as String? ?? '';
-          final position = (athlete['position'] as String?)?.trim();
-          final yearLevel = (athlete['year_level'] as String?)?.trim();
-          final jersey = athlete['jersey_number'];
-          final stats = statsAsync.valueOrNull;
-          final gp = (stats?['games_played'] as num?)?.toInt() ?? 0;
-          final rawStats = stats?['stats'] as Map<String, dynamic>?;
-          final highlights = seasonStatHighlights(sport, rawStats, gp);
-          final insights = insAsync.valueOrNull ?? [];
-          final teams = teamsAsync.valueOrNull ?? [];
+    return athleteAsync.when(
+      loading: () => const BrandPage.fixed(title: 'Athlete', body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => BrandPage.fixed(title: 'Athlete', body: SheetMessage(text: friendlyError(e))),
+      data: (athlete) {
+        if (athlete == null) {
+          return const BrandPage.fixed(title: 'Athlete', body: SheetMessage(text: 'Athlete not found or not public.'));
+        }
+        final prof = athlete['profile'] as Map<String, dynamic>?;
+        final name = prof?['full_name'] as String? ?? 'Athlete';
+        final avatar = prof?['avatar_url'] as String?;
+        final sport = athlete['sport'] as String? ?? '';
+        final position = (athlete['position'] as String?)?.trim();
+        final yearLevel = (athlete['year_level'] as String?)?.trim();
+        final jersey = athlete['jersey_number'];
+        final stats = statsAsync.valueOrNull;
+        final gp = (stats?['games_played'] as num?)?.toInt() ?? 0;
+        final rawStats = stats?['stats'] as Map<String, dynamic>?;
+        final highlights = seasonStatHighlights(sport, rawStats, gp);
+        final insights = insAsync.valueOrNull ?? [];
+        final teams = teamsAsync.valueOrNull ?? [];
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
+        return BrandPage.scroll(
+          title: name,
+          subtitle: '${sportEmoji(sport)}  ${sportLabel(sport)}',
+          hero: Column(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppTheme.schoolPrimary,
-                    backgroundImage: avatar != null && avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
-                    child: avatar == null || avatar.isEmpty
-                        ? Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: TextStyle(fontSize: 28, color: AppTheme.schoolSecondary, fontWeight: FontWeight.w900),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 4),
-                        Text('${sportEmoji(sport)} ${sportLabel(sport)}', style: TextStyle(color: LayoutTokens.secondaryText(context))),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            if (position != null && position.isNotEmpty) _InfoTag(label: position),
-                            if (jersey != null) _InfoTag(label: '#$jersey'),
-                            if (yearLevel != null && yearLevel.isNotEmpty) _InfoTag(label: yearLevel),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (teams.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const Text('Team', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(height: 8),
-                // Tappable through to the team page, matching the web athlete
-                // profile where the team entry is a link.
-                ...teams.map((t) {
-                  final tSport = t['sport'] as String? ?? '';
-                  final tId = t['id'] as String?;
-                  return InkWell(
-                    onTap: tId == null ? null : () => context.push('/teams/$tId'),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${sportEmoji(tSport)} ${t['name'] as String? ?? ''} · ${sportLabel(tSport)}',
-                              style: TextStyle(color: LayoutTokens.secondaryText(context)),
-                            ),
-                          ),
-                          if (tId != null)
-                            Icon(Icons.chevron_right, size: 18, color: LayoutTokens.mutedText(context)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ],
-              if (stats != null) ...[
-                const SizedBox(height: 24),
-                const Text('Season stats', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(height: 10),
+              HeroAvatar(imageUrl: avatar, name: name, radius: 40),
+              if ([position, jersey?.toString(), yearLevel].any((v) => v != null && v.toString().isNotEmpty)) ...[
+                const SizedBox(height: 14),
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                  spacing: 8,
                   alignment: WrapAlignment.center,
                   children: [
-                    StatChip(label: 'GP', value: '$gp'),
-                    ...highlights.map((h) => StatChip(label: h.label, value: h.value)),
+                    if (position != null && position.isNotEmpty) _heroTag(position),
+                    if (jersey != null) _heroTag('#$jersey'),
+                    if (yearLevel != null && yearLevel.isNotEmpty) _heroTag(yearLevel),
                   ],
                 ),
               ],
-              if (insights.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const Text('Insights', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(height: 8),
-                ...insights.map(
-                  (i) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Material(
-                      color: LayoutTokens.cardBackground(context),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          i['insight_text'] as String? ?? '',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                        ),
+            ],
+          ),
+          children: [
+            if (stats != null) ...[
+              const SectionHeader(title: 'Season stats'),
+              SheetGroup(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      StatChip(label: 'GP', value: '$gp'),
+                      for (var i = 0; i < highlights.length; i++)
+                        StatChip(label: highlights[i].label, value: highlights[i].value, emphasis: i == 0),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+            if (teams.isNotEmpty) ...[
+              const SectionHeader(title: 'Team'),
+              SheetGroup(
+                // Tappable through to the team page, matching the web athlete
+                // profile where the team entry is a link.
+                children: teams.map((t) {
+                  final tSport = t['sport'] as String? ?? '';
+                  final tId = t['id'] as String?;
+                  return SheetTile(
+                    leading: IconTile(emoji: sportEmoji(tSport), color: sportTint(context, tSport)),
+                    title: t['name'] as String? ?? '',
+                    subtitle: sportLabel(tSport),
+                    trailing: tId == null ? null : Icon(Icons.chevron_right_rounded, color: LayoutTokens.mutedText(context)),
+                    onTap: tId == null ? null : () => context.push('/teams/$tId'),
+                  );
+                }).toList(),
+              ),
+            ],
+            if (insights.isNotEmpty) ...[
+              const SectionHeader(title: 'Insights'),
+              SheetGroup(
+                children: [
+                  for (final i in insights)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        i['insight_text'] as String? ?? '',
+                        style: TextStyle(height: 1.5, color: LayoutTokens.primaryText(context)),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ],
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
   }
-}
 
-class _InfoTag extends StatelessWidget {
-  const _InfoTag({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _heroTag(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: LayoutTokens.chipBackground(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: LayoutTokens.borderSubtle(context)),
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LayoutTokens.primaryText(context)),
+        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
       ),
     );
   }

@@ -44,12 +44,12 @@ class _HubAnnouncementStripState extends State<HubAnnouncementStrip> {
         final dangerColor = LayoutTokens.danger(context);
         final warningColor = LayoutTokens.warning(context);
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(top: 12),
           child: Material(
             color: critical
-                ? dangerColor.withValues(alpha: 0.12)
-                : warningColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+                ? dangerColor.withValues(alpha: 0.10)
+                : warningColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(18),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
               child: Row(
@@ -139,11 +139,13 @@ class HubAnnouncementTicker extends StatelessWidget {
         final critical = a['urgency'] == 'critical';
         final urgencyColor = critical ? LayoutTokens.danger(context) : LayoutTokens.warning(context);
         return Container(
-          height: 36,
+          height: 40,
+          margin: const EdgeInsets.only(top: 12),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: urgencyColor.withValues(alpha: critical ? 0.15 : 0.10),
-            border: Border(
-                bottom: BorderSide(color: urgencyColor.withValues(alpha: 0.3))),
+            color: urgencyColor.withValues(alpha: critical ? 0.12 : 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: urgencyColor.withValues(alpha: 0.25)),
           ),
           child: _MarqueeText(
             text: _line(a),

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
+import '../widgets/ui/brand_page.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -116,11 +116,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final institutionAsync = ref.watch(institutionProvider);
-    final hintDomain = institutionAsync.valueOrNull?.studentEmailDomain ??
-        'students.nu-dasma.edu.ph';
+    final institution = ref.watch(institutionProvider).valueOrNull;
+    final hintDomain = institution?.studentEmailDomain ?? 'students.nu-dasma.edu.ph';
+    final abbr = institution?.abbreviation?.trim();
+    final schoolName = (abbr?.isNotEmpty == true ? abbr! : 'U-Sports');
 
-    final onSurface = Theme.of(context).colorScheme.onSurface;
     // Reached via context.go(), which replaces the shell rather than pushing
     // on top of it, so there's nothing on the stack for the system back
     // button to pop — without this it exits the app. Send it Home instead.
@@ -130,262 +130,122 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         if (didPop) return;
         context.go('/');
       },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                institutionAsync.when(
-                  data: (ins) {
-                    if (ins == null) {
-                      return Column(
-                        children: [
-                          Text(
-                            'U-Sports',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Access your U-Sports dashboard',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: LayoutTokens.secondaryText(context),
-                                fontSize: 14),
-                          ),
-                        ],
-                      );
-                    }
-                    final logo = ins.logoUrl?.trim();
-                    final abbr = (ins.abbreviation?.trim().isNotEmpty == true
-                            ? ins.abbreviation!
-                            : ins.name.length >= 2
-                                ? ins.name.substring(0, 2)
-                                : ins.name)
-                        .toUpperCase();
-                    return Column(
-                      children: [
-                        if (logo != null && logo.isNotEmpty)
-                          // Full uncropped logo — BoxFit.contain never crops,
-                          // unlike the .cover + circular clip this replaced.
-                          CachedNetworkImage(
-                            imageUrl: logo,
-                            height: 72,
-                            width: 120,
-                            fit: BoxFit.contain,
-                            placeholder: (_, __) =>
-                                const SizedBox(height: 72, width: 120),
-                            errorWidget: (_, __, ___) => CircleAvatar(
-                              radius: 36,
-                              backgroundColor:
-                                  AppTheme.accent.withValues(alpha: 0.2),
-                              child: Text(
-                                abbr,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18),
-                              ),
-                            ),
-                          )
-                        else
-                          CircleAvatar(
-                            radius: 36,
-                            backgroundColor:
-                                AppTheme.accent.withValues(alpha: 0.25),
-                            child: Text(
-                              abbr,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 18),
-                            ),
-                          ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'U-Sports',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                              color: onSurface),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          ins.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: LayoutTokens.secondaryText(context)),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (_, __) => Column(
-                    children: [
-                      Text(
-                        'U-Sports',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Access your U-Sports dashboard',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: LayoutTokens.secondaryText(context),
-                            fontSize: 14),
-                      ),
-                    ],
-                  ),
+      child: BrandPage.scroll(
+        showBack: false,
+        hero: Column(
+          children: [
+            HeroAvatar(imageUrl: institution?.logoUrl, name: schoolName, radius: 34),
+            const SizedBox(height: 14),
+            Text(schoolName, textAlign: TextAlign.center, style: AppTheme.display(size: 26, color: Colors.white)),
+            if (institution?.name != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  institution!.name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.72), fontSize: 13.5),
                 ),
-                const SizedBox(height: 32),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Sign In',
-                      style:
-                          TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-                ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Access your U-Sports dashboard',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: LayoutTokens.secondaryText(context)),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                if (_error != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: AppTheme.danger.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(_error!,
-                        style: const TextStyle(
-                            color: AppTheme.danger, fontSize: 13)),
-                  ),
-                TextField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: onSurface),
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'yourname@$hintDomain',
-                    prefixIcon: Icon(Icons.mail_outline,
-                        color: LayoutTokens.secondaryText(context)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _passCtrl,
-                  obscureText: !_showPassword,
-                  style: TextStyle(color: onSurface),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline,
-                        color: LayoutTokens.secondaryText(context)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () =>
-                          setState(() => _showPassword = !_showPassword),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _showPassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 20,
-                            color: LayoutTokens.secondaryText(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Show password',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: LayoutTokens.secondaryText(context))),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => context.push('/auth/forgot-password'),
-                      child: Text(
-                        'Forgot password?',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: LayoutTokens.secondaryText(context)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: _loading ? null : _login,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.login_rounded, size: 20),
-                              SizedBox(width: 8),
-                              Text('Sign In',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.go('/'),
-                    child: Text(
-                      'Just browsing? View as Guest →',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: LayoutTokens.secondaryText(context)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
+              ),
+          ],
+        ),
+        sheetPadding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+        children: [
+          Text('Sign In', style: AppTheme.display(size: 24, color: LayoutTokens.primaryText(context))),
+          const SizedBox(height: 6),
+          Text(
+            'Access your U-Sports dashboard',
+            style: TextStyle(fontSize: 14, color: LayoutTokens.secondaryText(context)),
+          ),
+          const SizedBox(height: 22),
+          if (_error != null)
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: LayoutTokens.danger(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: LayoutTokens.danger(context).withValues(alpha: 0.3)),
+              ),
+              child: Text(_error!, style: TextStyle(color: LayoutTokens.danger(context), fontSize: 13)),
+            ),
+          TextField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email',
+              hintText: 'yourname@$hintDomain',
+              prefixIcon: const Icon(Icons.mail_outline, size: 20),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passCtrl,
+            obscureText: !_showPassword,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              prefixIcon: Icon(Icons.lock_outline, size: 20),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => _showPassword = !_showPassword),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      size: 18,
+                      color: LayoutTokens.mutedText(context),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('Show password', style: TextStyle(fontSize: 13, color: LayoutTokens.secondaryText(context))),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/auth/forgot-password'),
+                child: Text(
+                  'Forgot password?',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.brandInk(context)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _loading ? null : _login,
+              child: _loading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.login_rounded, size: 20),
+                        SizedBox(width: 8),
+                        Text('Sign In'),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Center(
+            child: TextButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Just browsing? View as Guest →'),
+            ),
+          ),
+        ],
       ),
     );
   }

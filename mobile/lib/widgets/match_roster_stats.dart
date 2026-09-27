@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/events_api_provider.dart';
+import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 
 /// Mirrors apps/web/src/lib/matchStatKeys.ts exactly — same per-sport stat
@@ -87,21 +88,23 @@ class MatchRosterStats extends ConsumerWidget {
         final showStats = status == 'completed';
         final statDefs = showStats ? _statKeys(sport) : const <({String label, String key})>[];
 
+        final b = Theme.of(context).brightness;
         return Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: LayoutTokens.cardBackground(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: LayoutTokens.borderSubtle(context)),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.cardShadow(b),
+              border: b == Brightness.dark ? Border.all(color: LayoutTokens.borderSubtle(context)) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   showStats ? 'Player Stats' : 'Roster',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: LayoutTokens.secondaryText(context)),
+                  style: AppTheme.overline(LayoutTokens.mutedText(context)),
                 ),
                 const SizedBox(height: 10),
                 showStats

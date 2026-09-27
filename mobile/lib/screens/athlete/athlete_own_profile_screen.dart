@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../theme/layout_tokens.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/event_placements.dart';
 import '../../utils/sport_helpers.dart';
 import '../../utils/error_helpers.dart';
 import '../../widgets/avatar_upload_button.dart';
+import '../../widgets/ui/brand_page.dart';
 
 class AthleteOwnProfileScreen extends ConsumerStatefulWidget {
   const AthleteOwnProfileScreen({super.key});
@@ -39,110 +40,92 @@ class _AthleteOwnProfileScreenState extends ConsumerState<AthleteOwnProfileScree
     final profileAsync = ref.watch(profileProvider);
     final athleteAsync = ref.watch(athleteRowProvider);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('My profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/athlete/dashboard');
+    Widget page(Widget body) => BrandPage.fixed(
+          title: 'My profile',
+          onBack: () => context.canPop() ? context.pop() : context.go('/athlete/dashboard'),
+          body: body,
+        );
+
+    return profileAsync.when(
+      loading: () => page(const Center(child: CircularProgressIndicator())),
+      error: (e, _) => page(SheetMessage(text: friendlyError(e))),
+      data: (profile) {
+        return athleteAsync.when(
+          loading: () => page(const Center(child: CircularProgressIndicator())),
+          error: (e, _) => page(SheetMessage(text: friendlyError(e))),
+          data: (athlete) {
+            if (profile == null || athlete == null) {
+              return page(const SheetMessage(text: 'Unable to load athlete record.'));
             }
-          },
-        ),
-      ),
-      body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(friendlyError(e))),
-        data: (profile) {
-          return athleteAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text(friendlyError(e))),
-            data: (athlete) {
-              if (profile == null || athlete == null) {
-                return const Center(child: Text('Unable to load athlete record.'));
-              }
 
-              final initial = (profile.fullName?.trim().isNotEmpty ?? false) ? profile.fullName!.trim()[0].toUpperCase() : '?';
+            final initial = (profile.fullName?.trim().isNotEmpty ?? false) ? profile.fullName!.trim()[0].toUpperCase() : '?';
 
-              return FutureBuilder<Map<String, dynamic>>(
-                future: _extrasFor(athlete.id),
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snap.hasError) {
-                    return Center(
-                      child: Text(
-                        'Could not load your team/finishes.',
-                        style: TextStyle(color: LayoutTokens.mutedText(context)),
-                      ),
-                    );
-                  }
-                  final teams = snap.data?['teams'] as List<dynamic>? ?? [];
-                  final finishes = snap.data?['finishes'] as List<dynamic>? ?? [];
+            return FutureBuilder<Map<String, dynamic>>(
+              future: _extrasFor(athlete.id),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+                  return const BrandPage.fixed(title: 'My profile', body: Center(child: CircularProgressIndicator()));
+                }
+                if (snap.hasError) {
+                  return page(const SheetMessage(text: 'Could not load your team/finishes.'));
+                }
+                final teams = snap.data?['teams'] as List<dynamic>? ?? [];
+                final finishes = snap.data?['finishes'] as List<dynamic>? ?? [];
 
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
+                return BrandPage.scroll(
+                  title: 'My profile',
+                  onBack: () => context.canPop() ? context.pop() : context.go('/athlete/dashboard'),
+                  hero: Column(
                     children: [
-                      Row(
-                        children: [
-                          AvatarUploadButton(
-                            avatarUrl: profile.avatarUrl,
-                            fallbackInitial: initial,
-                            radius: 40,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(profile.fullName ?? 'Athlete',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                                Text('${sportEmoji(athlete.sport)} ${sportLabel(athlete.sport)}',
-                                    style: TextStyle(color: LayoutTokens.secondaryText(context))),
-                              ],
-                            ),
-                          ),
-                        ],
+                      AvatarUploadButton(avatarUrl: profile.avatarUrl, fallbackInitial: initial, radius: 40),
+                      const SizedBox(height: 14),
+                      Text(profile.fullName ?? 'Athlete',
+                          textAlign: TextAlign.center, style: AppTheme.display(size: 21, color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${sportEmoji(athlete.sport)}  ${sportLabel(athlete.sport)}',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 13, fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 20),
-                      const Text('Teams', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                      const SizedBox(height: 6),
-                      if (teams.isEmpty)
-                        Text('No team assignments yet.', style: TextStyle(color: LayoutTokens.mutedText(context)))
-                      else
-                        ...teams.map((t) => ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: Text((t as Map)['name'] as String? ?? 'Team'),
-                              subtitle: Text((t)['sport'] as String? ?? ''),
-                            )),
-                      const SizedBox(height: 16),
-                      const Text('Competition finishes', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                      if (finishes.isEmpty)
-                        Text('No completed finishes on record.', style: TextStyle(color: LayoutTokens.mutedText(context)))
-                      else
-                        ...finishes.map((f) {
+                    ],
+                  ),
+                  children: [
+                    const SectionHeader(title: 'Teams'),
+                    if (teams.isEmpty)
+                      const SheetMessage(icon: Icons.groups_outlined, text: 'No team assignments yet.')
+                    else
+                      SheetGroup(
+                        children: teams.map((t) {
+                          final m = t as Map;
+                          final tSport = m['sport'] as String? ?? '';
+                          return SheetTile(
+                            leading: IconTile(emoji: sportEmoji(tSport), color: sportTint(context, tSport)),
+                            title: m['name'] as String? ?? 'Team',
+                            subtitle: sportLabel(tSport),
+                          );
+                        }).toList(),
+                      ),
+                    const SectionHeader(title: 'Competition finishes'),
+                    if (finishes.isEmpty)
+                      const SheetMessage(icon: Icons.emoji_events_outlined, text: 'No completed finishes on record.')
+                    else
+                      SheetGroup(
+                        children: finishes.map((f) {
                           final m = f as Map<String, dynamic>;
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(m['eventName'] as String? ?? ''),
-                            subtitle: Text('${placementRankLabel(m['rank'] as int)} · ${sportLabel(m['sport'] as String? ?? '')}'),
+                          return SheetTile(
+                            leading: IconTile(icon: Icons.emoji_events_outlined, color: sportTint(context, m['sport'] as String?)),
+                            title: m['eventName'] as String? ?? '',
+                            subtitle: '${placementRankLabel(m['rank'] as int)} · ${sportLabel(m['sport'] as String? ?? '')}',
                             onTap: () => context.push('/events/${m['eventId']}'),
                           );
-                        }),
-                    ],
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+                        }).toList(),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

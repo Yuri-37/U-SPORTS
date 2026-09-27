@@ -2,13 +2,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
 import '../providers/leaderboard_provider.dart';
-import '../providers/notifications_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../widgets/double_back_exit.dart';
-import '../widgets/notification_bell_icon_button.dart';
+import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/hub_header_actions.dart';
 import '../utils/leaderboard_stats.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
@@ -71,10 +70,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
       }
     }
 
-    final profileAsync = ref.watch(profileProvider);
-    final profile = profileAsync.valueOrNull;
-    final role = profile?.role ?? 'guest';
-
     final players = _seasonId != null
         ? ref.watch(leaderboardPlayersProvider((sport: _sport, seasonId: _seasonId!)))
         : null;
@@ -83,275 +78,255 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
         : null;
 
     return DoubleBackToExit(
-      child: Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Standings & Leaderboards'),
-        actions: [
-          if (role == 'guest')
-            IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => context.push('/settings')),
-          if (role == 'athlete')
-            profile != null && profile.isAthlete
-                ? NotificationBellIconButton(
-                    badgeCount: ref.watch(athleteNotificationBadgeCountProvider),
-                    onPressed: () => context.push('/notifications'),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () => context.push('/notifications'),
-                  ),
-          if (role == 'athlete')
-            IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => context.push('/athlete/settings')),
-        ],
-        bottom: TabBar(
-          controller: _tab,
-          tabs: const [
-            Tab(text: 'Player stats'),
-            Tab(text: 'Team standings'),
-          ],
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text('Season statistics and rankings', style: TextStyle(fontSize: 13, color: LayoutTokens.secondaryText(context))),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: ['basketball', 'volleyball', 'table-tennis']
-                    .map(
-                      (s) {
-                        final selected = _sport == s;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(
-                              sportLabel(s),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: selected ? Colors.white : LayoutTokens.primaryText(context),
-                              ),
-                            ),
-                            selected: selected,
-                            selectedColor: AppTheme.accent,
-                            backgroundColor: LayoutTokens.chipBackground(context),
-                            checkmarkColor: Colors.white,
-                            side: BorderSide(color: LayoutTokens.borderSubtle(context)),
-                            onSelected: (_) => setState(() => _sport = s),
+      child: BrandPage.fixed(
+        showBack: false,
+        title: 'Standings & Leaderboards',
+        subtitle: 'Season statistics and rankings',
+        actions: const [HubHeaderActions()],
+        bottom: BrandTabBar(controller: _tab, tabs: const ['Player stats', 'Team standings']),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              child: SizedBox(
+                height: 46,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: ['basketball', 'volleyball', 'table-tennis'].map((s) {
+                    final selected = _sport == s;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(
+                          sportLabel(s),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: selected
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : LayoutTokens.primaryText(context),
                           ),
-                        );
-                      },
-                    )
-                    .toList(),
+                        ),
+                        selected: selected,
+                        onSelected: (_) => setState(() => _sport = s),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: seasonsAsync.when(
-              loading: () => const LinearProgressIndicator(minHeight: 2),
-              error: (e, _) => Text(friendlyError(e)),
-              data: (seasons) {
-                final filtered = _filteredSeasons(seasons);
-                final effectiveId = _seasonId != null && seasons.any((s) => s['id'] == _seasonId)
-                    ? _seasonId
-                    : (seasons.isNotEmpty ? defaultSeasonId(seasons) : null);
-                var options = filtered;
-                if (effectiveId != null && !options.any((s) => s['id'] == effectiveId)) {
-                  Map<String, dynamic>? sel;
-                  for (final s in seasons) {
-                    if (s['id'] == effectiveId) {
-                      sel = s;
-                      break;
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: seasonsAsync.when(
+                loading: () => const LinearProgressIndicator(minHeight: 2),
+                error: (e, _) => Text(friendlyError(e)),
+                data: (seasons) {
+                  final filtered = _filteredSeasons(seasons);
+                  final effectiveId = _seasonId != null && seasons.any((s) => s['id'] == _seasonId)
+                      ? _seasonId
+                      : (seasons.isNotEmpty ? defaultSeasonId(seasons) : null);
+                  var options = filtered;
+                  if (effectiveId != null && !options.any((s) => s['id'] == effectiveId)) {
+                    Map<String, dynamic>? sel;
+                    for (final s in seasons) {
+                      if (s['id'] == effectiveId) {
+                        sel = s;
+                        break;
+                      }
                     }
+                    if (sel != null) options = [sel, ...options];
                   }
-                  if (sel != null) options = [sel, ...options];
-                }
-                return Column(
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Find season',
-                        hintText: 'Filter season list…',
-                        prefixIcon: Icon(Icons.search, size: 20),
-                        isDense: true,
-                      ),
-                      onChanged: (v) => setState(() => _seasonListQuery = v),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: effectiveId,
-                      decoration: const InputDecoration(labelText: 'Season'),
-                      items: options
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s['id'] as String,
-                              child: Text(formatSeasonSelectLabel(s)),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: seasons.isEmpty ? null : (v) => setState(() => _seasonId = v),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                      child: TextField(
+                  return Column(
+                    children: [
+                      TextField(
                         decoration: const InputDecoration(
-                          labelText: 'Search athletes',
-                          hintText: 'Filter by name…',
+                          labelText: 'Find season',
+                          hintText: 'Filter season list…',
                           prefixIcon: Icon(Icons.search, size: 20),
                           isDense: true,
                         ),
-                        onChanged: (v) => setState(() => _athleteSearch = v),
+                        onChanged: (v) => setState(() => _seasonListQuery = v),
                       ),
-                    ),
-                    Expanded(
-                      child: players?.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (e, _) => Center(child: Text(friendlyError(e))),
-                            data: (rows) {
-                              if (_seasonId == null) {
-                                return const Center(child: Text('No seasons available yet.'));
-                              }
-                              final q = _athleteSearch.trim().toLowerCase();
-                              final matching = q.isEmpty
-                                  ? rows
-                                  : rows.where((r) {
-                                      final athlete = r['athlete'] as Map<String, dynamic>?;
-                                      final prof = athlete?['profile'] as Map<String, dynamic>?;
-                                      final name = (prof?['full_name'] as String? ?? '').toLowerCase();
-                                      return name.contains(q);
-                                    }).toList();
-                              final filtered = sortByRank(matching, _sport);
-                              if (filtered.isEmpty) {
-                                return Center(
-                                  child: Text(
-                                    q.isNotEmpty ? 'No athletes match your search.' : 'No stats yet for this season.',
-                                    style: TextStyle(color: LayoutTokens.mutedText(context)),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        initialValue: effectiveId,
+                        decoration: const InputDecoration(labelText: 'Season'),
+                        borderRadius: BorderRadius.circular(16),
+                        items: options
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s['id'] as String,
+                                child: Text(formatSeasonSelectLabel(s)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: seasons.isEmpty ? null : (v) => setState(() => _seasonId = v),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Search athletes',
+                            hintText: 'Filter by name…',
+                            prefixIcon: Icon(Icons.search, size: 20),
+                            isDense: true,
+                          ),
+                          onChanged: (v) => setState(() => _athleteSearch = v),
+                        ),
+                      ),
+                      Expanded(
+                        child: players?.when(
+                              loading: () => const Center(child: CircularProgressIndicator()),
+                              error: (e, _) => SheetMessage(text: friendlyError(e)),
+                              data: (rows) {
+                                if (_seasonId == null) {
+                                  return const SheetMessage(text: 'No seasons available yet.');
+                                }
+                                final q = _athleteSearch.trim().toLowerCase();
+                                final matching = q.isEmpty
+                                    ? rows
+                                    : rows.where((r) {
+                                        final athlete = r['athlete'] as Map<String, dynamic>?;
+                                        final prof = athlete?['profile'] as Map<String, dynamic>?;
+                                        final name = (prof?['full_name'] as String? ?? '').toLowerCase();
+                                        return name.contains(q);
+                                      }).toList();
+                                final filtered = sortByRank(matching, _sport);
+                                if (filtered.isEmpty) {
+                                  return SheetMessage(
+                                    text: q.isNotEmpty ? 'No athletes match your search.' : 'No stats yet for this season.',
+                                  );
+                                }
+                                return SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                  child: SheetGroup(
+                                    dividers: false,
+                                    children: [
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: DataTable(
+                                          headingTextStyle: AppTheme.overline(LayoutTokens.mutedText(context)),
+                                          dataTextStyle: TextStyle(
+                                            fontSize: 14,
+                                            color: LayoutTokens.primaryText(context),
+                                          ),
+                                          dividerThickness: 0.6,
+                                          horizontalMargin: 16,
+                                          columnSpacing: 22,
+                                          showCheckboxColumn: false,
+                                          columns: [
+                                            const DataColumn(label: Text('#')),
+                                            const DataColumn(label: Text('ATHLETE')),
+                                            ...playerStatCells(_sport, null, 0)
+                                                .map((c) => DataColumn(label: Text(c.label.toUpperCase()))),
+                                          ],
+                                          rows: filtered.asMap().entries.map((entry) {
+                                            final i = entry.key;
+                                            final r = entry.value;
+                                            final athlete = r['athlete'] as Map<String, dynamic>?;
+                                            final prof = athlete?['profile'] as Map<String, dynamic>?;
+                                            final name = prof?['full_name'] as String? ?? '—';
+                                            final aid = athlete?['id'] as String?;
+                                            final stats = r['stats'] as Map<String, dynamic>?;
+                                            final gp = (r['games_played'] as num?)?.toInt() ?? 0;
+                                            final cells = playerStatCells(_sport, stats, gp);
+                                            return DataRow(
+                                              onSelectChanged: aid == null ? null : (_) => context.push('/athletes/$aid'),
+                                              cells: [
+                                                DataCell(Text('${i + 1}', style: TextStyle(color: LayoutTokens.mutedText(context)))),
+                                                DataCell(Text(name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                                ...cells.map(
+                                                  (c) => DataCell(
+                                                    Text(
+                                                      c.value,
+                                                      style: TextStyle(
+                                                        fontWeight: c.emphasis ? FontWeight.w800 : FontWeight.w500,
+                                                        color: c.emphasis ? AppTheme.brandInk(context) : null,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
-                              }
-                              return SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: SingleChildScrollView(
-                                  child: DataTable(
-                                    headingRowColor: WidgetStateProperty.all(LayoutTokens.cardBackground(context)),
-                                    showCheckboxColumn: false,
-                                    columns: [
-                                      const DataColumn(label: Text('#')),
-                                      const DataColumn(label: Text('Athlete')),
-                                      ...playerStatCells(_sport, null, 0).map((c) => DataColumn(label: Text(c.label))),
-                                    ],
-                                    rows: filtered.asMap().entries.map((entry) {
-                                      final i = entry.key;
-                                      final r = entry.value;
-                                      final athlete = r['athlete'] as Map<String, dynamic>?;
-                                      final prof = athlete?['profile'] as Map<String, dynamic>?;
-                                      final name = prof?['full_name'] as String? ?? '—';
-                                      final aid = athlete?['id'] as String?;
-                                      final stats = r['stats'] as Map<String, dynamic>?;
-                                      final gp = (r['games_played'] as num?)?.toInt() ?? 0;
-                                      final cells = playerStatCells(_sport, stats, gp);
-                                      return DataRow(
-                                        onSelectChanged: aid == null ? null : (_) => context.push('/athletes/$aid'),
-                                        cells: [
-                                          DataCell(Text('${i + 1}', style: TextStyle(color: LayoutTokens.mutedText(context)))),
-                                          DataCell(Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                                          ...cells.map(
-                                            (c) => DataCell(
-                                              Text(
-                                                c.value,
-                                                style: TextStyle(fontWeight: c.emphasis ? FontWeight.w800 : FontWeight.normal),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                              );
-                            },
-                          ) ??
-                          const SizedBox(),
-                    ),
-                  ],
-                ),
-                teams?.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text(friendlyError(e))),
-                      data: (rows) {
-                        if (_seasonId == null) {
-                          return const Center(child: Text('No seasons available yet.'));
-                        }
-                        if (rows.isEmpty) {
-                          return Center(child: Text('No team standings yet.', style: TextStyle(color: LayoutTokens.mutedText(context))));
-                        }
-                        final standings = sortTeamStandings(rows);
-                        return ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: standings.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (ctx, i) {
-                            final r = standings[i];
-                            final team = r['team'] as Map<String, dynamic>?;
-                            final teamId = team?['id'] as String?;
-                            final name = team?['name'] as String? ?? 'Team';
-                            final w = (r['wins'] as num?)?.toInt() ?? 0;
-                            final l = (r['losses'] as num?)?.toInt() ?? 0;
-                            final total = w + l;
-                            final pct = total > 0 ? ((w / total) * 100).round() : 0;
-                            return Material(
-                              color: LayoutTokens.cardBackground(context),
-                              borderRadius: BorderRadius.circular(12),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: teamId == null ? null : () => context.push('/teams/$teamId'),
-                                child: ListTile(
-                                  leading: Text('${i + 1}', style: TextStyle(fontWeight: FontWeight.w700, color: LayoutTokens.mutedText(context))),
-                                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  subtitle: Text(sportLabel(_sport)),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text('$w W', style: TextStyle(color: LayoutTokens.success(context), fontWeight: FontWeight.w700)),
-                                      const SizedBox(width: 12),
-                                      Text('$l L', style: const TextStyle(color: AppTheme.danger)),
-                                      const SizedBox(width: 12),
-                                      Text('$pct%', style: TextStyle(color: LayoutTokens.mutedText(context))),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ) ??
-                    const SizedBox(),
-              ],
+                              },
+                            ) ??
+                            const SizedBox(),
+                      ),
+                    ],
+                  ),
+                  teams?.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => SheetMessage(text: friendlyError(e)),
+                        data: (rows) {
+                          if (_seasonId == null) {
+                            return const SheetMessage(text: 'No seasons available yet.');
+                          }
+                          if (rows.isEmpty) {
+                            return const SheetMessage(text: 'No team standings yet.');
+                          }
+                          final standings = sortTeamStandings(rows);
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            child: SheetGroup(
+                              children: [
+                                for (var i = 0; i < standings.length; i++)
+                                  _teamRow(context, i, standings[i]),
+                              ],
+                            ),
+                          );
+                        },
+                      ) ??
+                      const SizedBox(),
+                ],
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _teamRow(BuildContext context, int i, Map<String, dynamic> r) {
+    final team = r['team'] as Map<String, dynamic>?;
+    final teamId = team?['id'] as String?;
+    final name = team?['name'] as String? ?? 'Team';
+    final w = (r['wins'] as num?)?.toInt() ?? 0;
+    final l = (r['losses'] as num?)?.toInt() ?? 0;
+    final total = w + l;
+    final pct = total > 0 ? ((w / total) * 100).round() : 0;
+    return SheetTile(
+      leading: RankBadge(rank: i + 1),
+      title: name,
+      subtitle: sportLabel(_sport),
+      onTap: teamId == null ? null : () => context.push('/teams/$teamId'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$w W', style: TextStyle(color: LayoutTokens.success(context), fontWeight: FontWeight.w800)),
+          const SizedBox(width: 10),
+          Text('$l L', style: TextStyle(color: LayoutTokens.danger(context), fontWeight: FontWeight.w700)),
+          const SizedBox(width: 10),
+          Text('$pct%', style: TextStyle(color: LayoutTokens.mutedText(context), fontWeight: FontWeight.w600)),
         ],
       ),
-    ),
     );
   }
 }

@@ -15,10 +15,6 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: LayoutTokens.cardBackground(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
     builder: (ctx) {
       return Consumer(
         builder: (context, ref, _) {
@@ -108,7 +104,7 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(evName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                      Text(evName, style: AppTheme.display(size: 18, color: LayoutTokens.primaryText(ctx))),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -116,14 +112,19 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppTheme.danger.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              color: LayoutTokens.danger(ctx).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Text(
-                              'LIVE',
-                              style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w900, fontSize: 11),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                    width: 6, height: 6, decoration: BoxDecoration(color: LayoutTokens.danger(ctx), shape: BoxShape.circle)),
+                                const SizedBox(width: 5),
+                                Text('LIVE', style: AppTheme.overline(LayoutTokens.danger(ctx)).copyWith(fontSize: 10.5, letterSpacing: 1)),
+                              ],
                             ),
                           ),
                           Text(sportLabel(sport), style: TextStyle(fontSize: 13, color: LayoutTokens.secondaryText(ctx))),
@@ -142,8 +143,8 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
+                          color: LayoutTokens.cardBackground(ctx),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: LayoutTokens.borderSubtle(ctx)),
                         ),
                         child: Column(
@@ -160,26 +161,12 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
                                     ],
                                   ),
                                 ),
-                                Text(
-                                  '${pres.left}',
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    color: Theme.of(ctx).colorScheme.onSurface,
-                                  ),
-                                ),
+                                Text('${pres.left}', style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 8),
                                   child: Text('—', style: TextStyle(color: LayoutTokens.mutedText(ctx))),
                                 ),
-                                Text(
-                                  '${pres.right}',
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    color: Theme.of(ctx).colorScheme.onSurface,
-                                  ),
-                                ),
+                                Text('${pres.right}', style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,

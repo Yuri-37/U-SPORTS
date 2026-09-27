@@ -9,27 +9,29 @@ import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/format_helpers.dart';
 import '../utils/error_helpers.dart';
+import '../widgets/ui/brand_page.dart';
 
 /// Icon + accent color for a notification's `type` (see server routes
 /// `teams.ts`, `events.ts`, `announcements.ts` for the values this covers).
 (IconData, Color) _typeStyle(String type, BuildContext context) {
+  final brand = AppTheme.brandInk(context);
   switch (type) {
     case 'announcement_emergency':
-      return (Icons.warning_rounded, AppTheme.danger);
+      return (Icons.warning_rounded, LayoutTokens.danger(context));
     case 'announcement_reschedule':
-      return (Icons.event_repeat_rounded, AppTheme.warning);
+      return (Icons.event_repeat_rounded, LayoutTokens.warning(context));
     case 'announcement_reminder':
-      return (Icons.notifications_active_rounded, AppTheme.accent);
+      return (Icons.notifications_active_rounded, brand);
     case 'announcement_system':
       return (Icons.campaign_rounded, LayoutTokens.mutedText(context));
     case 'added_to_team':
       return (Icons.groups_rounded, LayoutTokens.success(context));
     case 'lineup_updated':
-      return (Icons.list_alt_rounded, AppTheme.accent);
+      return (Icons.list_alt_rounded, brand);
     case 'team_added_to_event':
-      return (Icons.emoji_events_rounded, AppTheme.accent);
+      return (Icons.emoji_events_rounded, brand);
     case 'match_scheduled':
-      return (Icons.calendar_month_rounded, AppTheme.accent);
+      return (Icons.calendar_month_rounded, brand);
     default:
       return (Icons.notifications_rounded, LayoutTokens.mutedText(context));
   }
@@ -197,37 +199,34 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final rows = listAsync.valueOrNull ?? const [];
     final unreadCount = rows.where((r) => r['read'] != true).length;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          if (profile.valueOrNull != null && unreadCount > 0)
-            TextButton.icon(
-              onPressed: () async {
-                final p = profile.valueOrNull!;
-                try {
-                  await markAllNotificationsRead(p.id);
-                  ref.invalidate(notificationsListProvider);
-                  ref.invalidate(unreadNotificationsCountProvider);
-                } catch (_) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Could not mark notifications as read. Try again.')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.done_all_rounded, size: 18),
-              label: const Text('Read all'),
-            ),
-          if (rows.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Clear all',
-              onPressed: () => _confirmClearAll(profile.valueOrNull?.id),
-            ),
-        ],
-      ),
+    return BrandPage.fixed(
+      title: 'Notifications',
+      actions: [
+        if (profile.valueOrNull != null && unreadCount > 0)
+          HeroIconButton(
+            tooltip: 'Read all',
+            icon: Icons.done_all_rounded,
+            onPressed: () async {
+              final p = profile.valueOrNull!;
+              try {
+                await markAllNotificationsRead(p.id);
+                ref.invalidate(notificationsListProvider);
+                ref.invalidate(unreadNotificationsCountProvider);
+              } catch (_) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not mark notifications as read. Try again.')),
+                );
+              }
+            },
+          ),
+        if (rows.isNotEmpty)
+          HeroIconButton(
+            tooltip: 'Clear all',
+            icon: Icons.delete_sweep_outlined,
+            onPressed: () => _confirmClearAll(profile.valueOrNull?.id),
+          ),
+      ],
       body: Column(
         children: [
           Padding(
@@ -339,7 +338,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                                 width: 8,
                                                 height: 8,
                                                 margin: const EdgeInsets.only(left: 8, top: 4),
-                                                decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                                                decoration: BoxDecoration(color: AppTheme.brandInk(context), shape: BoxShape.circle),
                                               ),
                                           ],
                                         ),
@@ -404,16 +403,15 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChoiceChip(
-      label: Text(label),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: selected ? Theme.of(context).colorScheme.onPrimary : LayoutTokens.primaryText(context),
+        ),
+      ),
       selected: selected,
       onSelected: (_) => onTap(),
-      selectedColor: AppTheme.accent,
-      backgroundColor: LayoutTokens.chipBackground(context),
-      labelStyle: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: selected ? Colors.white : LayoutTokens.primaryText(context),
-      ),
-      side: BorderSide(color: LayoutTokens.borderSubtle(context)),
     );
   }
 }
