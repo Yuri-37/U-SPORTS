@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -134,7 +135,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         showBack: false,
         hero: Column(
           children: [
-            HeroAvatar(imageUrl: institution?.logoUrl, name: schoolName, radius: 34, fit: BoxFit.contain),
+            // The institution's own crest reads clearest bare on the gradient
+            // -- a circular badge behind it just added an extra ring with no
+            // purpose. Only the "no logo yet" fallback needs a shape at all,
+            // so it has something to sit on.
+            (institution?.logoUrl?.trim().isNotEmpty ?? false)
+                ? CachedNetworkImage(imageUrl: institution!.logoUrl!, height: 68, fit: BoxFit.contain)
+                : HeroAvatar(name: schoolName, radius: 34),
             const SizedBox(height: 14),
             Text(schoolName, textAlign: TextAlign.center, style: AppTheme.display(size: 26, color: Colors.white)),
             if (institution?.name != null)
