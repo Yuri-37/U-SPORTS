@@ -134,7 +134,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         showBack: false,
         hero: Column(
           children: [
-            HeroAvatar(imageUrl: institution?.logoUrl, name: schoolName, radius: 34),
+            HeroAvatar(imageUrl: institution?.logoUrl, name: schoolName, radius: 34, fit: BoxFit.contain),
             const SizedBox(height: 14),
             Text(schoolName, textAlign: TextAlign.center, style: AppTheme.display(size: 26, color: Colors.white)),
             if (institution?.name != null)

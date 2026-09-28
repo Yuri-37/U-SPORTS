@@ -263,7 +263,7 @@ export default function GuestHub() {
           <div className="animate-fade-in-up">
             <SectionLabel>Live Sports Platform</SectionLabel>
             <h1 className="font-display text-[2.75rem] sm:text-6xl lg:text-[5.25rem] mt-5 text-[var(--text-primary)]">
-              {institution?.abbreviation ?? 'U-Sports'}{' '}
+              U-
               <span
                 className="bg-clip-text text-transparent"
                 style={{
@@ -271,7 +271,7 @@ export default function GuestHub() {
                     'linear-gradient(to right, var(--school-primary), var(--accent-default))',
                 }}
               >
-                Athletics
+                Sports
               </span>
             </h1>
             <p className="mt-6 text-lg text-[var(--text-secondary)] leading-relaxed max-w-xl">
@@ -711,10 +711,11 @@ const SPORT_TILES = [
 ] as const
 
 /**
- * Hero graphic: a slowly turning dashed ring, two floating cards, a brand
- * corner block and a dot grid. Entirely decorative — it carries no
- * information, which is why the caller marks it aria-hidden and drops it on
- * small screens rather than trying to reflow it.
+ * Hero graphic: a slowly turning dashed ring, an inner ring, a dot grid, the
+ * institution's medallion at the centre, and two floating score cards.
+ * Entirely decorative — it carries no information, which is why the caller
+ * marks it aria-hidden and drops it on small screens rather than trying to
+ * reflow it.
  */
 function HeroGraphic({ logoUrl }: { logoUrl: string | null }) {
   return (
@@ -736,15 +737,6 @@ function HeroGraphic({ logoUrl }: { logoUrl: string | null }) {
       <div
         className="absolute left-[4%] bottom-[8%] h-20 w-20 texture-dots-brand rounded-md"
         style={{ backgroundSize: '16px 16px' }}
-      />
-
-      {/* Brand corner block */}
-      <div
-        className="absolute right-[6%] top-[10%] h-16 w-16 rounded-2xl"
-        style={{
-          background: 'var(--school-primary)',
-          boxShadow: '0 12px 32px rgba(var(--school-primary-rgb), 0.35)',
-        }}
       />
 
       {/* Centre medallion — the institution's own mark, unaltered */}

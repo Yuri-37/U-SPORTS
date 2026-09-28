@@ -136,31 +136,45 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                     }
                     if (sel != null) options = [sel, ...options];
                   }
-                  return Column(
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Find season',
-                          hintText: 'Filter season list…',
-                          prefixIcon: Icon(Icons.search, size: 20),
-                          isDense: true,
+                      Expanded(
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Find season',
+                            hintText: 'Filter…',
+                            isDense: true,
+                          ),
+                          onChanged: (v) => setState(() => _seasonListQuery = v),
                         ),
-                        onChanged: (v) => setState(() => _seasonListQuery = v),
                       ),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        initialValue: effectiveId,
-                        decoration: const InputDecoration(labelText: 'Season'),
-                        borderRadius: BorderRadius.circular(16),
-                        items: options
-                            .map(
-                              (s) => DropdownMenuItem(
-                                value: s['id'] as String,
-                                child: Text(formatSeasonSelectLabel(s)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: seasons.isEmpty ? null : (v) => setState(() => _seasonId = v),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: effectiveId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'Season', isDense: true),
+                          borderRadius: BorderRadius.circular(16),
+                          selectedItemBuilder: (context) => options
+                              .map(
+                                (s) => Text(
+                                  formatSeasonSelectLabel(s),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                              .toList(),
+                          items: options
+                              .map(
+                                (s) => DropdownMenuItem(
+                                  value: s['id'] as String,
+                                  child: Text(formatSeasonSelectLabel(s)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: seasons.isEmpty ? null : (v) => setState(() => _seasonId = v),
+                        ),
                       ),
                     ],
                   );

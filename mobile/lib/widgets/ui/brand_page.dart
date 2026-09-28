@@ -396,15 +396,28 @@ class FrostedStats extends StatelessWidget {
 /// Circular avatar for the hero: the photo if there is one, otherwise the
 /// first initial on a translucent white disc (never navy-on-navy).
 class HeroAvatar extends StatelessWidget {
-  const HeroAvatar({super.key, this.imageUrl, required this.name, this.radius = 36});
+  const HeroAvatar({
+    super.key,
+    this.imageUrl,
+    required this.name,
+    this.radius = 36,
+    this.fit = BoxFit.cover,
+  });
 
   final String? imageUrl;
   final String name;
   final double radius;
 
+  /// [BoxFit.cover] (default) fills and crops the circle — for real photo
+  /// avatars. [BoxFit.contain] instead shows the whole image, sized smaller
+  /// than the circle and centered, so a non-square mark (e.g. an institution
+  /// crest) never gets its corners cut off.
+  final BoxFit fit;
+
   @override
   Widget build(BuildContext context) {
     final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+    final contained = fit == BoxFit.contain;
     return Container(
       width: radius * 2,
       height: radius * 2,
@@ -412,15 +425,19 @@ class HeroAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: Colors.white.withValues(alpha: 0.16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-        image: hasImage ? DecorationImage(image: CachedNetworkImageProvider(imageUrl!), fit: BoxFit.cover) : null,
+        image: hasImage && !contained
+            ? DecorationImage(image: CachedNetworkImageProvider(imageUrl!), fit: BoxFit.cover)
+            : null,
       ),
       alignment: Alignment.center,
-      child: hasImage
-          ? null
-          : Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: AppTheme.display(size: radius * 0.78, color: Colors.white, height: 1),
-            ),
+      child: hasImage && contained
+          ? CachedNetworkImage(imageUrl: imageUrl!, height: radius * 1.4, fit: BoxFit.contain)
+          : (hasImage
+              ? null
+              : Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: AppTheme.display(size: radius * 0.78, color: Colors.white, height: 1),
+                )),
     );
   }
 }
