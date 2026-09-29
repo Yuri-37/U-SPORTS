@@ -20,6 +20,7 @@ import {
   Select,
   Button,
 } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, formatEnumLabel, formatDateTime } from '../../lib/utils'
@@ -774,22 +775,24 @@ export default function AthleteDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome back, {profile?.full_name.split(' ')[0]}!</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
+      <PageHeader
+        title={<>Welcome back, {profile?.full_name.split(' ')[0]}!</>}
+        subtitle={
+          <>
             {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)} ·{' '}
             {positionLine}
-          </p>
-        </div>
-        <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>
-          {athlete.season_status === 'active' ? 'Active' : 'Inactive'}
-        </Badge>
-      </div>
+          </>
+        }
+        actions={
+          <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>
+            {athlete.season_status === 'active' ? 'Active' : 'Inactive'}
+          </Badge>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start gap-6">
         <div>
-          <h2 className="font-bold mb-1 flex items-center gap-2">
+          <h2 className="font-semibold mb-1 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#0066FF]" />
             Upcoming games
           </h2>
@@ -867,7 +870,7 @@ export default function AthleteDashboard() {
 
           <div className="mt-8">
             <div className="flex items-center justify-between gap-2 mb-1">
-              <h2 className="font-bold flex items-center gap-2">
+              <h2 className="font-semibold flex items-center gap-2">
                 <History className="w-4 h-4 text-[#0066FF]" />
                 Match history
               </h2>
@@ -955,7 +958,7 @@ export default function AthleteDashboard() {
         </div>
 
         <div>
-          <h2 className="font-bold mb-1 flex items-center gap-2">
+          <h2 className="font-semibold mb-1 flex items-center gap-2">
             <Users className="w-4 h-4 text-[#0066FF]" />
             My team
           </h2>
@@ -1160,7 +1163,7 @@ export default function AthleteDashboard() {
 
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
-          <h2 className="font-bold flex items-center gap-2">
+          <h2 className="font-semibold flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-[#0066FF]" />
             Season stats
           </h2>
@@ -1848,7 +1851,7 @@ export default function AthleteDashboard() {
 
       {insights.length > 0 && (
         <div>
-          <h2 className="font-bold mb-3 flex items-center gap-2">
+          <h2 className="font-semibold mb-3 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-[#0066FF]" />
             Performance Insights
           </h2>

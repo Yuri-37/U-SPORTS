@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
+import PageHeader from '../../components/layout/PageHeader'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { Stepper } from '../../components/ui/Stepper'
 import { SportCheckboxes } from '../../components/ui/SportCheckboxes'
@@ -295,19 +296,19 @@ export default function SuperAdminSeasons() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Seasons</h1>
-          <p className="text-[var(--text-muted)] text-sm">Manage the sports season lifecycle</p>
-        </div>
-        <Button
-          icon={<Plus className="w-4 h-4" />}
-          onClick={() => setShowCreate(true)}
-          data-tour="seasons-new"
-        >
-          New Season
-        </Button>
-      </div>
+      <PageHeader
+        title="Seasons"
+        subtitle="Manage the sports season lifecycle"
+        actions={
+          <Button
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => setShowCreate(true)}
+            data-tour="seasons-new"
+          >
+            New Season
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">

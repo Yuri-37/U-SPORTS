@@ -1,78 +1,47 @@
 import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  BarChart3,
-  Settings,
-  Megaphone,
-  Trophy,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  User,
-  Globe,
-  Dumbbell,
-  UserCheck,
-  Building2,
-  HelpCircle,
-} from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useInstitutionStore } from '../../stores/institutionStore'
-import { cn } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
+import { cn } from '../../lib/utils'
+import HeaderAccountCluster from './HeaderAccountCluster'
+import {
+  groupNav,
+  navForRole,
+  sectionForPath,
+  sidebarIconClass,
+  sidebarRowClass,
+  type NavItem,
+} from './navConfig'
 
-// Exported (in addition to being used below) purely so tours/index.ts can
-// assert every `nav-*` tour target actually exists in the role's real nav —
-// otherwise editing one of these arrays can silently strand a tour step on
-// its centered fallback with no obvious cause.
-export const superAdminNav = [
-  { to: '/super-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/super-admin/organizers', label: 'Staff', icon: Users },
-  { to: '/super-admin/seasons', label: 'Seasons', icon: Calendar },
-  { to: '/organizer/athletes', label: 'Athletes', icon: UserCheck },
-  { to: '/organizer/events', label: 'Events', icon: Trophy },
-  { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
-  { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/organizer/announcements', label: 'Announcements', icon: Megaphone },
-  { to: '/super-admin/settings', label: 'School Profile', icon: Building2 },
-  { to: '/super-admin/preferences', label: 'Settings', icon: Settings },
-  { to: '/super-admin/audit', label: 'Audit Logs', icon: ClipboardList },
-  { to: '/help', label: 'Help Center', icon: HelpCircle },
-  { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
-]
+function NavRow({
+  item,
+  active,
+  collapsed,
+}: {
+  item: NavItem
+  active: boolean
+  collapsed: boolean
+}) {
+  const Icon = item.icon
+  return (
+    <NavLink
+      to={item.to}
+      end={Boolean(item.exact)}
+      data-tour={`nav-${item.to}`}
+      className={sidebarRowClass(active, collapsed)}
+      title={collapsed ? item.label : undefined}
+    >
+      <Icon className={sidebarIconClass(active)} />
+      {!collapsed && <span className="truncate">{item.label}</span>}
+    </NavLink>
+  )
+}
 
-export const organizerNav = [
-  { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
-  { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
-  { to: '/organizer/athletes', label: 'Athletes', icon: UserCheck },
-  { to: '/organizer/events', label: 'Events', icon: Trophy },
-  { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
-  { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/organizer/announcements', label: 'Announcements', icon: Megaphone },
-  { to: '/organizer/settings', label: 'Settings', icon: Settings },
-  { to: '/help', label: 'Help Center', icon: HelpCircle },
-]
-
-export const coachNav = [
-  { to: '/organizer', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
-  { to: '/organizer/seasons', label: 'Seasons', icon: Calendar },
-  { to: '/organizer/athletes', label: 'Athletes', icon: UserCheck },
-  { to: '/organizer/teams', label: 'Teams', icon: Dumbbell },
-  { to: '/organizer/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/organizer/settings', label: 'Settings', icon: Settings },
-  { to: '/help', label: 'Help Center', icon: HelpCircle },
-]
-
-const athleteNav = [
-  { to: '/athlete', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/athlete/profile', label: 'My Profile', icon: User },
-  { to: '/athlete/settings', label: 'Settings', icon: Settings, exact: true },
-  { to: '/guest', label: 'Browse hub', icon: Globe, exact: false },
-]
+function Divider() {
+  return <div className="mx-1 my-3 h-px bg-[var(--border-subtle)]" />
+}
 
 export default function Sidebar() {
   const { profile, session } = useAuthStore()
@@ -81,97 +50,71 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
 
-  const navItems =
-    scopedProfile?.role === 'Admin'
-      ? superAdminNav
-      : scopedProfile?.role === 'Organizer'
-        ? organizerNav
-        : scopedProfile?.role === 'Coach'
-          ? coachNav
-          : athleteNav
+  const role = scopedProfile?.role
+  const { primary, secondary, help } = groupNav(navForRole(role))
+  const activeTo = sectionForPath(location.pathname, role)?.to
+  const row = (item: NavItem) => (
+    <NavRow key={item.to} item={item} active={item.to === activeTo} collapsed={collapsed} />
+  )
 
   return (
     <aside
       className={cn(
-        'h-screen sticky top-0 flex flex-col bg-[var(--surface-card)] border-r border-[var(--border-subtle)] transition-all duration-200 z-20',
-        collapsed ? 'w-16' : 'w-56',
+        'relative z-40 flex h-full shrink-0 flex-col transition-[width] duration-200',
+        collapsed ? 'w-[72px]' : 'w-[220px]',
       )}
     >
-      {/* Brand header */}
+      {/* Brand */}
       <div
-        className="h-14 flex items-center px-4 gap-3 border-b border-[var(--border-subtle)]"
-        style={{ backgroundColor: 'var(--school-primary)' }}
+        className={cn('flex items-center gap-2.5 pb-4 pt-5', collapsed ? 'flex-col px-2' : 'px-5')}
       >
         {institution?.logo_url ? (
-          <div className="flex h-9 max-h-9 items-center justify-center shrink-0 overflow-visible">
-            <img
-              src={institution.logo_url}
-              alt="Logo"
-              className="max-h-9 w-auto max-w-[min(100%,8rem)] object-contain object-center flex-shrink-0"
-            />
-          </div>
+          <img
+            src={institution.logo_url}
+            alt="Logo"
+            className="h-8 w-auto max-w-[5rem] shrink-0 object-contain"
+          />
         ) : (
-          <div className="w-7 h-7 rounded-full bg-[var(--school-secondary)] flex items-center justify-center text-xs font-bold text-[var(--school-primary)] flex-shrink-0">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--school-primary)] text-xs font-bold text-[var(--school-secondary)]">
             {institution?.abbreviation?.slice(0, 2) ?? 'US'}
           </div>
         )}
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-white/60 font-bold text-[9px] uppercase tracking-[0.15em] leading-none mb-0.5">
-              U-Sports
-            </p>
-            <p className="text-[var(--school-secondary)] font-bold text-sm truncate font-[Barlow_Condensed] leading-tight">
-              {institution?.abbreviation ?? 'U-Sports'}
-            </p>
-            <p className="text-[var(--school-secondary)]/60 text-[10px] truncate">
-              {institution?.tagline}
-            </p>
-          </div>
+          <span className="min-w-0 flex-1 truncate text-[17px] font-bold tracking-[-0.02em] text-[var(--text-primary)]">
+            U-Sports
+          </span>
         )}
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-muted)] shadow-[var(--shadow-raised)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="h-3.5 w-3.5" />
+          ) : (
+            <PanelLeftClose className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = item.exact
-            ? location.pathname === item.to
-            : location.pathname.startsWith(item.to)
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={Boolean(item.exact)}
-              data-tour={`nav-${item.to}`}
-              className={cn(
-                'flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-0.5',
-                isActive
-                  ? 'bg-[#0066FF]/15 text-[var(--accent-default)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]',
-              )}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {!collapsed && item.label}
-            </NavLink>
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 pb-2">
+        <div className="space-y-0.5">{primary.map(row)}</div>
+        {secondary.length > 0 && (
+          <>
+            <Divider />
+            <div className="space-y-0.5">{secondary.map(row)}</div>
+          </>
+        )}
       </nav>
 
-      {/* Platform wordmark — persistent brand mark distinct from the school's own branding above */}
-      {!collapsed && (
-        <p className="text-center text-[9px] font-bold uppercase tracking-[0.15em] text-[var(--accent-default)] py-2 border-t border-[var(--border-subtle)]">
-          U-Sports
-        </p>
-      )}
-
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+      {/* Bottom: help, notifications, account */}
+      <div className="space-y-0.5 px-3 pb-4 pt-2">
+        {help && row(help)}
+        <HeaderAccountCluster placement="sidebar" collapsed={collapsed} activeTo={activeTo} />
+      </div>
     </aside>
   )
 }

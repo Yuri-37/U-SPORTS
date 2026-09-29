@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Bell, Check, Trash2, X } from 'lucide-react'
-import { Button, Card, EmptyState, Alert, Modal } from '../../components/ui'
+import { Button, Card, EmptyState, Alert, Modal, TabBar } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { useNotificationStore } from '../../stores/notificationStore'
 import { useAuthStore } from '../../stores/authStore'
 import { formatDateTime } from '../../lib/utils'
@@ -47,56 +48,46 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-[var(--text-muted)] text-sm">{unread.length} unread</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {unread.length > 0 && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<Check className="w-3.5 h-3.5" />}
-              onClick={() => profile && markAllRead(profile.id)}
-            >
-              Mark all read
-            </Button>
-          )}
-          {notifications.length > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<Trash2 className="w-3.5 h-3.5" />}
-              onClick={() => setConfirmClearAll(true)}
-            >
-              Clear all
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        icon={Bell}
+        title="Notifications"
+        subtitle={`${unread.length} unread`}
+        actions={
+          <>
+            {unread.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Check className="w-3.5 h-3.5" />}
+                onClick={() => profile && markAllRead(profile.id)}
+              >
+                Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+                onClick={() => setConfirmClearAll(true)}
+              >
+                Clear all
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className="flex gap-2">
-        {(
-          [
-            ['all', 'All'],
-            ['unread', 'Unread'],
-            ['recent', 'Recent'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setFilter(id)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              filter === id
-                ? 'bg-[#0066FF] border-transparent text-white'
-                : 'bg-[var(--surface-elevated)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        className="w-fit max-w-full"
+        tabs={[
+          { id: 'all', label: 'All' },
+          { id: 'unread', label: 'Unread' },
+          { id: 'recent', label: 'Recent' },
+        ]}
+        active={filter}
+        onChange={(id) => setFilter(id as typeof filter)}
+      />
 
       {notifications.length === 0 ? (
         <EmptyState

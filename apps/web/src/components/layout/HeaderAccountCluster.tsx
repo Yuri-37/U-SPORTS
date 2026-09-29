@@ -3,11 +3,12 @@ import { Bell, LogOut, Settings, ChevronDown, UserCircle } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useNotificationStore } from '../../stores/notificationStore'
-import { getInitials, formatDateTime } from '../../lib/utils'
+import { cn, getInitials, formatDateTime } from '../../lib/utils'
 import { Badge, Button, Modal, Alert } from '../ui'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import type { Notification } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { sidebarIconClass, sidebarRowClass } from './navConfig'
 
 function settingsPathForRole(role: string | undefined): string {
   if (role === 'Admin') return '/super-admin/preferences'
@@ -29,10 +30,25 @@ type Props = {
    * `guest` — guest hub shell has no sidebar; menu includes Profile + Settings + Sign out.
    */
   navVariant?: HeaderAccountClusterNavVariant
+  /**
+   * `header` — bell + avatar side by side, menus drop down from the top-right (guest shell).
+   * `sidebar` — a Notifications row and the account row at the foot of the app
+   * sidebar, menus opening to the right of it.
+   */
+  placement?: 'header' | 'sidebar'
+  /** Sidebar placement only: icon-only rows. */
+  collapsed?: boolean
+  /** Sidebar placement only: the current section's route, to mark the inbox row active. */
+  activeTo?: string
 }
 
-/** Notification bell + account menu (shared by App TopNav and guest shell for students). */
-export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
+/** Notification bell + account menu (shared by the app sidebar and the guest shell). */
+export default function HeaderAccountCluster({
+  navVariant = 'app',
+  placement = 'header',
+  collapsed = false,
+  activeTo,
+}: Props) {
   const { profile, session, signOut } = useAuthStore()
   const scopedProfile = sessionScopedProfile(session, profile)
   const avatarUrl = scopedProfile?.avatar_url ?? null
@@ -134,189 +150,168 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
 
   if (!scopedProfile || !uid) return null
 
-  return (
-    <>
-      <div className="flex items-center gap-3">
-        <div
-          className="relative flex items-center gap-2 shrink-0"
-          ref={usesNotificationPopover ? bellWrapRef : undefined}
-        >
-          <button
-            type="button"
-            onClick={openInboxPopover}
-            className="relative p-2 rounded-lg hover:bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-            aria-expanded={usesNotificationPopover ? notifOpen : undefined}
-            aria-haspopup={usesNotificationPopover ? 'dialog' : undefined}
-          >
-            <Bell className="w-4 h-4" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-4 h-4 px-0.5 bg-[#FF3355] text-white text-[10px] font-bold rounded-full flex items-center justify-center tabular-nums">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
+  const unreadLabel = unreadCount > 99 ? '99+' : unreadCount
 
-          {usesNotificationPopover && notifOpen && (
-            <div className="absolute right-0 top-full mt-1 w-80 max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-2xl z-50 overflow-hidden">
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold truncate">Notifications</span>
-                  {unreadCount > 0 && (
-                    <Badge variant="danger" size="sm">
-                      {unreadCount} new
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {unreadCount > 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 px-2"
-                      onClick={() => void markAllRead(uid)}
-                    >
-                      Read all
-                    </Button>
-                  )}
-                  {notifications.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 px-2 text-[#FF3355]"
-                      onClick={() => setClearAllOpen(true)}
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                {notifications.length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)] text-center py-8 px-2">
-                    No notifications yet.
-                  </p>
-                ) : (
-                  notifications.map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => {
-                        setNotifDeleteConfirm(false)
-                        setDetailNotif(n)
-                        if (!n.read) void markRead(n.id)
-                      }}
-                      className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
-                        !n.read
-                          ? 'border-[#0066FF]/30 bg-[#0066FF]/5'
-                          : 'border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)]'
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {!n.read && (
-                          <span className="w-2 h-2 rounded-full bg-[#0066FF] mt-1 shrink-0" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold truncate">{n.title}</p>
-                          <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2">
-                            {previewBody(n.body)}
-                          </p>
-                          <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                            {formatDateTime(n.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
+  // Uploaded photo when there is one, initials otherwise. `onError` falls
+  // back to initials if the stored URL 404s, so a deleted storage object
+  // can't leave an empty circle.
+  const avatar =
+    avatarUrl && failedAvatarUrl !== avatarUrl ? (
+      <img
+        src={avatarUrl}
+        alt=""
+        onError={() => setFailedAvatarUrl(avatarUrl)}
+        className="w-7 h-7 rounded-full object-cover shrink-0"
+      />
+    ) : (
+      <div className="w-7 h-7 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xs font-bold text-[var(--school-secondary)] shrink-0">
+        {getInitials(scopedProfile.full_name)}
+      </div>
+    )
+
+  const inboxPopover = (position: string) =>
+    usesNotificationPopover && notifOpen ? (
+      <div
+        className={cn(
+          'absolute w-80 max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-2xl z-50 overflow-hidden',
+          position,
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold truncate">Notifications</span>
+            {unreadCount > 0 && (
+              <Badge variant="danger" size="sm">
+                {unreadCount} new
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {unreadCount > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs h-7 px-2"
+                onClick={() => void markAllRead(uid)}
+              >
+                Read all
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs h-7 px-2 text-[#FF3355]"
+                onClick={() => setClearAllOpen(true)}
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 p-2 space-y-1">
+          {notifications.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8 px-2">
+              No notifications yet.
+            </p>
+          ) : (
+            notifications.map((n) => (
               <button
+                key={n.id}
                 type="button"
                 onClick={() => {
-                  setNotifOpen(false)
-                  navigate(notificationsRoute)
+                  setNotifDeleteConfirm(false)
+                  setDetailNotif(n)
+                  if (!n.read) void markRead(n.id)
                 }}
-                className="w-full text-center text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] py-2 border-t border-[var(--border-subtle)] shrink-0 transition-colors"
+                className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
+                  !n.read
+                    ? 'border-[#0066FF]/30 bg-[#0066FF]/5'
+                    : 'border-[var(--border-subtle)] hover:bg-[var(--surface-elevated)]'
+                }`}
               >
-                View all
+                <div className="flex items-start gap-2">
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-[#0066FF] mt-1 shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{n.title}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2">
+                      {previewBody(n.body)}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                      {formatDateTime(n.created_at)}
+                    </p>
+                  </div>
+                </div>
               </button>
-            </div>
+            ))
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setNotifOpen(false)
+            navigate(notificationsRoute)
+          }}
+          className="w-full text-center text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] py-2 border-t border-[var(--border-subtle)] shrink-0 transition-colors"
+        >
+          View all
+        </button>
+      </div>
+    ) : null
 
-        <div className="relative shrink-0">
+  const accountMenu = (position: string) =>
+    menuOpen ? (
+      <div
+        className={cn(
+          'absolute w-48 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-xl shadow-2xl py-1 z-50',
+          position,
+        )}
+      >
+        <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
+          <p className="text-sm font-medium">{scopedProfile.full_name}</p>
+          <p className="text-xs text-[var(--text-muted)] capitalize">
+            {scopedProfile.role.replace('_', ' ')}
+          </p>
+        </div>
+        {navVariant === 'guest' && profilePathForRole(scopedProfile.role) ? (
           <button
             type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[var(--surface-elevated)] transition-colors"
+            onClick={() => {
+              setMenuOpen(false)
+              navigate(profilePathForRole(scopedProfile.role)!)
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
           >
-            {/* Uploaded photo when there is one, initials otherwise. `onError`
-                falls back to initials if the stored URL 404s, so a deleted
-                storage object can't leave an empty circle. */}
-            {avatarUrl && failedAvatarUrl !== avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=""
-                onError={() => setFailedAvatarUrl(avatarUrl)}
-                className="w-7 h-7 rounded-full object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xs font-bold text-[var(--school-secondary)] shrink-0">
-                {getInitials(scopedProfile.full_name)}
-              </div>
-            )}
-            <span className="text-sm text-[var(--text-secondary)] hidden sm:block">
-              {scopedProfile.full_name.split(' ')[0]}
-            </span>
-            <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
+            <UserCircle className="w-4 h-4" />
+            Profile
           </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-xl shadow-2xl py-1 z-50">
-              <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
-                <p className="text-sm font-medium">{scopedProfile.full_name}</p>
-                <p className="text-xs text-[var(--text-muted)] capitalize">
-                  {scopedProfile.role.replace('_', ' ')}
-                </p>
-              </div>
-              {navVariant === 'guest' && profilePathForRole(scopedProfile.role) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    navigate(profilePathForRole(scopedProfile.role)!)
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
-                >
-                  <UserCircle className="w-4 h-4" />
-                  Profile
-                </button>
-              ) : null}
-              {navVariant === 'guest' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    navigate(settingsPathForRole(scopedProfile.role))
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#FF3355] hover:bg-[#FF3355]/10 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </button>
-            </div>
-          )}
-        </div>
+        ) : null}
+        {navVariant === 'guest' ? (
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false)
+              navigate(settingsPathForRole(scopedProfile.role))
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#FF3355] hover:bg-[#FF3355]/10 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </button>
       </div>
+    ) : null
 
+  const modals = (
+    <>
       <Modal
         open={!!detailNotif}
         onClose={() => {
@@ -408,6 +403,109 @@ export default function HeaderAccountCluster({ navVariant = 'app' }: Props) {
           </div>
         )}
       </Modal>
+    </>
+  )
+
+  if (placement === 'sidebar') {
+    const inboxActive = activeTo === notificationsRoute
+    return (
+      <>
+        <div className="relative" ref={usesNotificationPopover ? bellWrapRef : undefined}>
+          <button
+            type="button"
+            onClick={openInboxPopover}
+            className={sidebarRowClass(inboxActive, collapsed)}
+            aria-expanded={usesNotificationPopover ? notifOpen : undefined}
+            aria-haspopup={usesNotificationPopover ? 'dialog' : undefined}
+            title={collapsed ? 'Notifications' : undefined}
+          >
+            <Bell className={sidebarIconClass(inboxActive)} />
+            {!collapsed && <span className="flex-1 truncate text-left">Notifications</span>}
+            {unreadCount > 0 && (
+              <span
+                className={cn(
+                  'grid place-items-center rounded-full bg-[#FF3355] font-semibold text-white tabular-nums',
+                  collapsed
+                    ? 'absolute right-2 top-0.5 h-4 min-w-4 px-1 text-[10px]'
+                    : 'h-5 min-w-5 px-1.5 text-[11px]',
+                )}
+              >
+                {unreadLabel}
+              </span>
+            )}
+          </button>
+          {inboxPopover('bottom-0 left-full ml-3')}
+        </div>
+
+        <div className="mx-1 my-3 h-px bg-[var(--border-subtle)]" />
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            title={collapsed ? scopedProfile.full_name : undefined}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-[10px] py-1.5 text-left transition-colors hover:bg-[var(--shell-hover)]',
+              collapsed ? 'justify-center px-0' : 'px-2',
+            )}
+          >
+            {avatar}
+            {!collapsed && (
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-primary)]">
+                {scopedProfile.full_name}
+              </span>
+            )}
+          </button>
+          {accountMenu('bottom-0 left-full ml-3')}
+        </div>
+
+        {modals}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-3">
+        <div
+          className="relative flex items-center gap-2 shrink-0"
+          ref={usesNotificationPopover ? bellWrapRef : undefined}
+        >
+          <button
+            type="button"
+            onClick={openInboxPopover}
+            className="relative p-2 rounded-lg hover:bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            aria-expanded={usesNotificationPopover ? notifOpen : undefined}
+            aria-haspopup={usesNotificationPopover ? 'dialog' : undefined}
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-0.5 bg-[#FF3355] text-white text-[10px] font-bold rounded-full flex items-center justify-center tabular-nums">
+                {unreadLabel}
+              </span>
+            )}
+          </button>
+          {inboxPopover('right-0 top-full mt-1')}
+        </div>
+
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[var(--surface-elevated)] transition-colors"
+          >
+            {avatar}
+            <span className="text-sm text-[var(--text-secondary)] hidden sm:block">
+              {scopedProfile.full_name.split(' ')[0]}
+            </span>
+            <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
+          </button>
+          {accountMenu('right-0 top-full mt-1')}
+        </div>
+      </div>
+
+      {modals}
     </>
   )
 }

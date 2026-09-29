@@ -1,6 +1,7 @@
 import React from 'react'
-import { Compass, HelpCircle, RotateCcw } from 'lucide-react'
+import { Compass, RotateCcw } from 'lucide-react'
 import { Card } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { useTourStore } from '../../stores/tourStore'
@@ -24,18 +25,13 @@ export default function HelpCenter() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <HelpCircle className="w-6 h-6 text-[var(--accent-default)]" aria-hidden />
-          Help Center
-        </h1>
-        <p className="text-[var(--text-muted)] text-sm mt-1">
-          Guided tours and a quick reference for your role.
-        </p>
-      </div>
+      <PageHeader
+        title="Help Center"
+        subtitle="Guided tours and a quick reference for your role."
+      />
 
       <Card>
-        <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
+        <h2 className="text-base font-semibold mb-1 flex items-center gap-2">
           <Compass className="w-4 h-4 text-[var(--accent-default)]" aria-hidden />
           Guided tours
         </h2>
@@ -70,7 +66,7 @@ export default function HelpCenter() {
       </Card>
 
       <Card>
-        <h2 className="font-bold text-lg mb-1">Quick reference</h2>
+        <h2 className="text-base font-semibold mb-1">Quick reference</h2>
         <p className="text-sm text-[var(--text-muted)] mb-4">
           The limits and rules that come up most often.
         </p>

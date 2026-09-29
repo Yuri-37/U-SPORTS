@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, ArrowLeft, Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
+import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import {
   Button,
   Card,
@@ -105,33 +106,26 @@ export default function OrganizerEvents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/organizer')}
-          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
-          aria-label="Back to dashboard"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Events</h1>
-            <p className="text-[var(--text-muted)] text-sm">
-              {loading
-                ? 'Loading events…'
-                : filtered.length === events.length
-                  ? `${events.length} total events`
-                  : `${filtered.length} of ${events.length} events`}
-              {!hasFullSportAccess && assignedSports.length > 0 ? (
-                <span className="block mt-1 text-xs">
-                  You can edit events for{' '}
-                  {assignedSports.map((s) => getSportLabel(s as any)).join(', ')} only. Other sports
-                  are view-only.
-                </span>
-              ) : null}
-            </p>
-          </div>
+      <PageHeader
+        back={<BackButton onClick={() => navigate('/organizer')} label="Back to dashboard" />}
+        title="Events"
+        subtitle={
+          <>
+            {loading
+              ? 'Loading events…'
+              : filtered.length === events.length
+                ? `${events.length} total events`
+                : `${filtered.length} of ${events.length} events`}
+            {!hasFullSportAccess && assignedSports.length > 0 ? (
+              <span className="block mt-1 text-xs">
+                You can edit events for{' '}
+                {assignedSports.map((s) => getSportLabel(s as any)).join(', ')} only. Other sports
+                are view-only.
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
           <Button
             icon={<Plus className="w-4 h-4" />}
             onClick={() => setShowCreate(true)}
@@ -140,10 +134,11 @@ export default function OrganizerEvents() {
           >
             New Event
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <TabBar
+        className="w-fit max-w-full"
         tabs={[
           { id: 'active', label: 'Active' },
           { id: 'completed', label: 'Completed' },

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Keyboard, Shield } from 'lucide-react'
 import { Card } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
@@ -14,12 +15,7 @@ export default function SuperAdminPreferences() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-[var(--text-muted)] text-sm">
-          Personal preferences — dark mode is in the header.
-        </p>
-      </div>
+      <PageHeader title="Settings" subtitle="Personal preferences — dark mode is in the header." />
 
       <Card className="p-6">
         <AvatarUpload size="md" fallbackInitials={getInitials(profile?.full_name ?? 'A')}>

@@ -64,10 +64,28 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/*
+  Public-site headings. The signed-in app (.app-shell) is excluded: it uses
+  Inter, and because this rule is unlayered it would otherwise beat every
+  Tailwind utility (which are layered) on every heading -- no page could set
+  its own heading weight or tracking.
+*/
+:where(h1, h2, h3, h4, h5, h6):not(.app-shell *) {
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+/* Signed-in app type. Set on the AppLayout root, so modals rendered inside it inherit too. */
+.app-shell {
+  font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+}
+@layer base {
+  /* Layered on purpose, so a page's own `font-bold` / `tracking-*` still wins. */
+  .app-shell :where(h1, h2, h3, h4, h5, h6) {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
 }
 
 code, pre, .mono {
@@ -216,6 +234,72 @@ code, pre, .mono {
   --warning-ink: #ffb800;
   --info-ink: #4c9fff;
   --success-ink: #22c55e;
+}
+
+/*
+  Signed-in app shell: the page (--bg-primary) holds one rounded frame, the
+  sidebar sits directly on the frame surface, and the content is a white panel
+  inside it. Neutral values only -- brand color stays in the accents.
+*/
+:root {
+  --shell-frame: #f8fafc;
+  --shell-hover: rgba(15, 23, 42, 0.045);
+  --shadow-frame: 0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 40px -16px rgba(15, 23, 42, 0.12);
+  /* A control that sits slightly proud of its surface: active nav item, segmented chip, outlined button. */
+  --shadow-raised: 0 1px 2px rgba(15, 23, 42, 0.07), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-primary-btn: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(var(--school-primary-rgb), 0.3), 0 6px 14px -4px rgba(var(--school-primary-rgb), 0.45);
+}
+
+[data-theme='dark'] {
+  --shell-frame: #101017;
+  --shell-hover: rgba(255, 255, 255, 0.05);
+  --shadow-frame: 0 1px 2px rgba(0, 0, 0, 0.6), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.55);
+  --shadow-primary-btn: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 14px -4px rgba(0, 0, 0, 0.6);
+}
+
+/*
+  Hand-written <table>s that should read like the kit's <Table>: a rounded
+  light header band, open rows split by hairlines. Layered as components so a
+  cell's own utility (text-center, sticky, a highlight bg) still wins.
+*/
+@layer components {
+  .data-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .data-table thead th {
+    height: 2.5rem;
+    background: var(--surface-elevated);
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: nowrap;
+  }
+  .data-table thead th:first-child {
+    border-left: 1px solid var(--border-subtle);
+    border-radius: 10px 0 0 10px;
+  }
+  .data-table thead th:last-child {
+    border-right: 1px solid var(--border-subtle);
+    border-radius: 0 10px 10px 0;
+  }
+  .data-table tbody td {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+}
+
+/* Quieter scrollbars inside the white content panel. */
+.app-shell ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-shell ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
 }
 
 /* Display face -- hero and public section headings only, never dashboard UI. */

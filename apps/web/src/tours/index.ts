@@ -2,7 +2,7 @@ import type { TourDefinition, TourId, StaffRole } from './types'
 import { adminTour } from './adminTour'
 import { organizerTour } from './organizerTour'
 import { coachTour } from './coachTour'
-import { superAdminNav, organizerNav, coachNav } from '../components/layout/Sidebar'
+import { superAdminNav, organizerNav, coachNav } from '../components/layout/navConfig'
 import { navAnchor } from './anchors'
 
 export const TOURS: Record<TourId, TourDefinition> = {

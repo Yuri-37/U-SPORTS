@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, ToggleLeft, ToggleRight, Mail, Lock, Pencil, Copy, Check } from 'lucide-react'
+import PageHeader from '../../components/layout/PageHeader'
 import {
   Button,
   Modal,
@@ -481,24 +482,21 @@ export default function SuperAdminOrganizers() {
       )}
 
       {/* Super Admins */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Super Admins</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
-            Full platform access. Add another admin so more than one person can manage the
-            deployment.
-          </p>
-        </div>
-        <Button
-          icon={<Plus className="w-4 h-4" />}
-          onClick={() => {
-            setAddAdminError('')
-            setShowAddAdmin(true)
-          }}
-        >
-          Add Super Admin
-        </Button>
-      </div>
+      <PageHeader
+        title="Super Admins"
+        subtitle="Full platform access. Add another admin so more than one person can manage the deployment."
+        actions={
+          <Button
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => {
+              setAddAdminError('')
+              setShowAddAdmin(true)
+            }}
+          >
+            Add Super Admin
+          </Button>
+        }
+      />
 
       {adminsLoading ? (
         <Skeleton className="h-16" />
@@ -526,9 +524,9 @@ export default function SuperAdminOrganizers() {
       )}
 
       {/* Staff (organizers / coaches) */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between gap-4 pt-4">
         <div>
-          <h2 className="text-xl font-bold">Staff</h2>
+          <h2 className="text-lg font-semibold">Staff</h2>
           <p className="text-[var(--text-muted)] text-sm mt-1">
             Manage organizers and coaches with their sport and department assignments
           </p>

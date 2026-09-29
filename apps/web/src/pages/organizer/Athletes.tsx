@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check, UserPlus } from 'lucide-react'
-import { Button, Table, Badge, Modal, Alert, Input, Select } from '../../components/ui'
+import { Button, Table, Badge, Modal, Alert, Input, Select, TabBar } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
-import { getSportLabel, getSportIcon, cn } from '../../lib/utils'
+import { getSportLabel, getSportIcon } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import { studentEmailZ } from '../../lib/validation/forms'
@@ -564,58 +565,58 @@ export default function OrganizerAthletes() {
   ]
 
   return (
-    <div className={cn('space-y-6', selectedIds.size > 0 && 'pb-24')}>
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Athletes</h1>
-          <p className="text-[var(--text-muted)] text-sm">
-            {filteredAthletes.length !== athletes.length
-              ? `${filteredAthletes.length} of ${athletes.length} athletes · ${seasonFilter}`
-              : `${athletes.length} ${seasonFilter} athletes`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            icon={<UserPlus className="w-4 h-4" />}
-            onClick={() => {
-              resetAddAthleteForm()
-              setShowAddAthlete(true)
-            }}
-            data-tour="athletes-add"
-          >
-            Add athlete
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Upload className="w-4 h-4" />}
-            onClick={() => {
-              setImportResult(null)
-              setImportFile(null)
-              setShowImport(true)
-            }}
-            data-tour="athletes-import"
-          >
-            Import roster
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Download className="w-4 h-4" />}
-            onClick={handleExport}
-          >
-            Export CSV
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={<RefreshCw className="w-4 h-4" />}
-            onClick={fetchAthletes}
-            aria-label="Refresh"
-          />
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Athletes"
+        subtitle={
+          filteredAthletes.length !== athletes.length
+            ? `${filteredAthletes.length} of ${athletes.length} athletes · ${seasonFilter}`
+            : `${athletes.length} ${seasonFilter} athletes`
+        }
+        actions={
+          <>
+            <Button
+              size="sm"
+              icon={<UserPlus className="w-4 h-4" />}
+              onClick={() => {
+                resetAddAthleteForm()
+                setShowAddAthlete(true)
+              }}
+              data-tour="athletes-add"
+            >
+              Add athlete
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Upload className="w-4 h-4" />}
+              onClick={() => {
+                setImportResult(null)
+                setImportFile(null)
+                setShowImport(true)
+              }}
+              data-tour="athletes-import"
+            >
+              Import roster
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Download className="w-4 h-4" />}
+              onClick={handleExport}
+            >
+              Export CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<RefreshCw className="w-4 h-4" />}
+              onClick={fetchAthletes}
+              aria-label="Refresh"
+            />
+          </>
+        }
+      />
 
       {loadMessage && (
         <Alert type="danger" onDismiss={() => setLoadMessage('')}>
@@ -624,23 +625,15 @@ export default function OrganizerAthletes() {
       )}
 
       {/* Active / Inactive segmented filter */}
-      <div className="flex gap-1 p-1 rounded-lg bg-[var(--surface-elevated)] w-fit">
-        {(['active', 'inactive'] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSeasonFilter(s)}
-            className={cn(
-              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize',
-              seasonFilter === s
-                ? 'bg-[var(--surface-card)] text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-            )}
-          >
-            {s === 'active' ? 'Activated' : 'Deactivated'}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        className="w-fit max-w-full"
+        tabs={[
+          { id: 'active', label: 'Activated' },
+          { id: 'inactive', label: 'Deactivated' },
+        ]}
+        active={seasonFilter}
+        onChange={(id) => setSeasonFilter(id as 'active' | 'inactive')}
+      />
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1 min-w-0">
@@ -698,12 +691,12 @@ export default function OrganizerAthletes() {
             </div>
           ),
           sport: (
-            <span>
+            <span className="whitespace-nowrap">
               {getSportIcon(a.sport as any)} {getSportLabel(a.sport as any)}
             </span>
           ),
-          student_id: <code className="text-xs">{a.student_id}</code>,
-          year: <span className="text-sm">{a.year_level}</span>,
+          student_id: <code className="text-xs whitespace-nowrap">{a.student_id}</code>,
+          year: <span className="text-sm whitespace-nowrap">{a.year_level}</span>,
           department: <span className="text-sm">{a.department}</span>,
           status: (
             <Badge variant={a.season_status === 'active' ? 'success' : 'default'} size="sm">
@@ -761,7 +754,9 @@ export default function OrganizerAthletes() {
       />
 
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-40 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]">
+        // Sticks to the bottom of the content panel's scroll area rather than the
+        // viewport, so it floats inside the panel instead of covering the sidebar.
+        <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 py-3 shadow-[var(--shadow-frame)]">
           <p className="text-sm font-medium tabular-nums text-[var(--text-secondary)]">
             {selectedIds.size} selected
           </p>

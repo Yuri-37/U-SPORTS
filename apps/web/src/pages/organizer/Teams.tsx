@@ -28,6 +28,7 @@ import {
   Badge,
   Table,
 } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 
 import axios from 'axios'
 
@@ -1258,54 +1259,54 @@ export default function OrganizerTeams() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Teams</h1>
-
-          <p className="text-[var(--text-muted)] text-sm">
+      <PageHeader
+        title="Teams"
+        subtitle={
+          <>
             {teams.length} teams
             {filteredTeams.length !== teams.length ? <> · Showing {filteredTeams.length}</> : null}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Upload className="w-4 h-4" />}
+              disabled={!canCreateTeams}
+              onClick={() => {
+                resetTeamImportState()
+                setTeamImportSeasonId(seasons.find((s) => s.status === 'active')?.id ?? seasons[0]?.id ?? '')
+                setShowTeamImport(true)
+              }}
+            >
+              Import teams
+            </Button>
+
+            <Button
+              icon={<Plus className="w-4 h-4" />}
+
+              disabled={!canCreateTeams}
+
+              onClick={() => {
+                setError('')
+
+                setShowCreate(true)
+              }}
+              data-tour="teams-create-header"
+            >
+              New Team
+            </Button>
+          </>
+        }
+      >
+        {!hasFullSportAccess && assignedSports.length > 0 ? (
+          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xl">
+            You can edit teams for {assignedSports.map((s) => getSportLabel(s as any)).join(', ')}{' '}
+            only. Other sports are view-only.
           </p>
-
-          {!hasFullSportAccess && assignedSports.length > 0 ? (
-            <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xl">
-              You can edit teams for {assignedSports.map((s) => getSportLabel(s as any)).join(', ')}{' '}
-              only. Other sports are view-only.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Upload className="w-4 h-4" />}
-            disabled={!canCreateTeams}
-            onClick={() => {
-              resetTeamImportState()
-              setTeamImportSeasonId(seasons.find((s) => s.status === 'active')?.id ?? seasons[0]?.id ?? '')
-              setShowTeamImport(true)
-            }}
-          >
-            Import teams
-          </Button>
-
-          <Button
-            icon={<Plus className="w-4 h-4" />}
-
-            disabled={!canCreateTeams}
-
-            onClick={() => {
-              setError('')
-
-              setShowCreate(true)
-            }}
-            data-tour="teams-create-header"
-          >
-            New Team
-          </Button>
-        </div>
-      </div>
+        ) : null}
+      </PageHeader>
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

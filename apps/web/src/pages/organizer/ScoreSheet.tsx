@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { ArrowLeft, Download, FileText } from 'lucide-react'
+import { Download, FileText } from 'lucide-react'
+import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Skeleton } from '../../components/ui'
 import api from '../../lib/api'
 import { formatEnumLabel, formatDateTime } from '../../lib/utils'
@@ -143,31 +144,28 @@ export default function ScoreSheet() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Match Score Sheet</h1>
-          <p className="text-[var(--text-muted)] text-xs">
+      <PageHeader
+        back={<BackButton onClick={() => navigate(-1)} />}
+        title="Match Score Sheet"
+        subtitle={
+          <>
             {nameA} vs {nameB}
-          </p>
-        </div>
-        <div className="flex-1" />
-        <Badge variant="success">Finalized</Badge>
-        <Button
-          size="sm"
-          icon={<Download className="w-3 h-3" />}
-          loading={downloadingPdf}
-          onClick={handleDownloadPdf}
-        >
-          Download PDF
-        </Button>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <Badge variant="success">Finalized</Badge>
+            <Button
+              size="sm"
+              icon={<Download className="w-3 h-3" />}
+              loading={downloadingPdf}
+              onClick={handleDownloadPdf}
+            >
+              Download PDF
+            </Button>
+          </>
+        }
+      />
 
       {error && (
         <Alert type="danger" onDismiss={() => setError('')}>

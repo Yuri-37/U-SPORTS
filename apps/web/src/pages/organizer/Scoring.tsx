@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { Play, Square, Tv2, AlertTriangle, ArrowLeft, Timer, Shuffle, Lock } from 'lucide-react'
+import { Play, Square, Tv2, AlertTriangle, Timer, Shuffle, Lock } from 'lucide-react'
+import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Modal, Select } from '../../components/ui'
 import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
@@ -900,44 +901,40 @@ export default function OrganizerScoring() {
     // single column with the log at the end.
     <div className="max-w-4xl xl:max-w-7xl mx-auto flex flex-col xl:flex-row xl:items-start gap-4">
       <div className="space-y-4 flex-1 min-w-0">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Live Scoring</h1>
-          <p className="text-[var(--text-muted)] text-xs truncate">
+      <PageHeader
+        back={<BackButton onClick={() => navigate(-1)} />}
+        title="Live Scoring"
+        subtitle={
+          <span className="block truncate">
             {nameA} vs {nameB}
-          </p>
-        </div>
-        <div className="flex-1" />
-        {isLive && (
-          <MatchPresenceAvatars
-            online={online}
-            scoringLockHolderId={match?.scoring_locked_by ?? null}
-            clockLockHolderId={match?.clock_locked_by ?? null}
-          />
-        )}
-        {isLive && (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-live" />
-            <Badge variant="danger">LIVE</Badge>
-          </div>
-        )}
-        <Button
-          size="sm"
-          variant="secondary"
-          icon={<Tv2 className="w-3.5 h-3.5" />}
-          onClick={() => window.open(`/jumbotron/${matchId}`, '_blank')}
-        >
-          Jumbotron
-        </Button>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            {isLive && (
+              <MatchPresenceAvatars
+                online={online}
+                scoringLockHolderId={match?.scoring_locked_by ?? null}
+                clockLockHolderId={match?.clock_locked_by ?? null}
+              />
+            )}
+            {isLive && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-live" />
+                <Badge variant="danger">LIVE</Badge>
+              </div>
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Tv2 className="w-3.5 h-3.5" />}
+              onClick={() => window.open(`/jumbotron/${matchId}`, '_blank')}
+            >
+              Jumbotron
+            </Button>
+          </>
+        }
+      />
 
       {error && (
         <Alert type="danger" onDismiss={() => setError('')}>

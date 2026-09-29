@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Users, Trophy, Shield, ClipboardCheck, TrendingUp, Globe } from 'lucide-react'
 import { StatCard, Card, Skeleton, Badge } from '../../components/ui'
 import { useInstitutionStore } from '../../stores/institutionStore'
+import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import { formatDateTime } from '../../lib/utils'
 import type { AuditLog } from '../../types'
@@ -32,12 +33,10 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-        <p className="text-[var(--text-muted)] text-sm mt-1">
-          {institution?.name} — Full platform overview
-        </p>
-      </div>
+      <PageHeader
+        title="Super Admin Dashboard"
+        subtitle={<>{institution?.name} — Full platform overview</>}
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4" data-tour="admin-stats">
@@ -59,8 +58,8 @@ export default function SuperAdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Quick actions */}
         <Card data-tour="admin-actions">
-          <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#0066FF]" />
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-[#0066FF]" />
             Admin Actions
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -76,10 +75,12 @@ export default function SuperAdminDashboard() {
                 <a
                   key={a.label}
                   href={a.href}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--border-subtle)] hover:border-[#0066FF]/50 hover:bg-[#0066FF]/5 transition-all text-center"
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-[var(--shadow-raised)] hover:bg-[var(--surface-elevated)] transition-colors text-center"
                 >
-                  <Icon className="w-6 h-6 text-[#0066FF]" />
-                  <span className="text-xs font-medium">{a.label}</span>
+                  <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-[#0066FF]/8 text-[#0066FF]">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span className="text-[13px] font-medium">{a.label}</span>
                 </a>
               )
             })}
@@ -88,7 +89,7 @@ export default function SuperAdminDashboard() {
 
         {/* Recent audit logs */}
         <Card>
-          <h2 className="font-bold text-lg mb-4">Recent Activity</h2>
+          <h2 className="text-base font-semibold mb-4">Recent Activity</h2>
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -98,16 +99,16 @@ export default function SuperAdminDashboard() {
           ) : recentLogs.length === 0 ? (
             <p className="text-[var(--text-muted)] text-sm">No recent activity</p>
           ) : (
-            <div className="space-y-2">
+            <div>
               {recentLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-start gap-3 py-2 border-b border-[var(--border-subtle)] last:border-0"
+                  className="flex items-center gap-3 py-3 border-b border-[var(--border-subtle)] last:border-0"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[var(--surface-elevated)] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-xs font-semibold flex-shrink-0">
                     {(log.actor as any)?.full_name?.charAt(0) ?? '?'}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{log.action.replace(/_/g, ' ')}</p>
                     <p className="text-xs text-[var(--text-muted)]">
                       {formatDateTime(log.created_at)}

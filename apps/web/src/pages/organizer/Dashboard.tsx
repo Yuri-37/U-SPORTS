@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Trophy, UserCheck, Play, Mic2, Dumbbell, BarChart3, Users, Calendar } from 'lucide-react'
 import { StatCard, Card, Badge, Button, Skeleton } from '../../components/ui'
 import { CreateEventModal } from '../../components/organizer/CreateEventModal'
+import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
@@ -153,21 +154,23 @@ export default function OrganizerDashboard() {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Coach Dashboard</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
-            {scopedProfile?.department ?? '—'}
-            {(organizer?.assigned_sports ?? []).length > 0 && (
-              <>
-                {' '}
-                ·{' '}
-                {(organizer!.assigned_sports as string[])
-                  .map((s) => getSportLabel(s as any))
-                  .join(', ')}
-              </>
-            )}
-          </p>
-        </div>
+        <PageHeader
+          title="Coach Dashboard"
+          subtitle={
+            <>
+              {scopedProfile?.department ?? '—'}
+              {(organizer?.assigned_sports ?? []).length > 0 && (
+                <>
+                  {' '}
+                  ·{' '}
+                  {(organizer!.assigned_sports as string[])
+                    .map((s) => getSportLabel(s as any))
+                    .join(', ')}
+                </>
+              )}
+            </>
+          }
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" data-tour="coach-stats">
@@ -195,14 +198,17 @@ export default function OrganizerDashboard() {
 
         {/* Live matches */}
         {coachLiveMatches.length > 0 && (
-          <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="bg-[var(--surface-card)] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse" />
-              <span className="font-bold text-[var(--danger)] text-sm">LIVE NOW</span>
+              <span className="font-semibold text-[var(--danger-ink)] text-sm">LIVE NOW</span>
             </div>
-            <div className="space-y-2">
+            <div>
               {coachLiveMatches.map((m) => (
-                <div key={m.id} className="flex items-center justify-between gap-3 text-sm">
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 text-sm py-2.5 border-b border-[var(--border-subtle)] last:border-0"
+                >
                   <span className="text-[var(--text-secondary)]">
                     {coachMatchLabels[m.participant_a_id ?? ''] ?? '—'} vs{' '}
                     {coachMatchLabels[m.participant_b_id ?? ''] ?? '—'}
@@ -316,9 +322,11 @@ export default function OrganizerDashboard() {
                 key={to}
                 type="button"
                 onClick={() => navigate(to)}
-                className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border-subtle)] hover:border-[var(--accent-default)]/50 hover:bg-[var(--accent-default)]/5 transition-all text-left"
+                className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-[var(--shadow-raised)] hover:bg-[var(--surface-elevated)] transition-colors text-left"
               >
-                <Icon className="w-6 h-6 text-[var(--accent-default)] shrink-0" />
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-[var(--accent-default)]/8 text-[var(--accent-default)]">
+                  <Icon className="w-5 h-5" />
+                </span>
                 <div>
                   <p className="font-semibold text-sm">{label}</p>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">{sub}</p>
@@ -333,14 +341,16 @@ export default function OrganizerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Organizer Dashboard</h1>
-        <p className="text-[var(--text-muted)] text-sm mt-1">
-          Managing:{' '}
-          {(organizer?.assigned_sports ?? []).map((s) => getSportLabel(s as any)).join(', ') ||
-            'All sports'}
-        </p>
-      </div>
+      <PageHeader
+        title="Organizer Dashboard"
+        subtitle={
+          <>
+            Managing:{' '}
+            {(organizer?.assigned_sports ?? []).map((s) => getSportLabel(s as any)).join(', ') ||
+              'All sports'}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4" data-tour="org-stats">
         <StatCard label="My Events" value={events.length} subValue="Active + Draft" />
@@ -353,12 +363,15 @@ export default function OrganizerDashboard() {
       </div>
 
       {liveMatches.length > 0 && (
-        <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-4" data-tour="org-live-panel">
-          <div className="flex items-center gap-2 mb-3">
+        <div
+          className="bg-[var(--surface-card)] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] rounded-xl p-4"
+          data-tour="org-live-panel"
+        >
+          <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse-live" />
-            <span className="font-bold text-[var(--danger)] text-sm">LIVE MATCHES</span>
+            <span className="font-semibold text-[var(--danger-ink)] text-sm">LIVE MATCHES</span>
           </div>
-          <div className="space-y-2">
+          <div>
             {liveMatches.map((m) => {
               const la = m.participant_a_id
                 ? (liveMatchLabels[m.participant_a_id] ?? `Team ${m.participant_a_id.slice(0, 6)}`)
@@ -367,7 +380,10 @@ export default function OrganizerDashboard() {
                 ? (liveMatchLabels[m.participant_b_id] ?? `Team ${m.participant_b_id.slice(0, 6)}`)
                 : 'TBD'
               return (
-                <div key={m.id} className="flex items-center justify-between gap-3 flex-wrap">
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 flex-wrap py-2.5 border-b border-[var(--border-subtle)] last:border-0"
+                >
                   <span className="text-sm min-w-0">
                     {la} <span className="text-[var(--text-muted)] font-normal">vs</span> {lb}
                   </span>
@@ -393,7 +409,7 @@ export default function OrganizerDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-lg">Recent Events</h2>
+            <h2 className="text-base font-semibold">Recent Events</h2>
             <Button size="sm" variant="ghost" onClick={() => navigate('/organizer/events')}>
               View all →
             </Button>
@@ -438,7 +454,7 @@ export default function OrganizerDashboard() {
         </Card>
 
         <Card data-tour="org-quick-actions">
-          <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
+          <h2 className="text-base font-semibold mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'New Event', icon: Trophy, action: () => setShowCreateEvent(true) },
@@ -455,10 +471,12 @@ export default function OrganizerDashboard() {
                 <button
                   key={a.label}
                   onClick={a.action}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--border-subtle)] hover:border-[var(--accent-default)]/50 hover:bg-[var(--accent-default)]/5 transition-all"
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-[var(--shadow-raised)] hover:bg-[var(--surface-elevated)] transition-colors"
                 >
-                  <Icon className="w-6 h-6 text-[var(--accent-default)]" />
-                  <span className="text-xs font-medium">{a.label}</span>
+                  <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-[var(--accent-default)]/8 text-[var(--accent-default)]">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span className="text-[13px] font-medium">{a.label}</span>
                 </button>
               )
             })}

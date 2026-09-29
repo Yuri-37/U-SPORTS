@@ -24,21 +24,25 @@ export function Button({
 }: ButtonProps) {
   // `active:scale-[0.98]` gives every button the same tactile press.
   const base =
-    'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none'
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-[10px] transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none'
   const variants = {
     // The primary action carries the school's own color, not the electric-blue
     // accent it used to hardcode -- the accent is a supporting highlight
     // (hovers, badges, links), never the thing a brand is recognised by.
     primary:
-      'bg-[var(--school-primary)] text-white shadow-[var(--shadow-lift)] hover:shadow-[var(--shadow-lift-lg)] hover:brightness-110',
+      'bg-[var(--school-primary)] text-white shadow-[var(--shadow-primary-btn)] hover:brightness-110',
+    // White, outlined and slightly raised -- the everyday secondary action.
     secondary:
-      'bg-[var(--surface-elevated)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]',
-    danger: 'bg-[#FF3355] hover:bg-[#CC2244] text-white shadow-lg shadow-red-900/30',
+      'bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] shadow-[var(--shadow-raised)]',
+    danger:
+      'bg-[#FF3355] hover:bg-[#CC2244] text-white shadow-[0_6px_14px_-4px_rgba(255,51,85,0.45)]',
+    // Bare icon + text, for toolbar actions that shouldn't compete with the page.
     ghost:
-      'bg-transparent hover:bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+      'bg-transparent hover:bg-[var(--shell-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
     outline:
       'bg-transparent border border-[var(--school-primary)]/35 hover:border-[var(--school-primary)] text-[var(--text-primary)]',
-    success: 'bg-[var(--success)] hover:opacity-90 text-white shadow-lg shadow-green-900/30',
+    success:
+      'bg-[var(--success)] hover:opacity-90 text-white shadow-[0_6px_14px_-4px_rgba(5,150,105,0.4)]',
   }
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',
@@ -129,8 +133,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={cn(
-              'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors',
-              'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
+              'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors',
+              'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
               error && 'border-[#FF3355] focus:border-[#FF3355] focus:ring-[#FF3355]/30',
               icon && 'pl-9',
               className,
@@ -159,8 +163,8 @@ export function Select({ label, error, options, className, ...props }: SelectPro
       {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
       <select
         className={cn(
-          'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors',
-          'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
+          'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors',
+          'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
           error && 'border-[#FF3355]',
           className,
         )}
@@ -189,8 +193,8 @@ export function Textarea({ label, error, className, ...props }: TextareaProps) {
       {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
       <textarea
         className={cn(
-          'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors resize-none',
-          'focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]/30',
+          'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors resize-none',
+          'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
           error && 'border-[#FF3355]',
           className,
         )}
@@ -223,11 +227,11 @@ export function Badge({ children, variant = 'default', size = 'md', className }:
     info: 'bg-[#0066FF]/10 text-[var(--info-ink)] border border-[#0066FF]/25',
     school: 'bg-[var(--school-primary)] text-[var(--school-secondary)]',
   }
-  const sizes = { sm: 'px-1.5 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' }
+  const sizes = { sm: 'px-2 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' }
   return (
     <span
       className={cn(
-        'inline-flex items-center font-medium rounded-md',
+        'inline-flex items-center gap-1 font-medium rounded-full',
         variants[variant],
         sizes[size],
         className,
@@ -275,13 +279,15 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between p-5 border-b border-[var(--border-subtle)] shrink-0">
-            <h2 className="text-lg font-bold">{title}</h2>
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--border-subtle)] shrink-0">
+            <h2 className="text-lg font-semibold">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
-              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1 rounded"
+              aria-label="Close"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--shell-hover)] transition-colors"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -305,7 +311,7 @@ export function Spinner({
   className?: string
 }) {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' }
-  return <Loader2 className={cn(sizes[size], 'animate-spin text-[#0066FF]', className)} />
+  return <Loader2 className={cn(sizes[size], 'animate-spin text-[var(--accent-default)]', className)} />
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -363,14 +369,16 @@ export function Alert({
   dismissAriaLabel,
   className,
 }: AlertProps) {
+  // Tint stays vivid; text uses the per-theme ink (the vivid hue as text on a
+  // light tint measured about 2:1 for the amber).
   const styles = {
-    info: 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#4D94FF]',
-    success: 'bg-[var(--success)]/10 border-[var(--success)]/30 text-[var(--success)]',
-    warning: 'bg-[#FFB800]/10 border-[#FFB800]/30 text-[#FFB800]',
-    danger: 'bg-[#FF3355]/10 border-[#FF3355]/30 text-[#FF3355]',
+    info: 'bg-[#0066FF]/8 border-[#0066FF]/25 text-[var(--info-ink)]',
+    success: 'bg-[var(--success)]/10 border-[var(--success)]/25 text-[var(--success-ink)]',
+    warning: 'bg-[#FFB800]/10 border-[#FFB800]/30 text-[var(--warning-ink)]',
+    danger: 'bg-[#FF3355]/8 border-[#FF3355]/25 text-[var(--danger-ink)]',
   }
   return (
-    <div className={cn('border rounded-lg p-4 flex gap-3 items-start', styles[type], className)}>
+    <div className={cn('border rounded-xl p-4 flex gap-3 items-start', styles[type], className)}>
       <div className="flex-1 min-w-0">
         {title && <p className="font-semibold text-sm mb-1">{title}</p>}
         <div className="text-sm opacity-90">{children}</div>
@@ -402,7 +410,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
       {icon && <div className="text-5xl mb-4 opacity-50">{icon}</div>}
-      <h3 className="text-lg font-bold text-[var(--text-secondary)] mb-2">{title}</h3>
+      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1.5">{title}</h3>
       {description && (
         <p className="text-sm text-[var(--text-muted)] max-w-sm mb-6">{description}</p>
       )}
@@ -442,10 +450,10 @@ export function StatCard({
   }
   const body = (
     <>
-      <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">
-        {label}
+      <p className="text-[13px] font-medium text-[var(--text-muted)]">{label}</p>
+      <p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] tabular-nums">
+        {value}
       </p>
-      <p className="text-2xl font-bold font-[Barlow_Condensed]">{value}</p>
       {(subValue || trendValue) && (
         <div className="flex items-center gap-2">
           {subValue && <p className="text-xs text-[var(--text-muted)]">{subValue}</p>}
@@ -468,18 +476,18 @@ export function StatCard({
         type="button"
         onClick={onClick}
         className={cn(
-          'w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]',
+          'w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]',
           className,
         )}
       >
-        <Card className="flex flex-col gap-1 h-full hover:border-[var(--accent-default)]/35 transition-colors cursor-pointer">
+        <Card className="flex flex-col gap-1.5 h-full p-5 hover:border-[var(--accent-default)]/35 transition-colors cursor-pointer">
           {body}
         </Card>
       </button>
     )
   }
 
-  return <Card className={cn('flex flex-col gap-1', className)}>{body}</Card>
+  return <Card className={cn('flex flex-col gap-1.5 p-5', className)}>{body}</Card>
 }
 
 // ─── Tab Bar ──────────────────────────────────────────────────────────────────
@@ -490,18 +498,25 @@ interface TabBarProps {
   className?: string
 }
 
+/** Segmented control: a light track with the selected segment as a raised white chip. */
 export function TabBar({ tabs, active, onChange, className }: TabBarProps) {
   return (
-    <div className={cn('flex gap-1 bg-[var(--surface-elevated)] p-1 rounded-lg', className)}>
+    <div
+      className={cn(
+        'flex gap-0.5 overflow-x-auto rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5',
+        className,
+      )}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.id}
+          type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            'flex items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-all duration-150',
             active === tab.id
-              ? 'bg-[var(--surface-card)] text-[var(--text-primary)] shadow border border-[var(--border-subtle)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+              ? 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-primary)] shadow-[var(--shadow-raised)]'
+              : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]',
           )}
         >
           {tab.icon}
@@ -528,17 +543,23 @@ export function Table({
   loading,
   emptyMessage = 'No data found',
 }: TableProps) {
+  const last = columns.length - 1
+  // Header is a rounded light band; body rows are open, split by hairlines.
+  // `border-separate` is what lets the header cells carry rounded corners.
+  const headCell = (i: number) =>
+    cn(
+      'h-10 border-y border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 text-left text-[13px] font-medium text-[var(--text-muted)] whitespace-nowrap',
+      i === 0 && 'rounded-l-[10px] border-l',
+      i === last && 'rounded-r-[10px] border-r',
+    )
+  const bodyCell = 'h-[52px] border-b border-[var(--border-subtle)] px-4 py-2.5'
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
-          <tr className="border-b border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
-                style={{ width: col.width }}
-              >
+          <tr>
+            {columns.map((col, i) => (
+              <th key={col.key} className={headCell(i)} style={{ width: col.width }}>
                 {col.label}
               </th>
             ))}
@@ -547,9 +568,9 @@ export function Table({
         <tbody>
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className="border-b border-[var(--border-subtle)]">
+              <tr key={i}>
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3">
+                  <td key={col.key} className={bodyCell}>
                     <Skeleton className="h-4 w-full" />
                   </td>
                 ))}
@@ -566,13 +587,13 @@ export function Table({
               <tr
                 key={i}
                 className={cn(
-                  'border-b border-[var(--border-subtle)] bg-[var(--surface-card)] transition-colors',
+                  'transition-colors',
                   onRowClick && 'cursor-pointer hover:bg-[var(--surface-elevated)]',
                 )}
                 onClick={() => onRowClick?.(row, i)}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3">
+                  <td key={col.key} className={bodyCell}>
                     {row[col.key]}
                   </td>
                 ))}

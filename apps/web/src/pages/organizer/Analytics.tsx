@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { Card, TabBar, Select, Button, Badge, Skeleton, Alert } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
 import type { Insight, Season } from '../../types'
@@ -479,69 +480,64 @@ export default function OrganizerAnalytics() {
 
   return (
     <div className="space-y-6" data-tour="analytics-root">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-[var(--text-muted)] text-sm">
-            Performance insights, placements, and leaderboards
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end w-full lg:w-auto lg:max-w-3xl">
-          <Select
-            label="Season"
-            value={effectiveSeasonId ?? ''}
-            onChange={(e) => setSelectedSeasonId(e.target.value)}
-            options={
-              seasonSelectOptions.length > 0
-                ? seasonSelectOptions
-                : [{ value: '', label: seasonsLoading ? 'Loading seasons…' : 'No seasons' }]
-            }
-            disabled={seasonsLoading || !effectiveSeasonId || seasons.length === 0}
-            className="min-w-[200px] flex-1 sm:flex-none sm:w-56"
-          />
-          <Select
-            label="Sport"
-            value={sport}
-            onChange={(e) => setSport(e.target.value)}
-            options={[
-              { value: 'basketball', label: '🏀 Basketball' },
-              { value: 'volleyball', label: '🏐 Volleyball' },
-              { value: 'table-tennis', label: '🏓 Table Tennis' },
-            ]}
-            className="min-w-[160px] flex-1 sm:flex-none sm:w-48"
-          />
-          <Select
-            label="Department"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            options={[
-              { value: '', label: 'All departments' },
-              { value: 'SBMA', label: 'SBMA' },
-              { value: 'SECA', label: 'SECA' },
-              { value: 'SASE', label: 'SASE' },
-              { value: 'SHS', label: 'SHS' },
-            ]}
-            className="min-w-[130px] flex-1 sm:flex-none sm:w-40"
-          />
-          {tab !== 'scoresheets' && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<Download className="w-4 h-4" />}
-              onClick={() => void handleExportCSV()}
-              disabled={!effectiveSeasonId}
-            >
-              {tab === 'insights'
-                ? `Export Excel${insightFilter !== 'all' ? ` (${INSIGHT_FILTER_LABELS[insightFilter]})` : ''}`
-                : 'Export CSV'}
-            </Button>
-          )}
-        </div>
+      <PageHeader title="Analytics" subtitle="Performance insights, placements, and leaderboards" />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <Select
+          label="Season"
+          value={effectiveSeasonId ?? ''}
+          onChange={(e) => setSelectedSeasonId(e.target.value)}
+          options={
+            seasonSelectOptions.length > 0
+              ? seasonSelectOptions
+              : [{ value: '', label: seasonsLoading ? 'Loading seasons…' : 'No seasons' }]
+          }
+          disabled={seasonsLoading || !effectiveSeasonId || seasons.length === 0}
+          className="min-w-[200px] flex-1 sm:flex-none sm:w-56"
+        />
+        <Select
+          label="Sport"
+          value={sport}
+          onChange={(e) => setSport(e.target.value)}
+          options={[
+            { value: 'basketball', label: '🏀 Basketball' },
+            { value: 'volleyball', label: '🏐 Volleyball' },
+            { value: 'table-tennis', label: '🏓 Table Tennis' },
+          ]}
+          className="min-w-[160px] flex-1 sm:flex-none sm:w-48"
+        />
+        <Select
+          label="Department"
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
+          options={[
+            { value: '', label: 'All departments' },
+            { value: 'SBMA', label: 'SBMA' },
+            { value: 'SECA', label: 'SECA' },
+            { value: 'SASE', label: 'SASE' },
+            { value: 'SHS', label: 'SHS' },
+          ]}
+          className="min-w-[130px] flex-1 sm:flex-none sm:w-40"
+        />
+        {tab !== 'scoresheets' && (
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Download className="w-4 h-4" />}
+            onClick={() => void handleExportCSV()}
+            disabled={!effectiveSeasonId}
+          >
+            {tab === 'insights'
+              ? `Export Excel${insightFilter !== 'all' ? ` (${INSIGHT_FILTER_LABELS[insightFilter]})` : ''}`
+              : 'Export CSV'}
+          </Button>
+        )}
       </div>
 
       {exportError && <Alert type="danger">{exportError}</Alert>}
 
       <TabBar
+        className="w-fit max-w-full"
         tabs={[
           { id: 'leaderboard', label: 'Leaderboard' },
           { id: 'insights', label: 'Insights' },
@@ -557,18 +553,37 @@ export default function OrganizerAnalytics() {
         <div className="space-y-6">
           {chartData.length > 0 && (
             <Card>
-              <h3 className="font-bold mb-4">Top performers — {getSportLabel(sport as any)}</h3>
+              <h3 className="text-base font-semibold mb-4">
+                Top performers — {getSportLabel(sport as any)}
+              </h3>
+              {/* Theme tokens, not fixed hex: these were dark-mode-only values
+                  that rendered near-invisible gridlines and a black tooltip in light mode. */}
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" tick={{ fill: '#8888A0', fontSize: 11 }} />
-                  <YAxis tick={{ fill: '#8888A0', fontSize: 11 }} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--border-subtle)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                    axisLine={{ stroke: 'var(--border-subtle)' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
+                    cursor={{ fill: 'var(--shell-hover)' }}
                     contentStyle={{
-                      background: '#16161E',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 8,
-                      color: '#fff',
+                      background: 'var(--surface-card)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 10,
+                      color: 'var(--text-primary)',
+                      boxShadow: 'var(--shadow-raised)',
                     }}
                   />
                   <Bar
@@ -576,7 +591,8 @@ export default function OrganizerAnalytics() {
                       sport === 'basketball' ? 'PPG' : sport === 'volleyball' ? 'Attack' : 'Winners'
                     }
                     fill="#0066FF"
-                    radius={[4, 4, 0, 0]}
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={36}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -590,20 +606,20 @@ export default function OrganizerAnalytics() {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-elevated)]">
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       #
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Athlete
                     </th>
                     {playerStatCells(sport, null, 0).map((c) => (
                       <th
                         key={c.label}
-                        className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)] whitespace-nowrap"
+                        className="px-4 py-3 text-center text-[13px] font-medium text-[var(--text-muted)] whitespace-nowrap"
                       >
                         {c.label}
                       </th>
@@ -652,7 +668,7 @@ export default function OrganizerAnalytics() {
             <div className="flex items-start gap-3">
               <TrendingUp className="w-5 h-5 text-[var(--accent-default)] shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-sm mb-1">Season snapshots</h3>
+                <h3 className="text-sm font-semibold mb-1">Season snapshots</h3>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
                   Derived from recorded season totals for the selected season and sport (same
                   aggregates as the leaderboard below).
@@ -851,20 +867,20 @@ export default function OrganizerAnalytics() {
               No finished bracket results for this sport yet.
             </Card>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-elevated)]">
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Event
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Champion
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Runner-up
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-muted)]" />
+                    <th className="px-4 py-3 text-right text-[13px] font-medium text-[var(--text-muted)]" />
                   </tr>
                 </thead>
                 <tbody>
@@ -917,23 +933,23 @@ export default function OrganizerAnalytics() {
               No finalized matches for this sport yet.
             </Card>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-elevated)]">
+            <div className="overflow-x-auto">
+              <table className="data-table w-full text-sm">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Event
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Teams
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Final Score
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Winner
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                    <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                       Finalized
                     </th>
                   </tr>
@@ -974,20 +990,20 @@ export default function OrganizerAnalytics() {
       )}
 
       {tab === 'teams' && (
-        <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--surface-elevated)]">
+        <div className="overflow-x-auto">
+          <table className="data-table w-full text-sm">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
+                <th className="px-4 py-3 text-left text-[13px] font-medium text-[var(--text-muted)]">
                   Team
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                <th className="px-4 py-3 text-center text-[13px] font-medium text-[var(--text-muted)]">
                   W
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                <th className="px-4 py-3 text-center text-[13px] font-medium text-[var(--text-muted)]">
                   L
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-muted)]">
+                <th className="px-4 py-3 text-center text-[13px] font-medium text-[var(--text-muted)]">
                   Win%
                 </th>
               </tr>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil } from 'lucide-react'
+import PageHeader from '../../components/layout/PageHeader'
 import {
   Button,
   Card,
@@ -224,17 +225,15 @@ export default function OrganizerAnnouncements() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Announcements</h1>
-          <p className="text-[var(--text-muted)] text-sm">
-            Broadcast messages to athletes and the public
-          </p>
-        </div>
-        <Button icon={<Plus className="w-4 h-4" />} onClick={openCreate} data-tour="announcements-new">
-          New Announcement
-        </Button>
-      </div>
+      <PageHeader
+        title="Announcements"
+        subtitle="Broadcast messages to athletes and the public"
+        actions={
+          <Button icon={<Plus className="w-4 h-4" />} onClick={openCreate} data-tour="announcements-new">
+            New Announcement
+          </Button>
+        }
+      />
 
       {loading ? null : announcements.length === 0 ? (
         <EmptyState

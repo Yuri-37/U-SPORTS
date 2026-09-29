@@ -1,11 +1,11 @@
 /*
-  Type system (three roles):
+  Type system:
     Calistoga        -- display only (hero h1, marketing section h2). Warm serif,
                         carries personality on the public-facing surfaces.
-    Barlow Condensed -- in-app headings. Kept deliberately: it is the athletic
-                        voice of the brand and stays legible at dashboard
-                        density, where a serif would fight the content.
-    DM Sans          -- body / UI.
+    Barlow Condensed -- public-site headings (guest hub, auth pages).
+    DM Sans          -- public-site body / UI.
+    Inter            -- the signed-in app (`.app-shell`), headings and body
+                        alike: a neutral workspace face at dashboard density.
     JetBrains Mono   -- section labels, badges, technical callouts.
 */
-@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');

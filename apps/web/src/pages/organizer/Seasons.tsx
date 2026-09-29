@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Card, Badge, Skeleton } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import type { Season } from '../../types'
@@ -34,12 +35,10 @@ export default function OrganizerSeasons() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Seasons</h1>
-        <p className="text-[var(--text-muted)] text-sm">
-          Seasons you're assigned to. Ask a Super Admin to add or change your season assignments.
-        </p>
-      </div>
+      <PageHeader
+        title="Seasons"
+        subtitle="Seasons you're assigned to. Ask a Super Admin to add or change your season assignments."
+      />
 
       {loading ? (
         <div className="space-y-3">

@@ -91,8 +91,8 @@ export default function OnlineOrganizers() {
               isIdle ? 'bg-amber-400' : 'bg-[var(--success)]',
             )}
           />
-          {/* Tooltip */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+          {/* Tooltip — opens downward: the bar sits at the top edge of the content panel, which clips above it */}
+          <div className="absolute top-full right-0 mt-2 w-44 bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-lg p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
             <p className="font-semibold text-[var(--text-primary)]">{user.full_name}</p>
             <p className="text-[var(--text-muted)] capitalize">{user.role.replace('_', ' ')}</p>
             <p className="text-[var(--text-muted)] truncate">{user.current_page}</p>

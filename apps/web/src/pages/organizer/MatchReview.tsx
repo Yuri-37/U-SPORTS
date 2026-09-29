@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { CheckCircle, ArrowLeft, Save, FileText } from 'lucide-react'
+import { CheckCircle, Save, FileText } from 'lucide-react'
+import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Skeleton, Modal, Input } from '../../components/ui'
 import api from '../../lib/api'
 import { formatEnumLabel } from '../../lib/utils'
@@ -298,23 +299,16 @@ export default function MatchReview() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Post-Game Review</h1>
-          <p className="text-[var(--text-muted)] text-xs">
+      <PageHeader
+        back={<BackButton onClick={() => navigate(-1)} />}
+        title="Post-Game Review"
+        subtitle={
+          <>
             {nameA} vs {nameB}
-          </p>
-        </div>
-        <div className="flex-1" />
-        <Badge variant="success">Completed</Badge>
-      </div>
+          </>
+        }
+        actions={<Badge variant="success">Completed</Badge>}
+      />
 
       {error && (
         <Alert type="danger" onDismiss={() => setError('')}>

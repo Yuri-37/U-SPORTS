@@ -7,6 +7,7 @@ import { Trophy, Users } from 'lucide-react'
 import { deriveEliminationPodium, placementRankLabel } from '../../lib/eventPlacements'
 import { useNavigate } from 'react-router'
 import AvatarUpload from '../../components/settings/AvatarUpload'
+import PageHeader from '../../components/layout/PageHeader'
 
 type AthleteTeamSummary = {
   teamId: string
@@ -172,7 +173,7 @@ export default function AthleteProfile() {
 
   return (
     <div className="space-y-6 max-w-xl">
-      <h1 className="text-2xl font-bold">My Profile</h1>
+      <PageHeader title="My Profile" />
 
       <Card>
         <AvatarUpload size="lg" fallbackInitials={getInitials(profile.full_name)}>

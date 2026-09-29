@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, eventPublicLifecycleLabel } from '../../lib/utils'
@@ -60,10 +61,7 @@ export default function AthleteEvents() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">My Events</h1>
-        <p className="text-[var(--text-muted)] text-sm">Events you're participating in</p>
-      </div>
+      <PageHeader title="My Events" subtitle="Events you're participating in" />
 
       {loading ? (
         <div className="space-y-3">

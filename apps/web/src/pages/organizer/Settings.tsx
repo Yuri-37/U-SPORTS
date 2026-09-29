@@ -1,5 +1,6 @@
 import React from 'react'
 import { Card, Badge } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { useAuthStore } from '../../stores/authStore'
 import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
@@ -15,10 +16,7 @@ export default function OrganizerSettings() {
 
   return (
     <div className="space-y-6 max-w-xl">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-[var(--text-muted)] text-sm">Your organizer account details</p>
-      </div>
+      <PageHeader title="Settings" subtitle="Your organizer account details" />
 
       <Card>
         <div className="mb-6">

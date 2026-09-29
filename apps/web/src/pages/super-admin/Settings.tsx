@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Save, Building2, Palette, Upload } from 'lucide-react'
 import { Button, Input, Card, Alert } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import api from '../../lib/api'
 import { applyTheme } from '../../lib/utils'
@@ -104,12 +105,10 @@ export default function SuperAdminSettings() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">School Profile</h1>
-        <p className="text-[var(--text-muted)] text-sm">
-          Changes reflect immediately across the platform
-        </p>
-      </div>
+      <PageHeader
+        title="School Profile"
+        subtitle="Changes reflect immediately across the platform"
+      />
 
       {success && (
         <Alert type="success" onDismiss={() => setSuccess(false)}>

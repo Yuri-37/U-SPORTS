@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Table, Badge, Input, Select, Button } from '../../components/ui'
+import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import type { AuditLog } from '../../types'
 import { formatDateTime } from '../../lib/utils'
@@ -279,12 +280,14 @@ export default function SuperAdminAuditLogs() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Audit Logs</h1>
-        <p className="text-[var(--text-muted)] text-sm">
-          {total} total {filtersActive ? 'matching ' : ''}entries
-        </p>
-      </div>
+      <PageHeader
+        title="Audit Logs"
+        subtitle={
+          <>
+            {total} total {filtersActive ? 'matching ' : ''}entries
+          </>
+        }
+      />
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1 min-w-0">

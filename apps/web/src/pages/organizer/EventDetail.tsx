@@ -40,6 +40,7 @@ import {
   fetchParticipantTypes,
 } from '../../lib/participantLabels'
 import BracketView from '../../components/brackets/BracketView'
+import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import EventPodiumStrip from '../../components/events/EventPodiumStrip'
 import { deriveFullEventStandings } from '../../lib/eventPlacements'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
@@ -482,16 +483,12 @@ export default function OrganizerEventDetail() {
         </Alert>
       )}
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <button
-            onClick={() => navigate('/organizer/events')}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-2 flex items-center gap-1"
-          >
-            ← Back to Events
-          </button>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold">{event.name}</h1>
+      <PageHeader
+        className="sm:items-start"
+        back={<BackButton onClick={() => navigate('/organizer/events')} label="Back to Events" />}
+        title={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-2">
+            {event.name}
             {!readOnlyEvent ? (
               <Button
                 size="sm"
@@ -513,83 +510,88 @@ export default function OrganizerEventDetail() {
                 View only
               </Badge>
             )}
-          </div>
-          <p className="text-[var(--text-muted)] text-sm">
+          </span>
+        }
+        subtitle={
+          <>
             {getSportLabel(event.sport as any)} · {formatEnumLabel(event.format)}
             {event.sport === 'table-tennis' && (event as any).table_tennis_format
               ? ` · ${(event as any).table_tennis_format}`
               : ''}
+          </>
+        }
+        actions={
+          <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+            {!readOnlyEvent ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Badge variant={STATUS_VARIANTS[event.status]}>
+                    {organizerEventStatusLabel(event.status)}
+                  </Badge>
+                  {event.status === 'draft' && (
+                    <Button
+                      size="sm"
+                      icon={<Calendar className="w-3 h-3" />}
+                      onClick={() => void handleStatusChange('registration')}
+                    >
+                      Publish to hub
+                    </Button>
+                  )}
+                  {event.status === 'registration' && (
+                    <Button
+                      size="sm"
+                      icon={<Play className="w-3 h-3" />}
+                      onClick={() => void handleStatusChange('in_progress')}
+                    >
+                      Start event
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  {event.status === 'in_progress' && (
+                    <Button size="sm" variant="success" onClick={() => setFinishOpen(true)}>
+                      Mark finished
+                    </Button>
+                  )}
+                  {['draft', 'registration', 'in_progress'].includes(event.status) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      icon={<Ban className="w-3 h-3" />}
+                      onClick={() => setCancelOpen(true)}
+                    >
+                      Cancel event
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    icon={<Trash2 className="w-3 h-3" />}
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Badge variant={STATUS_VARIANTS[event.status]}>
+                {organizerEventStatusLabel(event.status)}
+              </Badge>
+            )}
+          </div>
+        }
+      >
+        {event.sport === 'table-tennis' && (event as any).table_tennis_format && (
+          <Badge className="mt-2" variant="default" size="sm">
+            {(event as any).table_tennis_format === 'doubles' ? '🏓🏓 Doubles' : '🏓 Singles'}
+          </Badge>
+        )}
+        {event.description ? (
+          <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">
+            {event.description}
           </p>
-          {event.sport === 'table-tennis' && (event as any).table_tennis_format && (
-            <Badge className="mt-1 ml-2" variant="default" size="sm">
-              {(event as any).table_tennis_format === 'doubles' ? '🏓🏓 Doubles' : '🏓 Singles'}
-            </Badge>
-          )}
-          {event.description ? (
-            <p className="text-sm text-[var(--text-secondary)] mt-3 whitespace-pre-wrap">
-              {event.description}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-          {!readOnlyEvent ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                <Badge variant={STATUS_VARIANTS[event.status]}>
-                  {organizerEventStatusLabel(event.status)}
-                </Badge>
-                {event.status === 'draft' && (
-                  <Button
-                    size="sm"
-                    icon={<Calendar className="w-3 h-3" />}
-                    onClick={() => void handleStatusChange('registration')}
-                  >
-                    Publish to hub
-                  </Button>
-                )}
-                {event.status === 'registration' && (
-                  <Button
-                    size="sm"
-                    icon={<Play className="w-3 h-3" />}
-                    onClick={() => void handleStatusChange('in_progress')}
-                  >
-                    Start event
-                  </Button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 sm:justify-end">
-                {event.status === 'in_progress' && (
-                  <Button size="sm" variant="success" onClick={() => setFinishOpen(true)}>
-                    Mark finished
-                  </Button>
-                )}
-                {['draft', 'registration', 'in_progress'].includes(event.status) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    icon={<Ban className="w-3 h-3" />}
-                    onClick={() => setCancelOpen(true)}
-                  >
-                    Cancel event
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="danger"
-                  icon={<Trash2 className="w-3 h-3" />}
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  Delete
-                </Button>
-              </div>
-            </>
-          ) : (
-            <Badge variant={STATUS_VARIANTS[event.status]}>
-              {organizerEventStatusLabel(event.status)}
-            </Badge>
-          )}
-        </div>
-      </div>
+        ) : null}
+      </PageHeader>
 
       {error && (
         <Alert type="danger" onDismiss={() => setError('')}>
@@ -643,6 +645,7 @@ export default function OrganizerEventDetail() {
       </Modal>
 
       <TabBar
+        className="w-fit max-w-full"
         tabs={[
           { id: 'bracket', label: 'Bracket', icon: <Trophy className="w-3.5 h-3.5" /> },
           {
