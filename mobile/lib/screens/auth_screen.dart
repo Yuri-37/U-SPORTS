@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
+import '../widgets/institution_logo.dart';
 import '../widgets/ui/brand_page.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -140,7 +140,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             // purpose. Only the "no logo yet" fallback needs a shape at all,
             // so it has something to sit on.
             (institution?.logoUrl?.trim().isNotEmpty ?? false)
-                ? CachedNetworkImage(imageUrl: institution!.logoUrl!, height: 68, fit: BoxFit.contain)
+                ? InstitutionLogo(
+                    url: institution!.logoUrl!,
+                    height: 68,
+                    fallback: HeroAvatar(name: schoolName, radius: 34),
+                  )
                 : HeroAvatar(name: schoolName, radius: 34),
             const SizedBox(height: 14),
             Text(schoolName, textAlign: TextAlign.center, style: AppTheme.display(size: 26, color: Colors.white)),

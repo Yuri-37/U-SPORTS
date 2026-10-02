@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/institution_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
+import 'institution_logo.dart';
 
 /// Header row: school logo (or initials) + abbreviation + tagline — parity with web [GuestLayout].
 class InstitutionBrandTitle extends ConsumerWidget {
@@ -33,13 +33,11 @@ class InstitutionBrandTitle extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: h, maxWidth: compact ? 80 : 104),
-                  child: CachedNetworkImage(
-                    imageUrl: logo,
+                  child: InstitutionLogo(
+                    url: logo,
                     height: h,
-                    fit: BoxFit.contain,
                     alignment: Alignment.centerLeft,
-                    placeholder: (_, __) => SizedBox(height: h, width: h),
-                    errorWidget: (_, __, ___) => _AbbrBadge(abbr: abbr, size: h),
+                    fallback: _AbbrBadge(abbr: abbr, size: h),
                   ),
                 ),
               )

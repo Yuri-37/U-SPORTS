@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check, UserPlus } from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select, TabBar } from '../../components/ui'
 import PageHeader from '../../components/layout/PageHeader'
+import AccountCredentialsModal from '../../components/accounts/AccountCredentialsModal'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
@@ -105,16 +106,6 @@ export default function OrganizerAthletes() {
   >(null)
   const [resetPasswordCopied, setResetPasswordCopied] = useState(false)
 
-  // Whether an admin-triggered reset can rely on email delivery — off until
-  // SMTP is configured server-side (see utils/accountEmail.ts).
-  const [inviteEmailsEnabled, setInviteEmailsEnabled] = useState(false)
-  useEffect(() => {
-    api
-      .get<{ inviteEmailsEnabled: boolean }>('/admin/config')
-      .then(({ data }) => setInviteEmailsEnabled(data.inviteEmailsEnabled))
-      .catch(() => setInviteEmailsEnabled(false))
-  }, [])
-
   // Add single athlete
   const [showAddAthlete, setShowAddAthlete] = useState(false)
   const [addName, setAddName] = useState('')
@@ -129,10 +120,10 @@ export default function OrganizerAthletes() {
   const [addAthleteResult, setAddAthleteResult] = useState<{
     name: string
     email: string
-    mode: 'invited' | 'password'
     tempPassword?: string
+    emailed?: boolean
+    emailError?: string
   } | null>(null)
-  const [addAthleteResultCopied, setAddAthleteResultCopied] = useState(false)
 
   // Editing an existing athlete. Same fields the add form owns, minus the
   // ones that aren't the athlete row's to change: course is only used to
@@ -166,8 +157,7 @@ export default function OrganizerAthletes() {
     if (!addName.trim()) return setAddAthleteError('Full name is required')
     if (!addStudentId.trim()) return setAddAthleteError('Student ID is required')
     if (!addSport) return setAddAthleteError('Sport is required')
-    // Required -- the account is delivered by email, so there's nothing
-    // useful to create without a real mailbox.
+    // Required -- it is the account's login, and where the set-password link goes.
     if (!addEmail.trim()) return setAddAthleteError('Email is required')
     const parsedEmail = studentEmailZ.safeParse(addEmail.trim())
     if (!parsedEmail.success) {
@@ -179,8 +169,9 @@ export default function OrganizerAthletes() {
       const { data } = await api.post<{
         athlete: { profile?: { full_name?: string } }
         email: string
-        mode: 'invited' | 'password'
         tempPassword?: string
+        emailed?: boolean
+        emailError?: string
       }>('/athletes', {
         full_name: addName.trim(),
         student_id: addStudentId.trim(),
@@ -196,10 +187,10 @@ export default function OrganizerAthletes() {
       setAddAthleteResult({
         name: addName.trim(),
         email: data.email,
-        mode: data.mode,
         tempPassword: data.tempPassword,
+        emailed: data.emailed,
+        emailError: data.emailError,
       })
-      setAddAthleteResultCopied(false)
       setShowAddAthlete(false)
       resetAddAthleteForm()
       fetchAthletes()
@@ -274,7 +265,6 @@ export default function OrganizerAthletes() {
   const [importResult, setImportResult] = useState<{
     created: { student_id: string; email: string; athlete_id: string; tempPassword?: string }[]
     errors: { row: number; error: string }[]
-    invited?: boolean
   } | null>(null)
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[] | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -514,7 +504,6 @@ export default function OrganizerAthletes() {
       const res = await api.post<{
         created: { student_id: string; email: string; athlete_id: string; tempPassword?: string }[]
         errors: { row: number; error: string }[]
-        invited?: boolean
       }>('/students/import', {
         rows: validRows.map((r) => ({
           full_name: r.full_name,
@@ -883,24 +872,16 @@ export default function OrganizerAthletes() {
               >
                 Cancel
               </Button>
-              {inviteEmailsEnabled ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    loading={resetPasswordBusy}
-                    onClick={() => void confirmResetPassword('password')}
-                  >
-                    Use temporary password
-                  </Button>
-                  <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('email')}>
-                    Send reset email
-                  </Button>
-                </>
-              ) : (
-                <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('password')}>
-                  Generate new password
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                loading={resetPasswordBusy}
+                onClick={() => void confirmResetPassword('password')}
+              >
+                Use temporary password
+              </Button>
+              <Button loading={resetPasswordBusy} onClick={() => void confirmResetPassword('email')}>
+                Send reset email
+              </Button>
             </div>
           </div>
         )}
@@ -919,7 +900,9 @@ export default function OrganizerAthletes() {
           <div className="space-y-4">
             <Alert type="success">
               Reset email sent to <span className="font-semibold">{resetPasswordResult.name}</span>.
-              They'll get a link to choose a new password.
+              They'll get a link to choose a new password. School mail filters sometimes hold new
+              senders — if it hasn't arrived in a few minutes, reset again with a temporary
+              password instead.
             </Alert>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setResetPasswordResult(null)}>
@@ -973,9 +956,8 @@ export default function OrganizerAthletes() {
         title="Add athlete"
       >
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          {inviteEmailsEnabled
-            ? "Sends an email invite. They'll set their own password to finish setting up."
-            : 'Creates their login immediately with a generated password shown after saving.'}
+          Creates their login immediately. You'll get a password to hand over, and we'll also try
+          to email them a link to choose their own.
         </p>
         {addAthleteError && (
           <Alert type="danger" className="mb-4">
@@ -1036,10 +1018,10 @@ export default function OrganizerAthletes() {
             value={addEmail}
             onChange={(e) => setAddEmail(e.target.value)}
             placeholder="juan.delacruz@students.nu-dasma.edu.ph"
-            hint="Their school email — the invite is sent here."
+            hint="Their school email — it is their login, and the set-password link is sent here."
           />
           <Button className="w-full" loading={addAthleteBusy} onClick={() => void handleAddAthlete()}>
-            {inviteEmailsEnabled ? 'Send invitation' : 'Create account'}
+            Create account
           </Button>
         </div>
       </Modal>
@@ -1149,59 +1131,16 @@ export default function OrganizerAthletes() {
       </Modal>
 
       {/* Add single athlete result */}
-      <Modal
+      <AccountCredentialsModal
         open={addAthleteResult !== null}
-        onClose={() => {
-          setAddAthleteResult(null)
-          setAddAthleteResultCopied(false)
-        }}
+        onClose={() => setAddAthleteResult(null)}
         title="Athlete added"
-        size="md"
-      >
-        {addAthleteResult && (
-          <div className="space-y-4">
-            <Alert type="success">
-              <span className="font-semibold">{addAthleteResult.name}</span> was added with the
-              email <span className="font-semibold">{addAthleteResult.email}</span>.{' '}
-              {addAthleteResult.mode === 'invited'
-                ? "They'll get an email to set their own password."
-                : 'This is shown once — copy it now and relay it to them directly.'}
-            </Alert>
-            {addAthleteResult.mode === 'password' && addAthleteResult.tempPassword && (
-              <div className="flex gap-2">
-                <Input readOnly value={addAthleteResult.tempPassword} className="font-mono" />
-                <Button
-                  variant="secondary"
-                  icon={
-                    addAthleteResultCopied ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )
-                  }
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(addAthleteResult.tempPassword ?? '')
-                    setAddAthleteResultCopied(true)
-                  }}
-                >
-                  {addAthleteResultCopied ? 'Copied' : 'Copy'}
-                </Button>
-              </div>
-            )}
-            <div className="flex justify-end">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setAddAthleteResult(null)
-                  setAddAthleteResultCopied(false)
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        name={addAthleteResult?.name}
+        email={addAthleteResult?.email ?? ''}
+        password={addAthleteResult?.tempPassword}
+        emailed={addAthleteResult?.emailed}
+        emailError={addAthleteResult?.emailError}
+      />
 
       {/* Roster import modal (CSV or Excel) */}
       <Modal
@@ -1390,13 +1329,11 @@ export default function OrganizerAthletes() {
                     {importResult.created.length} athlete
                     {importResult.created.length !== 1 ? 's' : ''} imported successfully.
                   </span>{' '}
-                  They are immediately active.{' '}
-                  {importResult.invited
-                    ? "They'll each get an email invite to set their own password."
-                    : 'Their generated passwords are shown below — this is the only time they’re shown, so copy them before closing this dialog.'}
+                  They are immediately active. Their generated passwords are shown below — this is
+                  the only time they’re shown, so copy them before closing this dialog.
                 </Alert>
               )}
-              {!importResult.invited && importResult.created.some((c) => c.tempPassword) && (
+              {importResult.created.some((c) => c.tempPassword) && (
                 <div className="max-h-48 overflow-y-auto">
                   <Table
                     columns={[

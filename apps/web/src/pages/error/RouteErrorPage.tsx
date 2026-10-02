@@ -1,5 +1,5 @@
 import { isRouteErrorResponse, useRouteError, Link } from 'react-router'
-import { Home } from 'lucide-react'
+import { Home, RefreshCw } from 'lucide-react'
 import { EmptyState, Button } from '../../components/ui'
 
 /**
@@ -22,11 +22,27 @@ export default function RouteErrorPage() {
             : 'An unexpected error occurred. Reloading usually fixes it — if not, try again later.'
         }
         action={
-          <Link to="/">
-            <Button variant="primary" icon={<Home className="w-4 h-4" />}>
-              Back to home
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {/* After a new release an open tab can be holding page files that no
+                longer exist; a reload fetches the current ones. */}
+            {!notFound && (
+              <Button
+                variant="primary"
+                icon={<RefreshCw className="w-4 h-4" />}
+                onClick={() => window.location.reload()}
+              >
+                Reload page
+              </Button>
+            )}
+            <Link to="/">
+              <Button
+                variant={notFound ? 'primary' : 'secondary'}
+                icon={<Home className="w-4 h-4" />}
+              >
+                Back to home
+              </Button>
+            </Link>
+          </div>
         }
       />
     </div>

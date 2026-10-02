@@ -4,7 +4,12 @@ import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
 import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
-import { respondIfSportForbidden } from '../utils/organizerSportAccess'
+import {
+  respondIfSportForbidden,
+  respondIfAthleteForbidden,
+  getStaffReadScope,
+  athleteIdsOnTeams,
+} from '../utils/organizerSportAccess'
 import {
   resetAccountPassword,
   createAthleteAuthUser,
@@ -18,12 +23,17 @@ import supabase from '../utils/supabase'
 const router = createRouter()
 
 // Get all athletes (with filters)
-router.get('/', requireAuth, async (req: AuthRequest, res) => {
+router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
+  // Staff only: the rows carry every athlete's email, so a signed-in athlete (or
+  // anyone else) must not be able to pull the list. Organizers and coaches see
+  // the sports they are assigned to.
+  const scope = await getStaffReadScope(req)
   let query = supabase
     .from('athletes')
     .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url)')
     .order('created_at', { ascending: false })
 
+  if (scope.sports !== 'all') query = query.in('sport', scope.sports)
   if (req.query.sport) query = query.eq('sport', req.query.sport as string)
   if (req.query.department) query = query.eq('department', req.query.department as string)
   if (req.query.season_status) query = query.eq('season_status', req.query.season_status as string)
@@ -88,6 +98,9 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
         department: body.department,
         course: body.course,
         yearLevel,
+        // One account at a time, so a set-your-own-password email is safe to
+        // attempt; the password in the response is the dependable route.
+        sendEmail: true,
       })
     } catch (e: unknown) {
       return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not create auth user' })
@@ -99,7 +112,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
       full_name: body.full_name,
       role: null,
       department: body.department,
-      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
+      issued_password_scheme: ISSUED_PASSWORD_SCHEME,
     })
     if (profileError) return res.status(400).json({ error: profileError.message })
 
@@ -124,16 +137,16 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
       action: 'athlete_created',
       entity_type: 'athlete',
       entity_id: athlete.id as string,
-      details: { student_id: body.student_id, email, mode: account.mode },
+      details: { student_id: body.student_id, email, emailed: account.emailed },
     })
 
     res.status(201).json({
       athlete,
       email,
       mode: account.mode,
-      // Only meaningful in 'password' mode -- the invited path never sets a
-      // password server-side, the invitee picks their own via the email link.
-      ...(account.mode === 'password' ? { tempPassword: password } : {}),
+      tempPassword: account.password,
+      emailed: account.emailed,
+      ...(account.emailError ? { emailError: account.emailError } : {}),
     })
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
@@ -169,6 +182,8 @@ router.patch(
       for (const sport of sports) {
         if (await respondIfSportForbidden(req, res, sport)) return
       }
+
+      if (await respondIfAthleteForbidden(req, res, body.ids)) return
 
       const nextStatus = body.action === 'set_inactive' ? 'inactive' : 'active'
       const { error: uErr } = await supabase
@@ -214,6 +229,7 @@ router.patch(
     if (lookupError) return res.status(500).json({ error: lookupError.message })
     if (!target) return res.status(404).json({ error: 'Athlete not found' })
     if (await respondIfSportForbidden(req, res, target.sport)) return
+    if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
 
     const { data, error } = await supabase
       .from('athletes')
@@ -259,6 +275,7 @@ router.patch(
       if (lookupError) return res.status(500).json({ error: lookupError.message })
       if (!target) return res.status(404).json({ error: 'Athlete not found' })
       if (await respondIfSportForbidden(req, res, target.sport)) return
+      if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
 
       const patch: Record<string, unknown> = {}
       if (body.position !== undefined) patch.position = body.position
@@ -358,6 +375,7 @@ router.patch(
 
       // Guard the sport they are in now...
       if (await respondIfSportForbidden(req, res, current.sport)) return
+      if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
       // ...and the one they would move to, so a coach cannot push an athlete
       // into a sport they do not run.
       if (body.sport && body.sport !== current.sport) {
@@ -478,6 +496,7 @@ router.delete(
     if (lookupError) return res.status(500).json({ error: lookupError.message })
     if (!athlete) return res.status(404).json({ error: 'Athlete not found' })
     if (await respondIfSportForbidden(req, res, athlete.sport)) return
+    if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
 
     const rawProfile = athlete.profile as
       | { full_name?: string; email?: string }
@@ -528,11 +547,19 @@ router.get(
   '/export/csv',
   requireAuth,
   requireRole('Organizer', 'Admin', 'Coach'),
-  async (_req, res) => {
-    const { data } = await supabase
+  async (req: AuthRequest, res) => {
+    // Same scope as the list: assigned sports, and a team-scoped coach gets
+    // only the players on their own teams.
+    const scope = await getStaffReadScope(req)
+    let exportQuery = supabase
       .from('athletes')
       .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email)')
       .eq('season_status', 'active')
+    if (scope.sports !== 'all') exportQuery = exportQuery.in('sport', scope.sports)
+    if (scope.teamIds) {
+      exportQuery = exportQuery.in('id', await athleteIdsOnTeams(scope.teamIds))
+    }
+    const { data } = await exportQuery
 
     const rows = (data ?? []).map((a: any) => ({
       student_id: a.student_id,
@@ -587,6 +614,7 @@ router.post(
     if (error) return res.status(500).json({ error: error.message })
     if (!athlete) return res.status(404).json({ error: 'Athlete not found' })
     if (await respondIfSportForbidden(req, res, athlete.sport)) return
+    if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
 
     let result: PasswordResetResult
     try {

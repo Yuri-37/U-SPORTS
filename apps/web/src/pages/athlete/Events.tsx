@@ -11,52 +11,87 @@ export default function AthleteEvents() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!athlete) return
-    // Find team_members for this athlete, then matches for their teams
-    supabase
-      .from('team_members')
-      .select('team_id, team:teams(id, name, sport, events:event_participants(event:events(*)))')
-      .eq('athlete_id', athlete.id)
-      .then(({ data }) => {
-        const byEventId = new Map<
-          string,
-          Record<string, unknown> & { id: string; teamName?: string }
-        >()
-        for (const tm of data ?? []) {
-          const rows = tm as {
-            team?: {
-              name?: string
-              events?: Array<{ event?: Record<string, unknown> & { id?: string } }>
-            }
-          }
-          for (const ep of rows.team?.events ?? []) {
-            const ev = ep.event as (Record<string, unknown> & { id?: string }) | null | undefined
-            const id = typeof ev?.id === 'string' ? ev.id : undefined
-            if (!id) continue
+    if (!athlete) {
+      // Without this the skeleton below would never stop: the effect used to
+      // bail out while `loading` stayed true for anyone whose athlete record
+      // hadn't resolved yet.
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    /*
+      Three separate queries rather than one nested select. `event_participants
+      .participant_id` holds either a team id or an athlete id, so it carries no
+      foreign key to `teams` (migration 004) -- asking PostgREST to embed
+      teams -> event_participants -> events makes it reject the whole request
+      with "could not find a relationship". The old code ignored that error and
+      rendered an empty list, which is why this page was always blank. Same
+      team-ids-then-participants shape the dashboard already uses.
+    */
+    ;(async () => {
+      try {
+        const { data: tm, error: tmError } = await supabase
+          .from('team_members')
+          .select('team_id, team:teams(id, name, sport)')
+          .eq('athlete_id', athlete.id)
+        if (tmError) throw tmError
 
-            const tname = rows.team?.name
-            const existing = byEventId.get(id)
-            if (!existing) {
-              byEventId.set(id, {
-                ...(ev as Record<string, unknown> & { id: string }),
-                teamName: tname,
-              } as Record<string, unknown> & { id: string; teamName?: string })
-              continue
-            }
-
-            const parts = [
-              ...String(existing.teamName ?? '')
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean),
-            ]
-            if (tname && !parts.includes(tname)) parts.push(tname)
-            if (parts.length > 0) existing.teamName = parts.join(', ')
-          }
+        // Cast through `unknown`: the generated types model an embed as an
+        // array, while a to-one join like this returns a single object.
+        const teamRows = (tm ?? []) as unknown as Array<{
+          team_id: string
+          team?: { id: string; name?: string; sport?: string } | null
+        }>
+        const teamNameById = new Map<string, string>()
+        for (const row of teamRows) {
+          if (row.team?.id && row.team.name) teamNameById.set(row.team.id, row.team.name)
         }
-        setMatches([...byEventId.values()])
-        setLoading(false)
-      })
+        const teamIds = [...new Set(teamRows.map((t) => t.team_id))]
+        if (teamIds.length === 0) {
+          if (!cancelled) setMatches([])
+          return
+        }
+
+        const { data: eps, error: epError } = await supabase
+          .from('event_participants')
+          .select('event_id, participant_id')
+          .in('participant_id', teamIds)
+        if (epError) throw epError
+
+        const participantsByEvent = new Map<string, string[]>()
+        for (const ep of (eps ?? []) as Array<{ event_id: string; participant_id: string }>) {
+          const list = participantsByEvent.get(ep.event_id) ?? []
+          list.push(ep.participant_id)
+          participantsByEvent.set(ep.event_id, list)
+        }
+        const eventIds = [...participantsByEvent.keys()]
+        if (eventIds.length === 0) {
+          if (!cancelled) setMatches([])
+          return
+        }
+
+        const { data: evs, error: evError } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', eventIds)
+        if (evError) throw evError
+
+        const rows = ((evs ?? []) as Array<Record<string, unknown> & { id: string }>).map((ev) => {
+          const names = (participantsByEvent.get(ev.id) ?? [])
+            .map((pid) => teamNameById.get(pid))
+            .filter((n): n is string => Boolean(n))
+          return { ...ev, teamName: [...new Set(names)].join(', ') || undefined }
+        })
+        if (!cancelled) setMatches(rows)
+      } catch {
+        if (!cancelled) setMatches([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [athlete])
 
   return (

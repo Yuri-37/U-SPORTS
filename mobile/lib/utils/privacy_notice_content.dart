@@ -18,7 +18,7 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
     '',
     "U-Sports is a companion app built by and for NU Dasmariñas students to "
         "run intramural sports — team rosters, schedules, live scoring, and "
-        "standings. It is an independent, unofficial platform, not one of NU "
+        "rankings. It is an independent, unofficial platform, not one of NU "
         "Dasmariñas's official information systems. Before you continue, "
         "here's what we collect and how we use it.",
   ),
@@ -36,7 +36,7 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
   PrivacyNoticeSection(
     'Why',
     'Solely to run intramural sports: rosters, scheduling, live scoring, '
-        'standings, and notifications about your team.',
+        'rankings, and notifications about your team.',
   ),
   PrivacyNoticeSection(
     'Who can see it',

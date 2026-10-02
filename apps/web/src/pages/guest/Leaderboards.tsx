@@ -145,7 +145,7 @@ export default function GuestLeaderboards() {
           aria-label="Back to hub"
         />
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">Standings & Leaderboards</h1>
+          <h1 className="text-2xl font-bold">Rankings & Leaderboards</h1>
           <p className="text-[var(--text-muted)] text-sm">Season statistics and rankings</p>
         </div>
       </div>
@@ -197,7 +197,7 @@ export default function GuestLeaderboards() {
       <TabBar
         tabs={[
           { id: 'players', label: 'Player Stats' },
-          { id: 'teams', label: 'Team Standings' },
+          { id: 'teams', label: 'Team Rankings' },
         ]}
         active={tab}
         onChange={setTab}
@@ -291,11 +291,11 @@ export default function GuestLeaderboards() {
       {tab === 'teams' && (
         <div className="space-y-2">
           {loading || seasonsLoading ? (
-            <p className="text-center text-[var(--text-muted)] py-10">Loading standings…</p>
+            <p className="text-center text-[var(--text-muted)] py-10">Loading rankings…</p>
           ) : !effectiveSeasonId ? (
             <p className="text-center text-[var(--text-muted)] py-10">No seasons available yet.</p>
           ) : teamStandings.filter((ts) => !sport || ts.team?.sport === sport).length === 0 ? (
-            <p className="text-center text-[var(--text-muted)] py-10">No team standings yet</p>
+            <p className="text-center text-[var(--text-muted)] py-10">No team rankings yet</p>
           ) : (
             sortTeamStandings(teamStandings.filter((ts) => !sport || ts.team?.sport === sport)).map(
               (ts, i) => (

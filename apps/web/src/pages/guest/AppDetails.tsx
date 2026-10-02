@@ -47,7 +47,7 @@ const GUEST_FEATURES: Feature[] = [
   },
   {
     icon: Trophy,
-    title: 'Standings & leaderboards',
+    title: 'Rankings & leaderboards',
     body: 'Team rankings and top player statistics for each sport.',
   },
   {
@@ -110,7 +110,7 @@ const SPORTS = [
     name: 'Volleyball',
     note: 'Set-by-set scores; attack, block, ace, excellent set, excellent dig and receive.',
   },
-  { icon: '🏓', name: 'Table Tennis', note: 'Game-by-game scoring and singles standings.' },
+  { icon: '🏓', name: 'Table Tennis', note: 'Game-by-game scoring and singles rankings.' },
 ]
 
 // Captured from the release APK in guest mode, so they show team names rather
@@ -118,7 +118,7 @@ const SPORTS = [
 const SCREENSHOTS = [
   { src: '/app/home.webp', caption: 'Home' },
   { src: '/app/live.webp', caption: 'Live scores' },
-  { src: '/app/standings.webp', caption: 'Standings' },
+  { src: '/app/standings.webp', caption: 'Rankings' },
   { src: '/app/signin.webp', caption: 'Sign in' },
 ]
 
@@ -206,7 +206,7 @@ export default function AppDetails() {
         <div className="space-y-5 text-lg text-[var(--text-secondary)] leading-relaxed">
           <p>
             U-Sports brings NU Dasmariñas intramural sports to your phone. Follow live games, check
-            brackets and standings, and — if you're a student-athlete — see your own schedule and
+            brackets and rankings, and — if you're a student-athlete — see your own schedule and
             performance, all in one app.
           </p>
           <p>

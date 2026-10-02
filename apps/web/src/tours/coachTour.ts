@@ -46,14 +46,14 @@ export const coachTour: TourDefinition = {
       route: '/organizer',
       target: A_COACH_TEAMS,
       title: 'My teams',
-      body: 'Your assigned teams live here on your dashboard — click one to jump straight to its roster.',
+      body: 'The teams you coach live here on your dashboard — click one to jump straight to its roster. A team you create is yours automatically; the Super Admin or your sport\'s Organizer can add you to others.',
     },
     {
       id: 'athletes-nav',
       route: '/organizer/athletes',
       target: navAnchor('/organizer/athletes'),
       title: 'Athletes',
-      body: 'Add an athlete one at a time, or import a whole roster from a spreadsheet — both send an email invite to set up their account.',
+      body: 'Add an athlete one at a time, or import a whole roster from a spreadsheet — each account comes with a password to hand over, and a set-up link is emailed too.',
       interactive: true,
     },
     {

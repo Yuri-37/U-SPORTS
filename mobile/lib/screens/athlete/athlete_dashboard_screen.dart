@@ -14,6 +14,7 @@ import '../../utils/participant_labels.dart';
 import '../../utils/sport_helpers.dart';
 import '../../widgets/double_back_exit.dart';
 import '../../widgets/stat_chip.dart';
+import '../../widgets/avatar_upload_button.dart';
 import '../../widgets/ui/brand_page.dart';
 import '../../widgets/ui/hub_header_actions.dart';
 import '../../utils/error_helpers.dart';
@@ -362,7 +363,13 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
       onRefresh: _load,
       hero: Column(
         children: [
-          HeroAvatar(imageUrl: avatarUrl, name: fullName, radius: 34),
+          // Tappable: this is the only place an athlete can change their photo,
+          // since /athlete/profile is deprecated in favour of this dashboard.
+          AvatarUploadButton(
+            avatarUrl: avatarUrl,
+            fallbackInitial: fullName.trim().isNotEmpty ? fullName.trim()[0].toUpperCase() : '?',
+            radius: 34,
+          ),
           const SizedBox(height: 12),
           Text(fullName, textAlign: TextAlign.center, style: AppTheme.display(size: 21, color: Colors.white)),
           const SizedBox(height: 4),

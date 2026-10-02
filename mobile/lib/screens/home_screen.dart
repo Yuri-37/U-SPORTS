@@ -305,7 +305,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         type: MaterialType.transparency,
         child: InkWell(
           // Dedicated drill-down page (real push, real back arrow) rather than
-          // switching to the Standings tab.
+          // switching to the Rankings tab.
           onTap: () => context.push('/sport/$sport'),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 6),

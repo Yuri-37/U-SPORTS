@@ -51,7 +51,7 @@ export const organizerTour: TourDefinition = {
       id: 'athletes-add',
       target: [A_ATHLETES_ADD, A_ATHLETES_IMPORT],
       title: 'Add or import athletes',
-      body: 'Add one athlete directly, or import a spreadsheet for a whole roster at once — either sends the athlete an email invite to set up their account.',
+      body: 'Add one athlete directly, or import a spreadsheet for a whole roster at once — each account comes with a password to hand over, and a set-up link is emailed too.',
       interactive: true,
     },
     {
@@ -97,7 +97,7 @@ export const organizerTour: TourDefinition = {
       route: '/organizer/analytics',
       target: navAnchor('/organizer/analytics'),
       title: 'Analytics',
-      body: 'Leaderboards, standings, and trending performance — updates automatically as matches finish.',
+      body: 'Leaderboards, rankings, and trending performance — updates automatically as matches finish.',
       interactive: true,
     },
     {

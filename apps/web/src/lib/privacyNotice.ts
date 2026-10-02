@@ -13,7 +13,7 @@
 export const PRIVACY_NOTICE_SECTIONS: { heading: string; body: string }[] = [
   {
     heading: '',
-    body: "U-Sports is a companion app built by and for NU Dasmariñas students to run intramural sports — team rosters, schedules, live scoring, and standings. It is an independent, unofficial platform, not one of NU Dasmariñas's official information systems. Before you continue, here's what we collect and how we use it.",
+    body: "U-Sports is a companion app built by and for NU Dasmariñas students to run intramural sports — team rosters, schedules, live scoring, and rankings. It is an independent, unofficial platform, not one of NU Dasmariñas's official information systems. Before you continue, here's what we collect and how we use it.",
   },
   {
     heading: 'What we collect',
@@ -21,7 +21,7 @@ export const PRIVACY_NOTICE_SECTIONS: { heading: string; body: string }[] = [
   },
   {
     heading: 'Why',
-    body: "Solely to run intramural sports: rosters, scheduling, live scoring, standings, and notifications about your team.",
+    body: "Solely to run intramural sports: rosters, scheduling, live scoring, rankings, and notifications about your team.",
   },
   {
     heading: 'Who can see it',

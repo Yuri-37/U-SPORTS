@@ -22,7 +22,7 @@ export const STAFF_MANUAL_SECTIONS: Record<StaffRole, ManualSection[]> = {
     },
     {
       heading: 'Staff accounts',
-      body: "A Coach is scoped to exactly one sport and one department — the system won't let two Coach accounts hold the same sport in the same department. An Organizer can be scoped to multiple sports. New staff get an email invite to set their own password.",
+      body: "A Coach is scoped to exactly one sport and one department — the system won't let two Coach accounts hold the same sport in the same department. An Organizer can be scoped to multiple sports. New staff get a password to hand over, plus an emailed link to choose their own. Coaches only work with the teams they coach: a team you create is yours automatically, and only the Super Admin or the Organizer of that sport can add a coach to another team.",
     },
     {
       heading: 'Common gotcha',
@@ -62,7 +62,7 @@ export const STAFF_MANUAL_SECTIONS: Record<StaffRole, ManualSection[]> = {
     },
     {
       heading: 'Adding your roster',
-      body: 'Add athletes one at a time from the Athletes page, or import a whole roster from a spreadsheet — both send the athlete an email invite to set up their own account.',
+      body: 'Add athletes one at a time from the Athletes page, or import a whole roster from a spreadsheet — each account comes with a password to hand over, and a link to choose their own is emailed too (school mail filters sometimes hold it, so the password is the dependable way in).',
     },
   ],
 }

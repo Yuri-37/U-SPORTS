@@ -14,7 +14,7 @@ import '../widgets/ui/brand_page.dart';
 
 /// Drill-down page for a single sport, reached from Home's "Browse by Sport"
 /// cards. A real pushed route (back arrow, no tab-switch ambiguity) combining
-/// that sport's standings and events in one place.
+/// that sport's rankings and events in one place.
 class SportDetailScreen extends ConsumerStatefulWidget {
   const SportDetailScreen({super.key, required this.sport});
 
@@ -74,7 +74,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
           ),
         ],
       ),
-      bottom: BrandTabBar(controller: _tab, tabs: const ['Standings', 'Events']),
+      bottom: BrandTabBar(controller: _tab, tabs: const ['Rankings', 'Events']),
       body: TabBarView(
         controller: _tab,
         children: [
@@ -134,7 +134,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                     error: (e, _) => SheetMessage(text: friendlyError(e)),
                     data: (rows) {
                       if (_seasonId == null) return const SheetMessage(text: 'No seasons available yet.');
-                      if (rows.isEmpty) return const SheetMessage(text: 'No team standings yet.');
+                      if (rows.isEmpty) return const SheetMessage(text: 'No team rankings yet.');
                       final standings = sortTeamStandings(rows);
                       return ListView(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),

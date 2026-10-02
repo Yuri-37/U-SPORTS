@@ -7,7 +7,7 @@ import '../../providers/notifications_provider.dart';
 import '../notification_bell_icon_button.dart';
 import 'brand_page.dart';
 
-/// Header actions shared by the Home, Standings and Events tabs: guests get
+/// Header actions shared by the Home, Rankings and Events tabs: guests get
 /// Settings; athletes get notifications and their own settings. Was copied
 /// into each of those screens separately.
 class HubHeaderActions extends ConsumerWidget {

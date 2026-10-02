@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
@@ -22,6 +22,7 @@ function matchStatusLabel(status: string): string {
 
 export default function GuestTeamDetail() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id: string }>()
   const [team, setTeam] = useState<any>(null)
   const [roster, setRoster] = useState<any[]>([])
@@ -128,7 +129,15 @@ export default function GuestTeamDetail() {
     }
   }, [id])
 
-  const goBack = () => navigate(-1)
+  // Staff open this page in a NEW TAB from the Teams list's eye button, and a
+  // fresh tab has no history, so a bare navigate(-1) does nothing at all --
+  // the button looked dead. `location.key` is 'default' exactly in that case
+  // (and on any direct link), so fall back to a real destination. Same
+  // pattern as EventDetailPage.
+  const goBack = () => {
+    if (location.key !== 'default') navigate(-1)
+    else navigate('/guest/leaderboards')
+  }
 
   if (loading)
     return (

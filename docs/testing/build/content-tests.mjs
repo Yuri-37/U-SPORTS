@@ -14,13 +14,13 @@ const tc = (id, description, steps, data, expected, shot, result = 'Pass', note 
 export const webTests = [
   // --- 1. Public hub / guest browsing -------------------------------------
   tc('1-1', 'Verify that the public hub loads successfully with the correct elements.',
-    ['Open the web application at its root address.', 'Confirm the navigation bar carries Hub, Standings, Events and Sign In.', 'Confirm the live-game and season-total sections render.'],
+    ['Open the web application at its root address.', 'Confirm the navigation bar carries Hub, Rankings, Events and Sign In.', 'Confirm the live-game and season-total sections render.'],
     'N/A',
     ['The hub loads with no broken links or console errors.', 'Live game cards show the matches currently being played.', 'Season totals report athletes, teams, competitions and games played.'],
     'w01-guest-hub.png'),
 
-  tc('1-2', 'Verify that a guest can read season standings and leaderboards.',
-    ['From the hub, open Standings.', 'Select a sport and an academic year.', 'Read the player-statistics table.'],
+  tc('1-2', 'Verify that a guest can read season rankings and leaderboards.',
+    ['From the hub, open Rankings.', 'Select a sport and an academic year.', 'Read the player-statistics table.'],
     'Basketball, AY 2026-2027',
     ['The leaderboard lists ranked athletes with games played and the statistics that apply to the chosen sport.', 'Changing the sport or season re-filters the table.'],
     'w02-guest-standings.png'),
@@ -38,7 +38,7 @@ export const webTests = [
     'w04-guest-event-detail.png'),
 
   tc('1-5', 'Verify that a guest can open a team page.',
-    ['From Standings or an event, open a team.', 'Review the record and roster.'],
+    ['From Rankings or an event, open a team.', 'Review the record and roster.'],
     'Volleyball Team A',
     ['The team page shows the season record and the full roster.'],
     'w05-guest-team-detail.png'),
@@ -291,17 +291,17 @@ export const mobileTests = [
   tc('9-1', 'Verify that the mobile home screen loads with the correct elements.',
     ['Install and open the Android application.', 'Review the banner, totals and bottom navigation.'],
     'N/A',
-    ['The home screen shows the institution banner, games being played now, open events and the announcement ticker.', 'Bottom navigation offers Home, Standings, Events and Sign in.'],
+    ['The home screen shows the institution banner, game matches ongoing now, open events and the announcement ticker.', 'Bottom navigation offers Home, Rankings, Events and Sign in.'],
     'm04-home-guest.png'),
 
   tc('9-2', 'Verify mobile player statistics.',
-    ['Open Standings.', 'Choose a sport and season on the Player stats tab.'],
+    ['Open Rankings.', 'Choose a sport and season on the Player stats tab.'],
     'Basketball, AY 2026-2027',
     ['Ranked athletes are listed with games played and sport-appropriate statistics.'],
     'm05-standings.png'),
 
-  tc('9-3', 'Verify mobile team standings.',
-    ['Open Standings and switch to Team standings.'],
+  tc('9-3', 'Verify mobile team rankings.',
+    ['Open Rankings and switch to Team rankings.'],
     'Basketball, AY 2026-2027',
     ['Teams are ranked with wins, losses and win percentage.'],
     'm11-team-standings.png'),
@@ -331,7 +331,7 @@ export const mobileTests = [
     'm09-match-live.png'),
 
   tc('9-8', 'Verify the mobile team detail screen.',
-    ['From team standings, open a team.'],
+    ['From team rankings, open a team.'],
     'SBMA Blazers',
     ['The team record and full roster render, with starters and jersey numbers marked.'],
     'm12-team-detail.png'),

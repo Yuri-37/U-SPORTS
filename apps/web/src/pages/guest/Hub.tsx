@@ -275,15 +275,15 @@ export default function GuestHub() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-[var(--text-secondary)] leading-relaxed max-w-xl">
-              {institution?.name ?? 'Intramural sports'} — rosters, schedules, live scoring and
-              standings, in one place. Follow every game as it happens.
+              {institution?.name ?? 'Intramural sports'}. Rosters, Schedules, Live Score Count, and
+              Rankings — in one place. Follow every game match as it happens.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Button size="lg" onClick={() => navigate('/guest/events')}>
                 Browse events
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('/guest/leaderboards')}>
-                View standings
+                View rankings
               </Button>
             </div>
             {liveMatches.length > 0 && (
@@ -292,7 +292,7 @@ export default function GuestHub() {
                 <span className="text-xl font-bold text-[var(--brand-ink)]">
                   {liveMatches.length}
                 </span>
-                {liveMatches.length === 1 ? 'game' : 'games'} being played right now
+                {liveMatches.length === 1 ? 'Game match is' : 'Game matches are'} ongoing right now
               </p>
             )}
           </div>
@@ -326,7 +326,7 @@ export default function GuestHub() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="danger">LIVE</Badge>
-                    <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                       {v.sportPretty}
                     </span>
                   </div>
@@ -337,15 +337,7 @@ export default function GuestHub() {
                       Details →
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-sm font-bold truncate flex-1 text-[var(--text-primary)]"
-                      title={v.nameA}
-                    >
-                      {v.nameA}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between my-2">
+                  <div className="flex items-center justify-between mt-3">
                     <span className="text-3xl font-black font-[Barlow_Condensed] text-[var(--text-primary)]">
                       {v.left}
                     </span>
@@ -354,15 +346,22 @@ export default function GuestHub() {
                       {v.right}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  {/* Both team names sit under their own score, so the two sides mirror. */}
+                  <div className="grid grid-cols-2 gap-4 mt-1">
                     <span
-                      className="text-sm font-bold truncate flex-1 text-[var(--text-primary)] text-right"
+                      className="min-w-0 text-sm font-bold leading-snug line-clamp-2 break-words text-[var(--text-primary)]"
+                      title={v.nameA}
+                    >
+                      {v.nameA}
+                    </span>
+                    <span
+                      className="min-w-0 text-sm font-bold leading-snug line-clamp-2 break-words text-right text-[var(--text-primary)]"
                       title={v.nameB}
                     >
                       {v.nameB}
                     </span>
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-2 truncate">{v.subtitle}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-3 truncate">{v.subtitle}</p>
                 </Card>
               )
             })}
@@ -539,7 +538,7 @@ export default function GuestHub() {
               <span
                 className={`${i === 0 ? 'mt-8' : 'mt-auto pt-8'} text-sm font-medium text-[var(--brand-ink)] group-hover:underline`}
               >
-                View standings →
+                View rankings →
               </span>
             </Card>
           ))}
@@ -664,7 +663,7 @@ export default function GuestHub() {
           <p className="mt-5 text-lg text-[var(--text-secondary)] leading-relaxed">
             {scopedProfile
               ? 'Jump back into your dashboard, or keep browsing the public results.'
-              : 'Anyone can browse events, brackets and standings. Sign in to see your own team, stats and schedule.'}
+              : 'Anyone can browse events, brackets and rankings. Sign in to see your own team, stats and schedule.'}
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button size="xl" onClick={() => navigate('/guest/events')} className="w-full sm:w-auto">
@@ -706,7 +705,7 @@ const SPORT_TILES = [
     sport: 'table-tennis',
     label: 'Table Tennis',
     icon: '🏓',
-    blurb: 'Best-of-series brackets and singles standings.',
+    blurb: 'Best-of-series brackets and singles rankings.',
   },
 ] as const
 

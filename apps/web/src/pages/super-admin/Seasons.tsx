@@ -288,7 +288,7 @@ export default function SuperAdminSeasons() {
     if (next === 'active')
       return 'This sets the season to active. Depending on your setup, other seasons may be adjusted automatically. Continue?'
     if (next === 'completed')
-      return 'Mark this season as completed? This action closes the season — events and standings will be locked.'
+      return 'Mark this season as completed? This action closes the season — events and rankings will be locked.'
     if (next === 'archived')
       return 'Archive this season? Historical records remain; the season leaves the active lifecycle.'
     return 'Apply this change?'

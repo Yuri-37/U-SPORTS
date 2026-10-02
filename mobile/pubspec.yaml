@@ -1,6 +1,6 @@
 name: u_sports_mobile
 description: U-Sports mobile app for athletes and guests
-version: 1.0.0+1
+version: 1.9.0+9
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -17,18 +17,13 @@ dependencies:
   cached_network_image: ^3.3.1
   intl: ^0.19.0
   image_picker: ^1.1.2
-  file_picker: ^8.0.7
-  photo_view: ^0.15.0
-  share_plus: ^9.0.0
   flutter_local_notifications: ^17.2.2
-  shimmer: ^3.0.0
-  lottie: ^3.1.2
   http: ^1.2.2
   shared_preferences: ^2.3.2
-  url_launcher: ^6.3.0
   connectivity_plus: ^6.1.0
   app_links: ^6.3.2
   google_fonts: ^8.2.1
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:

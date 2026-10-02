@@ -11,7 +11,7 @@ import DarkModeToggle from './DarkModeToggle'
 
 const GUEST_NAV = [
   { to: '/guest', label: 'Hub', Icon: Globe, end: true },
-  { to: '/guest/leaderboards', label: 'Standings', Icon: Trophy, end: false },
+  { to: '/guest/leaderboards', label: 'Rankings', Icon: Trophy, end: false },
   { to: '/guest/events', label: 'Events', Icon: Calendar, end: false },
 ] as const
 
@@ -93,7 +93,7 @@ export default function GuestLayout() {
 
         <div className="flex items-center gap-2 shrink-0">
           <DarkModeToggle />
-          {/* Not a nav section like Hub/Standings/Events -- a one-off "get this"
+          {/* Not a nav section like Hub/Rankings/Events -- a one-off "get this"
               link, so it sits with the actions. Icon-only on small screens;
               hidden on the app page itself. */}
           {location.pathname !== '/app' && (
@@ -206,7 +206,7 @@ function GuestFooter() {
             </div>
           </div>
           <p className="mt-4 text-sm text-[var(--text-muted)] leading-relaxed max-w-sm">
-            Rosters, schedules, live scoring and standings for intramural sports. An independent
+            Rosters, schedules, live scoring and rankings for intramural sports. An independent
             student-built platform, not an official university information system.
           </p>
           {place && (
@@ -222,7 +222,7 @@ function GuestFooter() {
           links={[
             { to: '/guest', label: 'Hub' },
             { to: '/guest/events', label: 'Events' },
-            { to: '/guest/leaderboards', label: 'Standings' },
+            { to: '/guest/leaderboards', label: 'Rankings' },
             { to: '/app', label: 'Mobile app' },
           ]}
         />

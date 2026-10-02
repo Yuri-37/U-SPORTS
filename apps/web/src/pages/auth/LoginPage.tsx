@@ -40,10 +40,16 @@ export default function LoginPage() {
         const { profile: nextProfile, session: nextSession } = useAuthStore.getState()
         const scoped = sessionScopedProfile(nextSession ?? data.session, nextProfile)
 
+        // Staff used to be signed back out here and told to use the Staff
+        // Portal, with nothing linking to it -- correct credentials looked
+        // like a broken account. They are already authenticated by this
+        // point and the portal uses the same Supabase auth, so send them on
+        // to their own dashboard instead of bouncing them.
         if (scoped?.role === 'Admin' || scoped?.role === 'Organizer' || scoped?.role === 'Coach') {
-          await supabase.auth.signOut()
-          useAuthStore.setState({ session: null, user: null, profile: null })
-          throw new Error('Staff sign in through the Staff Portal.')
+          navigate(scoped.role === 'Admin' ? '/super-admin' : defaultPostLoginPath(scoped.role), {
+            replace: true,
+          })
+          return
         }
 
         const returnTo = safeInternalPath((location.state as { from?: string } | null)?.from)

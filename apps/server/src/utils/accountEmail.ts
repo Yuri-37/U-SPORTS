@@ -1,40 +1,89 @@
 import supabase from './supabase'
-import { ISSUED_PASSWORD_SCHEME, resetPassword } from './readablePassword'
+import { ISSUED_PASSWORD_SCHEME, readablePassword, resetPassword } from './readablePassword'
 
 /**
- * Whether outbound account email (invites via
- * supabase.auth.admin.inviteUserByEmail, and admin-triggered password
- * resets via supabase.auth.resetPasswordForEmail) can be relied on, as
- * opposed to the admin setting/relaying a password by hand. OFF by default
- * and must stay that way until BOTH of these are done in the Supabase
- * dashboard (verified as unconfigured as of this writing):
+ * Whether new accounts ALSO get a "set your own password" email.
  *
- *   1. Auth -> SMTP Settings: point at a real provider (Resend/Brevo/etc,
- *      see supabase/SMTP.md). The built-in mailer caps at ~2 emails/hour and
- *      is documented as development-only -- fine for occasional password
- *      resets, not for onboarding a roster of staff.
- *   2. Auth -> URL Configuration: add the accept-invite and reset-password
- *      redirect URLs to the allow-list. Supabase silently substitutes Site
- *      URL for any redirectTo that isn't allow-listed -- the same
- *      misconfiguration that sends password-reset links to localhost today.
+ * On by default; set INVITE_EMAILS_ENABLED=false to switch it off. This used
+ * to be opt-in because the old behaviour was all-or-nothing: with it on, an
+ * account was made through Supabase's invite API, which creates it with NO
+ * password -- so if the mail never arrived (a quarantined message, an
+ * unconfigured SMTP, the built-in mailer's ~2/hour cap) the account existed
+ * but nobody could sign in. That is why the flag had to stay off, and why
+ * registration then sent nothing at all.
  *
- * Flipping this on without both of those means invites and reset emails
- * silently fail to deliver with no working fallback, which is worse than
- * the current password-and-share flow they would replace.
+ * Accounts are now always created WITH a password the staff member can hand
+ * over (see the creators below), and the email is a best-effort extra whose
+ * outcome is reported back rather than swallowed. A failed or filtered
+ * message can therefore no longer lock anyone out, which is what makes it
+ * safe to default on.
+ *
+ * Delivery still depends on dashboard settings that live outside this repo:
+ * Auth -> SMTP (Resend, see supabase/SMTP.md) and Auth -> URL Configuration
+ * (Supabase silently swaps in Site URL for a redirectTo that isn't
+ * allow-listed -- the misconfiguration that once sent reset links to
+ * localhost).
  */
 export function inviteEmailsEnabled(): boolean {
-  return process.env.INVITE_EMAILS_ENABLED === 'true'
+  return process.env.INVITE_EMAILS_ENABLED !== 'false'
 }
 
-export type AccountCreationResult =
-  | { mode: 'invited'; userId: string }
-  | { mode: 'password'; userId: string }
+export type AccountCreationResult = {
+  /** Always 'password': the account is created with a usable password. */
+  mode: 'password'
+  userId: string
+  /** The password the account was created with -- the reliable way in. */
+  password: string
+  /** Whether a set-your-own-password email was accepted by the mail provider. */
+  emailed: boolean
+  /** Why no email went out, when one was attempted and failed. */
+  emailError?: string
+}
+
+/** Short, human wording for the errors Supabase's mailer actually produces. */
+function describeMailError(raw: string): string {
+  if (/rate limit|too many|over_email_send_rate_limit/i.test(raw)) {
+    return 'Too many emails were sent recently. Try again in about an hour.'
+  }
+  if (/not authorized|not allowed|only.*team/i.test(raw)) {
+    return 'The mail provider is not set up to send to this address yet.'
+  }
+  return raw || 'The email could not be sent.'
+}
 
 /**
- * Creates the auth user for a new staff account via whichever path
- * inviteEmailsEnabled() selects, so callers (POST /admin/organizers,
- * POST /admin/admins) don't need to branch themselves. Both paths converge
- * on the same result shape.
+ * Sends the "set your own password" link to a freshly created account.
+ *
+ * Uses the recovery email -- the one flow already proven to reach inboxes
+ * through the configured SMTP -- rather than an invite, because an invite
+ * would also (re)create the account without a password. Never throws: a
+ * message that fails to send must not fail account creation, so the outcome
+ * comes back as data for the staff UI to show.
+ */
+async function sendSetPasswordEmail(
+  email: string,
+): Promise<{ emailed: boolean; emailError?: string }> {
+  if (!inviteEmailsEnabled()) return { emailed: false }
+  const redirectTo = process.env.WEB_URL
+    ? `${process.env.WEB_URL.replace(/\/+$/, '')}/auth/reset-password`
+    : undefined
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    if (error) return { emailed: false, emailError: describeMailError(error.message) }
+    return { emailed: true }
+  } catch (e: unknown) {
+    return { emailed: false, emailError: describeMailError(e instanceof Error ? e.message : '') }
+  }
+}
+
+/**
+ * Creates the auth user for a new staff account. Used by POST
+ * /admin/organizers and POST /admin/admins.
+ *
+ * The account always gets a password: the one the admin typed, or a readable
+ * generated one ("Brave-Otter-372") when none was given. Either way it is
+ * returned so the admin can read it out, independent of whether the email
+ * below ever arrives.
  */
 export async function createStaffAuthUser(params: {
   email: string
@@ -43,29 +92,11 @@ export async function createStaffAuthUser(params: {
   fullName: string
   department: string | null
 }): Promise<AccountCreationResult> {
-  const { email, password, role, fullName, department } = params
+  const { email, role, fullName, department } = params
+  // Keyed by a secret and by the clock, so every issued password is fresh and
+  // not derivable from anything public (the old first-password formula was).
+  const password = params.password ?? readablePassword(`staff:${email.toLowerCase()}:${Date.now()}`)
 
-  if (inviteEmailsEnabled()) {
-    const redirectTo = process.env.WEB_URL
-      ? `${process.env.WEB_URL.replace(/\/+$/, '')}/auth/accept-invite`
-      : undefined
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName, department },
-      redirectTo,
-    })
-    if (error || !data?.user?.id) {
-      throw new Error(error?.message ?? 'Could not send invitation email')
-    }
-    // app_metadata.role isn't reliably settable via inviteUserByEmail's
-    // options across supabase-js versions -- set it explicitly right after,
-    // matching how createUser sets it in the password path below.
-    await supabase.auth.admin.updateUserById(data.user.id, { app_metadata: { role } })
-    return { mode: 'invited', userId: data.user.id }
-  }
-
-  if (!password) {
-    throw new Error('Password is required while invite emails are disabled (INVITE_EMAILS_ENABLED)')
-  }
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -76,61 +107,50 @@ export async function createStaffAuthUser(params: {
   if (error || !data?.user?.id) {
     throw new Error(error?.message ?? 'Could not create staff account')
   }
-  return { mode: 'password', userId: data.user.id }
+  return { mode: 'password', userId: data.user.id, password, ...(await sendSetPasswordEmail(email)) }
 }
 
 /**
- * Creates the auth user for a new athlete account, same invited/password
- * split as createStaffAuthUser above but with athlete-shaped metadata
+ * Creates the auth user for a new athlete account, same shape as
+ * createStaffAuthUser above but with athlete metadata
  * (student_id/course/year_level instead of a staff role). Used by both the
  * single-athlete form and the bulk importer (routes/students.ts) so there's
  * one code path instead of three.
+ *
+ * `sendEmail` is off for the bulk importer: mailing a whole roster at once
+ * trips the provider's hourly limit and would leave most of a class with a
+ * failed message. The import result lists every password instead, which is
+ * what staff hand out anyway.
  */
 export async function createAthleteAuthUser(params: {
   email: string
-  password?: string
+  password: string
   fullName: string
   studentId: string
   department: string
   course?: string
   yearLevel?: string
+  sendEmail?: boolean
 }): Promise<AccountCreationResult> {
-  const { email, password, fullName, studentId, department, course, yearLevel } = params
-  const metadata = {
-    full_name: fullName,
-    student_id: studentId,
-    department,
-    course,
-    year_level: yearLevel,
-  }
+  const { email, password, fullName, studentId, department, course, yearLevel, sendEmail } = params
 
-  if (inviteEmailsEnabled()) {
-    const redirectTo = process.env.WEB_URL
-      ? `${process.env.WEB_URL.replace(/\/+$/, '')}/auth/accept-invite`
-      : undefined
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: metadata,
-      redirectTo,
-    })
-    if (error || !data?.user?.id) {
-      throw new Error(error?.message ?? 'Could not send invitation email')
-    }
-    return { mode: 'invited', userId: data.user.id }
-  }
-
-  if (!password) {
-    throw new Error('Password is required while invite emails are disabled (INVITE_EMAILS_ENABLED)')
-  }
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: metadata,
+    user_metadata: {
+      full_name: fullName,
+      student_id: studentId,
+      department,
+      course,
+      year_level: yearLevel,
+    },
   })
   if (error || !data?.user?.id) {
     throw new Error(error?.message ?? 'Could not create athlete account')
   }
-  return { mode: 'password', userId: data.user.id }
+  const mail = sendEmail ? await sendSetPasswordEmail(email) : { emailed: false }
+  return { mode: 'password', userId: data.user.id, password, ...mail }
 }
 
 export type PasswordResetResult =

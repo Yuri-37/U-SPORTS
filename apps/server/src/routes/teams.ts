@@ -8,6 +8,8 @@ import {
   respondIfScopeForbidden,
   fetchActiveSportSlugs,
   organizerMayConfigureSport,
+  organizerIdForProfile,
+  coachesTeam,
 } from '../utils/organizerSportAccess'
 import { respondIfSeasonForbidden } from '../utils/organizerSeasonAccess'
 import { respondIfSportNotInSeason, fetchSeasonSportSlugs } from '../utils/seasonSports'
@@ -619,10 +621,21 @@ router.post(
         if (!r.valid) errors.push({ row: r.row, error: r.error ?? 'Invalid row' })
       }
 
+      const importerOrganizerId =
+        req.user!.role === 'Admin' ? null : await organizerIdForProfile(req.user!.id)
+
       for (const g of groups) {
         if (g.error) continue // already surfaced as a row-level error above
 
         let teamId = g.team_id
+        if (teamId && req.user!.role === 'Coach') {
+          if (!importerOrganizerId || !(await coachesTeam(importerOrganizerId, teamId))) {
+            for (const i of g.rows) {
+              errors.push({ row: rows[i].row, error: 'You can only change teams you coach.' })
+            }
+            continue
+          }
+        }
         if (!teamId) {
           // No sport/season re-check needed here: buildTeamImportPlan already
           // marked rows with a forbidden sport or a sport not in this season
@@ -645,6 +658,11 @@ router.post(
             continue
           }
           teamId = newTeam.id as string
+          if (importerOrganizerId) {
+            await supabase
+              .from('team_coaches')
+              .insert({ organizer_id: importerOrganizerId, team_id: teamId })
+          }
           createdTeams.push({ team_id: teamId, name: g.team_name, sport: g.sport })
           await writeAuditLog({
             actorId: req.user!.id,
@@ -775,7 +793,7 @@ router.get('/:id', async (req, res) => {
   res.json(data)
 })
 
-router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
   const parsed = teamCreateSchema.safeParse(req.body)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? 'Invalid request'
@@ -788,6 +806,27 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
       return
     if (await respondIfSportNotInSeason(res, body.season_id, body.sport)) return
 
+    // Whoever creates a team coaches it -- that is the only way a coach ends up
+    // on a team by their own action. A Super Admin has no staff row, so a team
+    // they create starts without a coach until one is assigned.
+    const creatorOrganizerId =
+      req.user!.role === 'Admin' ? null : await organizerIdForProfile(req.user!.id)
+    let department: z.infer<typeof departmentEnum> | null = body.department ?? null
+    if (req.user!.role === 'Coach') {
+      const { data: me } = await supabase
+        .from('profiles')
+        .select('department')
+        .eq('id', req.user!.id)
+        .maybeSingle()
+      const myDept = (me?.department as string | null) ?? null
+      if (myDept && department && department !== myDept) {
+        return res.status(403).json({
+          error: `You are a ${myDept} coach and cannot create a ${department} team.`,
+        })
+      }
+      department = department ?? (myDept as z.infer<typeof departmentEnum> | null)
+    }
+
     const { data, error } = await supabase
       .from('teams')
       .insert({
@@ -795,7 +834,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
         sport: body.sport,
         season_id: body.season_id,
         captain_id: body.captain_id,
-        department: body.department ?? null,
+        department,
       })
       .select()
       .single()
@@ -803,6 +842,18 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
       return res
         .status(error.message.includes('violates foreign key') ? 400 : 500)
         .json({ error: error.message })
+
+    if (creatorOrganizerId) {
+      const { error: coachErr } = await supabase
+        .from('team_coaches')
+        .insert({ organizer_id: creatorOrganizerId, team_id: data.id })
+      if (coachErr) {
+        await supabase.from('teams').delete().eq('id', data.id)
+        return res
+          .status(500)
+          .json({ error: 'Could not make you the coach of this team, so it was not created.' })
+      }
+    }
 
     await writeAuditLog({
       actorId: req.user!.id,
@@ -1016,6 +1067,7 @@ router.post(
       await respondIfScopeForbidden(req, res, {
         sport: team.sport as string,
         seasonId: team.season_id as string,
+        teamId: String(req.params.id),
       })
     )
       return
@@ -1078,6 +1130,7 @@ router.delete(
       await respondIfScopeForbidden(req, res, {
         sport: team.sport as string,
         seasonId: team.season_id as string,
+        teamId: String(req.params.id),
       })
     )
       return
@@ -1125,6 +1178,7 @@ router.post(
       await respondIfScopeForbidden(req, res, {
         sport: team.sport as string,
         seasonId: team.season_id as string,
+        teamId: String(req.params.id),
       })
     )
       return
@@ -1158,11 +1212,81 @@ router.post(
   },
 )
 
+/**
+ * Who coaches a team is decided by the Super Admin or by the Organizer of that
+ * team's sport -- a coach cannot add themselves to a team. (Creating a team is
+ * the one exception, see POST /, where the creator becomes its coach.)
+ */
+const coachAssignmentSchema = z.object({ organizer_id: z.string().uuid() })
+
+router.get(
+  '/:id/eligible-coaches',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('sport, department, season_id')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (!team) return res.status(404).json({ error: 'Team not found' })
+    if (
+      await respondIfScopeForbidden(req, res, {
+        sport: team.sport as string,
+        seasonId: team.season_id as string,
+      })
+    )
+      return
+
+    const { data, error } = await supabase
+      .from('organizers')
+      .select(
+        'id, assigned_sports, is_active, profile:profiles!organizers_profile_id_fkey(full_name, role, department)',
+      )
+      .eq('is_active', true)
+      .contains('assigned_sports', [team.sport as string])
+    if (error) return res.status(500).json({ error: error.message })
+
+    const { data: current } = await supabase
+      .from('team_coaches')
+      .select('organizer_id')
+      .eq('team_id', req.params.id)
+    const assignedIds = new Set((current ?? []).map((r) => r.organizer_id as string))
+
+    const teamDept = (team.department as string | null) ?? null
+    const list = (data ?? [])
+      .map((o) => {
+        const profile = (
+          o as unknown as {
+            profile?: { full_name?: string; role?: string; department?: string | null } | null
+          }
+        ).profile
+        return {
+          organizer_id: o.id as string,
+          full_name: profile?.full_name ?? 'Unnamed',
+          role: profile?.role ?? '',
+          department: profile?.department ?? null,
+          assigned: assignedIds.has(o.id as string),
+        }
+      })
+      .filter((c) => c.role === 'Coach' || c.role === 'Organizer')
+      // Coaches are department-scoped; a team without a department takes anyone.
+      .filter((c) => !(c.role === 'Coach' && teamDept && c.department && c.department !== teamDept))
+      .sort((x, y) => x.full_name.localeCompare(y.full_name))
+    res.json(list)
+  },
+)
+
 router.post(
   '/:id/coach',
   requireAuth,
-  requireRole('Organizer', 'Admin', 'Coach'),
+  requireRole('Organizer', 'Admin'),
   async (req: AuthRequest, res) => {
+    const parsed = coachAssignmentSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Choose which staff member to assign.' })
+    }
+
     const { data: team, error: teamErr } = await supabase
       .from('teams')
       .select('sport, department, season_id')
@@ -1180,27 +1304,37 @@ router.post(
 
     const { data: staff } = await supabase
       .from('organizers')
-      .select('id, profile:profiles!organizers_profile_id_fkey(department)')
-      .eq('profile_id', req.user!.id)
+      .select(
+        'id, is_active, assigned_sports, profile:profiles!organizers_profile_id_fkey(full_name, role, department)',
+      )
+      .eq('id', parsed.data.organizer_id)
       .maybeSingle()
-    if (!staff) return res.status(404).json({ error: 'Staff profile not found' })
-
-    // Coaches are department-scoped (see findCoachSportConflict in admin.ts, which
-    // enforces one-coach-per-sport-per-department at account creation) but this
-    // endpoint never checked the TEAM side of that boundary — a coach could self
-    // -assign to a same-sport team in a different department entirely. A team
-    // with no department set (nullable, migration 038) accepts any coach.
-    if (req.user!.role === 'Coach') {
-      const staffProfile = (
-        staff as unknown as { profile?: { department?: string | null } | null }
-      ).profile
-      const coachDept = staffProfile?.department ?? null
-      const teamDept = (team as { department?: string | null }).department ?? null
-      if (coachDept && teamDept && coachDept !== teamDept) {
-        return res.status(403).json({
-          error: `You are a ${coachDept} coach and cannot coach a ${teamDept} team.`,
-        })
-      }
+    const staffProfile = (
+      staff as unknown as {
+        profile?: { full_name?: string; role?: string; department?: string | null } | null
+      } | null
+    )?.profile
+    if (!staff || !staff.is_active || !staffProfile) {
+      return res.status(404).json({ error: 'That staff member could not be found or is inactive.' })
+    }
+    if (staffProfile.role !== 'Coach' && staffProfile.role !== 'Organizer') {
+      return res.status(400).json({ error: 'Only coaches and organizers can coach a team.' })
+    }
+    if (!((staff.assigned_sports as string[] | null) ?? []).includes(team.sport as string)) {
+      return res.status(400).json({
+        error: `${staffProfile.full_name ?? 'That staff member'} is not assigned to this team's sport.`,
+      })
+    }
+    const teamDept = (team as { department?: string | null }).department ?? null
+    if (
+      staffProfile.role === 'Coach' &&
+      staffProfile.department &&
+      teamDept &&
+      staffProfile.department !== teamDept
+    ) {
+      return res.status(403).json({
+        error: `${staffProfile.full_name ?? 'That coach'} is a ${staffProfile.department} coach and cannot coach a ${teamDept} team.`,
+      })
     }
 
     const { data, error } = await supabase
@@ -1208,7 +1342,12 @@ router.post(
       .insert({ organizer_id: staff.id, team_id: req.params.id })
       .select()
       .single()
-    if (error) return res.status(400).json({ error: error.message })
+    if (error) {
+      const duplicate = /duplicate|unique/i.test(error.message)
+      return res.status(duplicate ? 409 : 400).json({
+        error: duplicate ? 'That staff member already coaches this team.' : error.message,
+      })
+    }
 
     await writeAuditLog({
       actorId: req.user!.id,
@@ -1225,8 +1364,13 @@ router.post(
 router.delete(
   '/:id/coach',
   requireAuth,
-  requireRole('Organizer', 'Admin', 'Coach'),
+  requireRole('Organizer', 'Admin'),
   async (req: AuthRequest, res) => {
+    const target = z.string().uuid().safeParse(req.query.organizer_id)
+    if (!target.success) {
+      return res.status(400).json({ error: 'Choose which coach to remove.' })
+    }
+
     const { data: team } = await supabase
       .from('teams')
       .select('sport, season_id')
@@ -1241,24 +1385,17 @@ router.delete(
     )
       return
 
-    const { data: staff } = await supabase
-      .from('organizers')
-      .select('id')
-      .eq('profile_id', req.user!.id)
-      .maybeSingle()
-    if (!staff) return res.status(404).json({ error: 'Staff profile not found' })
-
     await supabase
       .from('team_coaches')
       .delete()
-      .eq('organizer_id', staff.id)
+      .eq('organizer_id', target.data)
       .eq('team_id', req.params.id)
     await writeAuditLog({
       actorId: req.user!.id,
       action: 'team_coach_removed',
       entityType: 'team',
       entityId: req.params.id,
-      details: { organizer_id: staff.id },
+      details: { organizer_id: target.data },
     })
 
     res.json({ success: true })
@@ -1282,6 +1419,7 @@ router.patch(
       await respondIfScopeForbidden(req, res, {
         sport: team.sport as string,
         seasonId: team.season_id as string,
+        teamId: String(req.params.id),
       })
     )
       return

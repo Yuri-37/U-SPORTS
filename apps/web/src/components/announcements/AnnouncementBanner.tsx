@@ -102,6 +102,9 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
         (payload) => {
           const a = payload.new as Announcement
           if (!isFetchedBannerMode(a.display_mode, modes)) return
+          // The initial fetch filters expired rows server-side, but a realtime
+          // INSERT bypasses that query -- check it here too.
+          if (a.expires_at && new Date(a.expires_at).getTime() <= Date.now()) return
           if (!publicOnly || a.is_public) {
             setAnnouncements((prev) => [a, ...prev])
           }
@@ -114,7 +117,25 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
     }
   }, [publicOnly, modesKey, modes])
 
-  const visible = announcements.filter((a) => !dismissed.has(a.id))
+  // Expiry used to be applied only when the list was first fetched, so a banner
+  // that expired while the page stayed open (a hub left up on a venue screen,
+  // say) simply never went away. `now` is bumped by a timer set for the next
+  // expiry, which re-runs the filter below.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const upcoming = announcements
+      .map((a) => (a.expires_at ? new Date(a.expires_at).getTime() : Infinity))
+      .filter((t) => t > Date.now())
+    if (upcoming.length === 0) return
+    // setTimeout overflows past ~24.8 days; cap it and re-evaluate after.
+    const delay = Math.min(Math.min(...upcoming) - Date.now() + 250, 60 * 60 * 1000)
+    const timer = window.setTimeout(() => setNow(Date.now()), delay)
+    return () => window.clearTimeout(timer)
+  }, [announcements, now])
+
+  const visible = announcements.filter(
+    (a) => !dismissed.has(a.id) && (!a.expires_at || new Date(a.expires_at).getTime() > now),
+  )
   if (visible.length === 0) return null
 
   const heroes = modes.includes('hero_slider')

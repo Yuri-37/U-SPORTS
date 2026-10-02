@@ -6,7 +6,7 @@ export const generalModules = [
     ['Authenticate', 'Verifies the email and password against Supabase Auth and routes the user to the dashboard that matches their role (Super Admin, Organizer, Coach or Athlete).'],
     ['Forgot Password', 'Sends a password-reset link to a registered school email address and reports the outcome without revealing whether the account exists.'],
     ['Accept Invite / Set First Password', 'Lets an invited staff member or athlete set their own password from the link sent to their school email.'],
-    ['Guest Access', 'Allows anyone to browse standings, events and rosters without signing in.'],
+    ['Guest Access', 'Allows anyone to browse rankings, events and rosters without signing in.'],
   ]],
   ['2', 'Data Privacy Notice', [
     ['Review Notice', 'Presents what the platform collects and why, before any personal data is shown.'],
@@ -28,12 +28,12 @@ export const generalModules = [
 
 export const webModules = [
   ['1', 'Public Hub (Landing Page)', [
-    ['Introduction and Navigation', 'Presents the institution banner, live games, open events, sports and season totals, with navigation to Hub, Standings, Events and Sign In.'],
+    ['Introduction and Navigation', 'Presents the institution banner, live games, open events, sports and season totals, with navigation to Hub, Rankings, Events and Sign In.'],
     ['Live Game Cards', 'Shows each match currently being played with running scores, refreshed in real time.'],
   ]],
-  ['2', 'Guest — Standings', [
+  ['2', 'Guest — Rankings', [
     ['View Player Statistics', 'Season leaderboard per sport, with the statistics that apply to that sport (PPG/RPG/APG for basketball, attacks/aces for volleyball, points/winners for table tennis).'],
-    ['View Team Standings', 'Win-loss record and win percentage per team for the selected sport and season.'],
+    ['View Team Rankings', 'Win-loss record and win percentage per team for the selected sport and season.'],
     ['Filter by Sport and Season', 'Restricts both tables to a chosen sport and academic year.'],
   ]],
   ['3', 'Guest — Events', [
@@ -120,11 +120,11 @@ export const webModules = [
 
 export const mobileModules = [
   ['1', 'Home', [
-    ['Access Services', 'Shows the institution banner, games being played now, open-event totals and the announcement ticker, and routes to every other section.'],
+    ['Access Services', 'Shows the institution banner, game matches ongoing now, open-event totals and the announcement ticker, and routes to every other section.'],
   ]],
-  ['2', 'Standings and Leaderboards', [
+  ['2', 'Rankings and Leaderboards', [
     ['View Player Statistics', 'Season leaderboard per sport with sport-appropriate statistics.'],
-    ['View Team Standings', 'Win-loss record and win percentage per team.'],
+    ['View Team Rankings', 'Win-loss record and win percentage per team.'],
     ['Filter by Sport and Season', 'Restricts the tables to a chosen sport and academic year.'],
   ]],
   ['3', 'Events', [

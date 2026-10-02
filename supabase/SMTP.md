@@ -72,3 +72,38 @@ For production, add the provider’s **SPF**, **DKIM**, and any **DMARC** record
 ## Local development (`config.toml`)
 
 See **[Local Mailpit (no extra install)](#local-mailpit-no-extra-install)** above. Hosted Supabase still uses Dashboard SMTP only.
+
+---
+
+## Account-creation emails (checklist for production)
+
+Every account created from the app (staff, athletes) now gets a **password the creator can hand over**, plus a best-effort **"choose your own password" email** (it is sent as a password-recovery email). The password is the dependable way in; the email is the convenience. For the email to arrive and work, set these in the Supabase Dashboard (none of this lives in the repo):
+
+1. **Authentication → URL Configuration**
+   - **Site URL:** `https://usports.info`
+   - **Redirect URLs (allow-list):** `https://usports.info/auth/reset-password` and `https://usports.info/auth/accept-invite`. Supabase silently replaces a `redirectTo` that is not on this list with the Site URL, which is how reset links once ended up pointing at localhost.
+2. **Authentication → Emails → Templates → Reset Password** (this is the template the account-creation email uses). Make the link carry the token hash, which the web page redeems with `verifyOtp` (it survives Outlook/Safe Links pre-fetching, which otherwise burns one-time links before the person clicks):
+
+   ```html
+   <h2>Set your U-Sports password</h2>
+   <p>Follow this link to choose a password for your U-Sports account:</p>
+   <p><a href="{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery">Choose my password</a></p>
+   ```
+3. **Project Settings → Authentication → SMTP Settings:** custom SMTP (Resend) enabled, sender on the verified `usports.info` domain. The built-in mailer is for development only (a couple of messages per hour).
+4. **Render (API) environment:**
+   - `WEB_URL=https://usports.info`
+   - `ACCOUNT_PASSWORD_SECRET` set to a long random value (keys the readable passwords).
+   - `INVITE_EMAILS_ENABLED` can be left unset (emails default **on**); set it to `false` to stop sending them.
+5. **School mail filters:** NU's Microsoft 365 tenant has quarantined mail from new senders before. If staff report that an email never arrived, check **Quarantine** in the Microsoft 365 Defender portal, or ask NU IT to allow-list the sending domain. Accounts are never blocked by this, because the password is shown on screen at creation.
+
+### Database migrations to apply to production
+
+Run `supabase db push` (or paste the files into the SQL editor) for:
+
+- `073_profiles_issued_password_scheme.sql`, `074_hide_email_from_anon.sql` (if not applied yet)
+- `076_revoke_public_function_access.sql` -- stops the public anon key from calling the score-changing functions.
+- `077_staff_writes_through_api_only.sql` -- coaches/organizers can no longer write team and roster tables directly with their own token.
+
+### Domain
+
+`https://www.usports.info` currently points at Porkbun's parking page instead of Vercel (its TLS handshake fails). Add `www.usports.info` to the Vercel project (Settings → Domains) and point the `www` CNAME at `cname.vercel-dns.com`, or add a Porkbun URL-forward from `www` to the apex.

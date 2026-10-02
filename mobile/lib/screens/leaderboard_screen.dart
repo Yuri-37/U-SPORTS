@@ -80,10 +80,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
     return DoubleBackToExit(
       child: BrandPage.fixed(
         showBack: false,
-        title: 'Standings & Leaderboards',
+        title: 'Rankings & Leaderboards',
         subtitle: 'Season statistics and rankings',
         actions: const [HubHeaderActions()],
-        bottom: BrandTabBar(controller: _tab, tabs: const ['Player stats', 'Team standings']),
+        bottom: BrandTabBar(controller: _tab, tabs: const ['Player stats', 'Team rankings']),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -294,7 +294,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                             return const SheetMessage(text: 'No seasons available yet.');
                           }
                           if (rows.isEmpty) {
-                            return const SheetMessage(text: 'No team standings yet.');
+                            return const SheetMessage(text: 'No team rankings yet.');
                           }
                           final standings = sortTeamStandings(rows);
                           return SingleChildScrollView(

@@ -222,12 +222,22 @@ export default function OrganizerTeams() {
     label: string
   } | null>(null)
 
-  const [coachLeaveConfirm, setCoachLeaveConfirm] = useState<{
-    teamId: string
-    teamName: string
-  } | null>(null)
-
-  const [coachBusy, setCoachBusy] = useState(false)
+  // Who coaches a team is set by the Super Admin or the sport's Organizer, from a
+  // dialog on the team card -- coaches cannot add themselves.
+  const [coachDialog, setCoachDialog] = useState<{ teamId: string; teamName: string } | null>(null)
+  const [coachOptions, setCoachOptions] = useState<
+    {
+      organizer_id: string
+      full_name: string
+      role: string
+      department: string | null
+      assigned: boolean
+    }[]
+  >([])
+  const [coachOptionsLoading, setCoachOptionsLoading] = useState(false)
+  const [coachDialogError, setCoachDialogError] = useState('')
+  /** organizers.id of the staff member being added/removed right now. */
+  const [coachBusy, setCoachBusy] = useState<string | null>(null)
 
   const [rosterSuccess, setRosterSuccess] = useState('')
 
@@ -890,68 +900,53 @@ export default function OrganizerTeams() {
     }
   }
 
-  const assignSelfAsCoach = async (teamId: string) => {
-    setCoachBusy(true)
+  const coachErrorText = (e: unknown, fallback: string) => {
+    if (axios.isAxiosError(e)) {
+      const d = e.response?.data
+      if (d && typeof d === 'object' && 'error' in d) return String((d as { error: string }).error)
+    }
+    return fallback
+  }
 
-    setListError('')
-
+  const loadCoachOptions = async (teamId: string) => {
+    setCoachOptionsLoading(true)
+    setCoachDialogError('')
     try {
-      await api.post(`/teams/${teamId}/coach`, {})
-
-      fetchTeams()
+      const { data } = await api.get(`/teams/${teamId}/eligible-coaches`)
+      setCoachOptions(data)
     } catch (e: unknown) {
-      if (axios.isAxiosError(e)) {
-        const d = e.response?.data
-
-        const apiErr =
-          d && typeof d === 'object' && 'error' in d ? String((d as { error: string }).error) : null
-
-        setListError(apiErr ?? e.message ?? 'Could not join as coach')
-      } else {
-        setListError('Could not join as coach')
-      }
+      setCoachOptions([])
+      setCoachDialogError(coachErrorText(e, 'Could not load the coaches for this team'))
     } finally {
-      setCoachBusy(false)
+      setCoachOptionsLoading(false)
     }
   }
 
-  const confirmLeaveCoachRole = async () => {
-    if (!coachLeaveConfirm) return
-
-    setCoachBusy(true)
-
-    setListError('')
-
-    try {
-      await api.delete(`/teams/${coachLeaveConfirm.teamId}/coach`)
-
-      setCoachLeaveConfirm(null)
-
-      fetchTeams()
-    } catch (e: unknown) {
-      if (axios.isAxiosError(e)) {
-        const d = e.response?.data
-
-        const apiErr =
-          d && typeof d === 'object' && 'error' in d ? String((d as { error: string }).error) : null
-
-        setListError(apiErr ?? e.message ?? 'Could not leave coaching role')
-      } else {
-        setListError('Could not leave coaching role')
-      }
-    } finally {
-      setCoachBusy(false)
-    }
+  const openCoachDialog = (teamId: string, teamName: string) => {
+    setCoachDialog({ teamId, teamName })
+    setCoachOptions([])
+    void loadCoachOptions(teamId)
   }
 
-  const handleSelfCoachCardClick = (teamId: string, teamName: string, isCoach: boolean) => {
-    if (isCoach) {
-      setCoachLeaveConfirm({ teamId, teamName })
-
-      return
+  const toggleCoach = async (organizerId: string, assigned: boolean) => {
+    if (!coachDialog) return
+    setCoachBusy(organizerId)
+    setCoachDialogError('')
+    try {
+      if (assigned) {
+        await api.delete(`/teams/${coachDialog.teamId}/coach`, {
+          params: { organizer_id: organizerId },
+        })
+      } else {
+        await api.post(`/teams/${coachDialog.teamId}/coach`, { organizer_id: organizerId })
+      }
+      await loadCoachOptions(coachDialog.teamId)
+      fetchTeams()
+    } catch (e: unknown) {
+      setCoachDialogError(coachErrorText(e, 'Could not update the coaches'))
+    } finally {
+      setCoachBusy(null)
     }
-
-    void assignSelfAsCoach(teamId)
   }
 
   const toggleRosterMemberSelect = (id: string) => {
@@ -1448,16 +1443,10 @@ export default function OrganizerTeams() {
 
                 const canCfg = canConfigureSport(team.sport)
 
-                // Mirrors the server-side department check in POST /teams/:id/coach —
-                // only blocks JOINING a mismatched team, never leaving one, so a coach
-                // who ended up on the wrong team (e.g. before this check existed) can
-                // still self-remove.
-                const deptMismatch =
-                  !isCoach &&
-                  profile?.role === 'Coach' &&
-                  !!profile.department &&
-                  !!team.department &&
-                  profile.department !== team.department
+                // Only the Super Admin and the sport's Organizer assign coaches (the
+                // server enforces the same); a coach just sees their own teams.
+                const canAssignCoach =
+                  profile?.role === 'Admin' || (profile?.role === 'Organizer' && canCfg)
 
                 return (
                   <div
@@ -1548,21 +1537,18 @@ export default function OrganizerTeams() {
                             />
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant={isCoach ? 'success' : 'secondary'}
-                            disabled={!canCfg || coachBusy || deptMismatch}
-                            loading={coachBusy}
-                            icon={<Star className="w-3 h-3" />}
-                            title={
-                              deptMismatch
-                                ? `You are a ${profile?.department} coach and cannot coach a ${team.department} team.`
-                                : undefined
-                            }
-                            onClick={() => handleSelfCoachCardClick(team.id, team.name, isCoach)}
-                          >
-                            {isCoach ? 'Coaching' : 'Coach'}
-                          </Button>
+                          {canAssignCoach ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              icon={<Star className="w-3 h-3" />}
+                              onClick={() => openCoachDialog(team.id, team.name)}
+                            >
+                              Coaches
+                            </Button>
+                          ) : isCoach ? (
+                            <Badge variant="success">Coaching</Badge>
+                          ) : null}
                         </div>
                       </div>
 
@@ -2686,51 +2672,71 @@ export default function OrganizerTeams() {
       </Modal>
 
       <Modal
-        open={!!coachLeaveConfirm}
-
+        open={!!coachDialog}
         onClose={() => {
           if (!coachBusy) {
-            setCoachLeaveConfirm(null)
-
-            setListError('')
+            setCoachDialog(null)
+            setCoachDialogError('')
           }
         }}
-
-        title="Leave coaching role"
-
+        title="Team coaches"
         size="md"
       >
-        {coachLeaveConfirm && (
+        {coachDialog && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--text-secondary)]">
-              Stop coaching{' '}
-              <span className="font-semibold text-[var(--text-primary)]">
-                {coachLeaveConfirm.teamName}
-              </span>
-              ? Another organizer can assign themselves as coach afterward.
+              Choose who coaches{' '}
+              <span className="font-semibold text-[var(--text-primary)]">{coachDialog.teamName}</span>.
+              Coaches can edit the roster and lineup of the teams they coach. Whoever creates a
+              team coaches it automatically.
             </p>
 
-            {listError ? <Alert type="danger">{listError}</Alert> : null}
+            {coachDialogError ? <Alert type="danger">{coachDialogError}</Alert> : null}
 
-            <div className="flex gap-2">
+            {coachOptionsLoading && coachOptions.length === 0 ? (
+              <Skeleton className="h-24 w-full" />
+            ) : coachOptions.length === 0 && !coachDialogError ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                No coaches or organizers are assigned to this sport yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)]">
+                {coachOptions.map((c) => (
+                  <li key={c.organizer_id} className="flex items-center justify-between gap-3 p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate text-[var(--text-primary)]">
+                        {c.full_name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {c.role}
+                        {c.department ? ` · ${c.department}` : ''}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={c.assigned ? 'danger' : 'secondary'}
+                      loading={coachBusy === c.organizer_id}
+                      disabled={coachBusy !== null && coachBusy !== c.organizer_id}
+                      onClick={() => void toggleCoach(c.organizer_id, c.assigned)}
+                    >
+                      {c.assigned ? 'Remove' : 'Assign'}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="secondary"
-                className="flex-1"
-                disabled={coachBusy}
-                onClick={() => setCoachLeaveConfirm(null)}
+                disabled={coachBusy !== null}
+                onClick={() => {
+                  setCoachDialog(null)
+                  setCoachDialogError('')
+                }}
               >
-                Cancel
-              </Button>
-
-              <Button
-                type="button"
-                variant="danger"
-                className="flex-1"
-                loading={coachBusy}
-                onClick={() => void confirmLeaveCoachRole()}
-              >
-                Leave role
+                Done
               </Button>
             </div>
           </div>

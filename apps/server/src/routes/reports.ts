@@ -7,6 +7,11 @@ import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import PDFDocument from 'pdfkit'
 import { deriveFullEventStandings } from '../utils/eventPlacements'
+import {
+  getStaffReadScope,
+  respondIfReadSportForbidden,
+  athleteIdsOnTeams,
+} from '../utils/organizerSportAccess'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
 import {
   aggregateInsightPlainText,
@@ -115,6 +120,12 @@ router.get(
 
     const sport = parsed.data.sport
     const tab = parsed.data.tab
+
+    // Same read scope as the Analytics page: no sport filter must not mean
+    // "every sport" for someone assigned to one.
+    const scope = await getStaffReadScope(req)
+    if (sport && respondIfReadSportForbidden(res, scope, sport)) return
+    const scopedAthleteIds = scope.teamIds ? await athleteIdsOnTeams(scope.teamIds) : null
     const dateStamp = new Date().toISOString().slice(0, 10)
     const filenamePrefix = `${safeFilenamePart(seasonName)}${sport ? `-${safeFilenamePart(sport)}` : ''}`
 
@@ -129,6 +140,8 @@ router.get(
           .order('games_played', { ascending: false })
 
         if (sport) statsQuery = statsQuery.eq('sport', sport)
+        else if (scope.sports !== 'all') statsQuery = statsQuery.in('sport', scope.sports)
+        if (scopedAthleteIds) statsQuery = statsQuery.in('athlete_id', scopedAthleteIds)
 
         const { data: stats, error } = await statsQuery
         if (error) return res.status(500).json({ error: error.message })
@@ -174,6 +187,14 @@ router.get(
 
         let list = raw ?? []
         if (sport) list = list.filter((ts: any) => ts.team?.sport === sport)
+        else if (scope.sports !== 'all') {
+          const allowed = scope.sports
+          list = list.filter((ts: any) => allowed.includes(ts.team?.sport))
+        }
+        if (scope.teamIds) {
+          const own = new Set(scope.teamIds)
+          list = list.filter((ts: any) => own.has(ts.team_id))
+        }
 
         // Latest streak per team, if any — same `insights` table/shape the
         // Insights export already reads, just not previously joined in here.
@@ -232,6 +253,7 @@ router.get(
         .limit(80)
 
       if (sport) evQuery = evQuery.eq('sport', sport)
+      else if (scope.sports !== 'all') evQuery = evQuery.in('sport', scope.sports)
 
       const { data: doneEv, error: evErr } = await evQuery
       if (evErr) return res.status(500).json({ error: evErr.message })
@@ -358,6 +380,11 @@ router.get(
 
     const { sport, filter } = parsed.data
 
+    const scope = await getStaffReadScope(req)
+    if (respondIfReadSportForbidden(res, scope, sport)) return
+    const ownTeamIds = scope.teamIds ? new Set(scope.teamIds) : null
+    const ownAthleteIds = scope.teamIds ? new Set(await athleteIdsOnTeams(scope.teamIds)) : null
+
     try {
       const [lbRes, tsRes] = await Promise.all([
         supabase
@@ -377,11 +404,13 @@ router.get(
       if (lbRes.error) return res.status(500).json({ error: lbRes.error.message })
       if (tsRes.error) return res.status(500).json({ error: tsRes.error.message })
 
-      const snapshots = buildSeasonAggregateInsights(
-        sport,
-        (lbRes.data ?? []) as any,
-        (tsRes.data ?? []) as any,
+      const lbData = (lbRes.data ?? []).filter(
+        (r: any) => !ownAthleteIds || ownAthleteIds.has(r.athlete_id),
       )
+      const tsData = (tsRes.data ?? []).filter(
+        (r: any) => !ownTeamIds || ownTeamIds.has(r.team_id),
+      )
+      const snapshots = buildSeasonAggregateInsights(sport, lbData as any, tsData as any)
 
       const { data: insightRows, error: iqErr } = await supabase
         .from('insights')
@@ -393,7 +422,13 @@ router.get(
         .limit(500)
       if (iqErr) return res.status(500).json({ error: iqErr.message })
 
-      const allRows = insightRows ?? []
+      const allRows = (insightRows ?? []).filter((r) =>
+        r.entity_type === 'team'
+          ? !ownTeamIds || ownTeamIds.has(r.entity_id as string)
+          : r.entity_type === 'player'
+            ? !ownAthleteIds || ownAthleteIds.has(r.entity_id as string)
+            : true,
+      )
       // Detail sheet is scoped to the selected category; the Summary counts below
       // always reflect the whole sport so the "overall" picture isn't lost to a filter.
       const rows =
@@ -551,7 +586,11 @@ router.get(
       .select('name, abbreviation, tagline')
       .single()
 
-    const { data: topPlayers } = await supabase
+    // An organizer's report covers the sports they are assigned to, not every
+    // sport in the season.
+    const scope = await getStaffReadScope(req)
+
+    let topPlayersQuery = supabase
       .from('player_season_stats')
       .select(
         '*, athlete:athletes(student_id, sport, profile:profiles!athletes_profile_id_fkey(full_name))',
@@ -559,12 +598,18 @@ router.get(
       .eq('season_id', req.params.seasonId)
       .order('games_played', { ascending: false })
       .limit(10)
+    if (scope.sports !== 'all') topPlayersQuery = topPlayersQuery.in('sport', scope.sports)
+    const { data: topPlayers } = await topPlayersQuery
 
-    const { data: teamStats } = await supabase
+    const { data: teamStatsAll } = await supabase
       .from('team_season_stats')
       .select('*, team:teams(name, sport)')
       .eq('season_id', req.params.seasonId)
       .order('wins', { ascending: false })
+    const teamStats =
+      scope.sports === 'all'
+        ? teamStatsAll
+        : (teamStatsAll ?? []).filter((ts: any) => scope.sports.includes(ts.team?.sport))
 
     const doc = new PDFDocument({ margin: 50 })
     res.setHeader('Content-Type', 'application/pdf')
@@ -600,9 +645,9 @@ router.get(
       .text(`Generated: ${new Date().toLocaleDateString('en-PH')}`, { align: 'center' })
     doc.moveDown(2)
 
-    // Team standings
+    // Team rankings
     if (teamStats && teamStats.length > 0) {
-      doc.fontSize(14).font('Helvetica-Bold').text('Team Standings')
+      doc.fontSize(14).font('Helvetica-Bold').text('Team Rankings')
       doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
       doc.moveDown(0.5)
       teamStats.forEach((ts: any, i: number) => {
@@ -867,6 +912,9 @@ router.get(
     const matchId = req.params.matchId as string
     const data = await getMatchReviewData(matchId)
     if (!data) return res.status(404).json({ error: 'Match not found' })
+    if (respondIfReadSportForbidden(res, await getStaffReadScope(req), data.match.event?.sport)) {
+      return
+    }
     if (!data.match.finalized_at) {
       return res.status(400).json({ error: 'This match has not been finalized yet' })
     }

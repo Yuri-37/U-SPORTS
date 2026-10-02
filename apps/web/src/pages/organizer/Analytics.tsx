@@ -16,6 +16,8 @@ import { Card, TabBar, Select, Button, Badge, Skeleton, Alert } from '../../comp
 import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import api from '../../lib/api'
+import { useAuthStore } from '../../stores/authStore'
+import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import type { Insight, Season } from '../../types'
 import { getSportLabel, formatEnumLabel, formatDate } from '../../lib/utils'
 import {
@@ -134,8 +136,19 @@ function formatSeasonSelectLabel(s: Season): string {
 
 export default function OrganizerAnalytics() {
   const navigate = useNavigate()
+  const { profile } = useAuthStore()
+  const { sportOptionsForForms } = useOrganizerSportScope()
   const [tab, setTab] = useState('leaderboard')
   const [sport, setSport] = useState('basketball')
+  // A coach who already coaches a team sees that team's analytics only; one with
+  // no team yet keeps a read-only view of their sport (scope stays null).
+  const isCoach = profile?.role === 'Coach'
+  const [coachScope, setCoachScope] = useState<{
+    teamIds: string[]
+    athleteIds: string[]
+    teamNames: string[]
+  } | null>(null)
+  const [coachScopeReady, setCoachScopeReady] = useState(!isCoach)
   const [seasons, setSeasons] = useState<Season[]>([])
   const [seasonsLoading, setSeasonsLoading] = useState(true)
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null)
@@ -173,6 +186,44 @@ export default function OrganizerAnalytics() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isCoach) {
+      setCoachScopeReady(true)
+      return
+    }
+    let cancelled = false
+    api
+      .get<{ id: string; name: string; members?: { athlete_id: string }[] }[]>('/teams/my-teams')
+      .then(({ data }) => {
+        if (cancelled) return
+        const teams = data ?? []
+        setCoachScope(
+          teams.length === 0
+            ? null
+            : {
+                teamIds: teams.map((t) => t.id),
+                teamNames: teams.map((t) => t.name),
+                athleteIds: [...new Set(teams.flatMap((t) => (t.members ?? []).map((m) => m.athlete_id)))],
+              },
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setCoachScope(null)
+      })
+      .finally(() => {
+        if (!cancelled) setCoachScopeReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isCoach])
+
+  useEffect(() => {
+    if (sportOptionsForForms.length > 0 && !sportOptionsForForms.some((o) => o.value === sport)) {
+      setSport(sportOptionsForForms[0].value)
+    }
+  }, [sportOptionsForForms, sport])
+
   const effectiveSeasonId = useMemo(() => {
     if (!seasons.length) return null
     if (selectedSeasonId && seasons.some((s) => s.id === selectedSeasonId)) return selectedSeasonId
@@ -196,6 +247,8 @@ export default function OrganizerAnalytics() {
       return
     }
 
+    if (!coachScopeReady) return
+
     let cancelled = false
     setLoading(true)
 
@@ -203,22 +256,27 @@ export default function OrganizerAnalytics() {
       const seasonId = effectiveSeasonId
 
       try {
-        const [lb, ts] = await Promise.all([
-          supabase
-            .from('player_season_stats')
-            .select(
-              '*, athlete:athletes(student_id, department, profile:profiles!athletes_profile_id_fkey(full_name))',
-            )
-            .eq('sport', sport)
-            .eq('season_id', seasonId)
-            .order('games_played', { ascending: false })
-            .limit(15),
-          supabase
-            .from('team_season_stats')
-            .select('*, team:teams(name, sport, department)')
-            .eq('season_id', seasonId)
-            .order('wins', { ascending: false }),
-        ])
+        let lbQuery = supabase
+          .from('player_season_stats')
+          .select(
+            '*, athlete:athletes(student_id, department, profile:profiles!athletes_profile_id_fkey(full_name))',
+          )
+          .eq('sport', sport)
+          .eq('season_id', seasonId)
+          .order('games_played', { ascending: false })
+          .limit(15)
+        let tsQuery = supabase
+          .from('team_season_stats')
+          .select('*, team:teams(name, sport, department)')
+          .eq('season_id', seasonId)
+          .order('wins', { ascending: false })
+        if (coachScope) {
+          // Placeholder id keeps an empty roster from turning into "no filter".
+          const none = ['00000000-0000-0000-0000-000000000000']
+          lbQuery = lbQuery.in('athlete_id', coachScope.athleteIds.length ? coachScope.athleteIds : none)
+          tsQuery = tsQuery.in('team_id', coachScope.teamIds)
+        }
+        const [lb, ts] = await Promise.all([lbQuery, tsQuery])
 
         if (cancelled) return
 
@@ -283,7 +341,7 @@ export default function OrganizerAnalytics() {
     return () => {
       cancelled = true
     }
-  }, [sport, effectiveSeasonId])
+  }, [sport, effectiveSeasonId, coachScope, coachScopeReady])
 
   const runInsightsBackfill = useCallback(async (): Promise<boolean> => {
     if (!effectiveSeasonId) return false
@@ -482,6 +540,14 @@ export default function OrganizerAnalytics() {
     <div className="space-y-6" data-tour="analytics-root">
       <PageHeader title="Analytics" subtitle="Performance insights, placements, and leaderboards" />
 
+      {isCoach && coachScopeReady && (
+        <Alert type="info">
+          {coachScope
+            ? `Showing the team${coachScope.teamNames.length === 1 ? '' : 's'} you coach: ${coachScope.teamNames.join(', ')}.`
+            : "You don't coach a team yet, so you're seeing your sport read-only. Create a team, or ask an organizer to assign you to one."}
+        </Alert>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <Select
           label="Season"
@@ -499,11 +565,8 @@ export default function OrganizerAnalytics() {
           label="Sport"
           value={sport}
           onChange={(e) => setSport(e.target.value)}
-          options={[
-            { value: 'basketball', label: '🏀 Basketball' },
-            { value: 'volleyball', label: '🏐 Volleyball' },
-            { value: 'table-tennis', label: '🏓 Table Tennis' },
-          ]}
+          options={sportOptionsForForms}
+          disabled={sportOptionsForForms.length <= 1}
           className="min-w-[160px] flex-1 sm:flex-none sm:w-48"
         />
         <Select

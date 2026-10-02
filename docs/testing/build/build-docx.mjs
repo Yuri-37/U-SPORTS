@@ -305,7 +305,7 @@ function loadLighthouse() {
   const labels = {
     '01-landing-guest-hub': 'Public Hub (Landing Page)',
     '02-login-page': 'Login Page',
-    '03-guest-standings': 'Standings (Guest)',
+    '03-guest-standings': 'Rankings (Guest)',
     '04-guest-events': 'Events (Guest)',
     '05-athlete-dashboard': 'Home Page (Athlete)',
     '06-athlete-profile': 'Athlete Profile',

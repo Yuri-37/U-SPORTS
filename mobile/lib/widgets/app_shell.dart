@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../theme/layout_tokens.dart';
 
-/// Persistent bottom nav shell for the four tab branches (Home, Standings,
+/// Persistent bottom nav shell for the four tab branches (Home, Rankings,
 /// Events, Profile). Each branch keeps its own Navigator/state via
 /// [StatefulShellRoute.indexedStack] so switching tabs no longer rebuilds
 /// the destination screen or refetches its data.
@@ -43,7 +43,7 @@ class AppShell extends ConsumerWidget {
     final role = ref.watch(profileProvider).valueOrNull?.role ?? 'guest';
 
     // Each tab branch is a single route with nothing to pop internally, so a
-    // system back press on Standings/Events/Profile would otherwise fall
+    // system back press on Rankings/Events/Profile would otherwise fall
     // through to the OS and exit the app. Only let that happen from Home —
     // everywhere else, back should return to Home first, matching how the
     // bottom nav itself behaves.
@@ -80,7 +80,7 @@ class AppShell extends ConsumerWidget {
               const NavigationDestination(
                 icon: Icon(Icons.emoji_events_outlined),
                 selectedIcon: Icon(Icons.emoji_events_rounded),
-                label: 'Standings',
+                label: 'Rankings',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.calendar_today_outlined),

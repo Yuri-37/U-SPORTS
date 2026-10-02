@@ -142,9 +142,8 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       // Organizers aren't, so this is optional/absent for them.
       department: z.enum(['SBMA', 'SECA', 'SASE', 'SHS']).nullable().optional(),
       assigned_sports: z.array(z.string()).min(1, 'Assign at least one sport'),
-      // Optional at the schema level -- required only when invite emails are
-      // disabled, checked below (inviteEmailsEnabled() is an env toggle, not
-      // something zod can see at schema-build time).
+      // Optional: left out, the server issues a readable one. Either way the
+      // password comes back in the response so it can be handed over.
       password: passwordZ.optional(),
       season_ids: z.array(z.string().uuid()).optional(),
     })
@@ -155,10 +154,6 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     .refine((v) => v.role !== 'Coach' || Boolean(v.department), {
       message: 'Department is required for coaches',
       path: ['department'],
-    })
-    .refine((v) => inviteEmailsEnabled() || Boolean(v.password), {
-      message: 'Password is required',
-      path: ['password'],
     })
 
   try {
@@ -206,9 +201,8 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
       department,
       // Records that this account's password was set by the keyed generator,
       // so the reissue script can tell it from accounts still on the old
-      // public formula. Only in password mode -- an invited user sets their
-      // own, so it stays NULL.
-      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
+      // public formula.
+      issued_password_scheme: ISSUED_PASSWORD_SCHEME,
     })
     if (profileError) throw new Error(profileError.message)
 
@@ -268,10 +262,14 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
 
     res.status(201).json({
       success: true,
-      message:
-        account.mode === 'invited'
-          ? `Invitation email sent to ${email}. They'll set their own password to finish setting up their ${role} account.`
-          : `${role} account created for ${email}. They can sign in with this email and the password you set.`,
+      // The password always comes back so it can be read out; the email is a
+      // convenience and its outcome is reported honestly rather than assumed.
+      tempPassword: account.password,
+      emailed: account.emailed,
+      ...(account.emailError ? { emailError: account.emailError } : {}),
+      message: account.emailed
+        ? `${role} account created for ${email}. A link to set their own password was emailed, but it can take a few minutes or land in spam — share the password below as a backup.`
+        : `${role} account created for ${email}. Share the password below with them to sign in.`,
     })
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
@@ -537,20 +535,15 @@ router.get('/admins', requireAuth, requireRole('Admin'), async (_req, res) => {
   res.json(data ?? [])
 })
 
-// Create another Super Admin account. Sends an invite email when
-// INVITE_EMAILS_ENABLED, otherwise falls back to the admin setting a
-// password directly, same pattern as staff creation.
+// Create another Super Admin account. Same pattern as staff creation: the
+// account always gets a password (typed, or generated) that is returned for
+// hand-over, plus a best-effort "set your own password" email.
 router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthRequest, res) => {
-  const schema = z
-    .object({
-      email: staffEmailZ,
-      full_name: fullNameZ,
-      password: passwordZ.optional(),
-    })
-    .refine((v) => inviteEmailsEnabled() || Boolean(v.password), {
-      message: 'Password is required',
-      path: ['password'],
-    })
+  const schema = z.object({
+    email: staffEmailZ,
+    full_name: fullNameZ,
+    password: passwordZ.optional(),
+  })
 
   try {
     const parsed = schema.parse(req.body)
@@ -579,7 +572,7 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
       email,
       full_name,
       role: 'Admin',
-      issued_password_scheme: account.mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
+      issued_password_scheme: ISSUED_PASSWORD_SCHEME,
     })
     if (profileError) throw new Error(profileError.message)
 
@@ -593,10 +586,12 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
 
     res.status(201).json({
       success: true,
-      message:
-        account.mode === 'invited'
-          ? `Invitation email sent to ${email}. They'll set their own password to finish setting up their Super Admin account.`
-          : `Super Admin account created for ${email}. They can sign in with this email and the password you set.`,
+      tempPassword: account.password,
+      emailed: account.emailed,
+      ...(account.emailError ? { emailError: account.emailError } : {}),
+      message: account.emailed
+        ? `Super Admin account created for ${email}. A link to set their own password was emailed, but it can take a few minutes or land in spam — share the password below as a backup.`
+        : `Super Admin account created for ${email}. Share the password below with them to sign in.`,
     })
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {

@@ -242,7 +242,7 @@ export default function EventDetailPage({
           labelByParticipantId={participantLabels}
           typeByParticipantId={participantTypes}
           onSelect={handleStandingsSelect}
-          title="Final standings"
+          title="Final rankings"
         />
       ) : null}
 

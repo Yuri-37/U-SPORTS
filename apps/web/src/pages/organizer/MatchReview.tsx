@@ -248,7 +248,7 @@ export default function MatchReview() {
         <CheckCircle className="w-16 h-16 mx-auto text-[var(--success)]" />
         <h1 className="text-2xl font-bold">Match Finalized</h1>
         <p className="text-[var(--text-muted)]">
-          Season totals, standings and insights now reflect these numbers. Any later correction
+          Season totals, rankings and insights now reflect these numbers. Any later correction
           recalculates them automatically and is recorded in the audit log.
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
@@ -424,7 +424,7 @@ export default function MatchReview() {
         <div>
           <p className="font-semibold">Ready to finalize?</p>
           <p className="text-xs text-[var(--text-muted)]">
-            This will update season leaderboards, team standings, and generate insights.
+            This will update season leaderboards, team rankings, and generate insights.
           </p>
         </div>
         <Button
@@ -519,7 +519,7 @@ export default function MatchReview() {
       >
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            Finalizing publishes these stats to season leaderboards, standings, and insights.
+            Finalizing publishes these stats to season leaderboards, rankings, and insights.
             Double-check scores above — fixing mistakes afterward requires another review pass.
           </p>
           <div className="flex gap-3 justify-end flex-wrap">

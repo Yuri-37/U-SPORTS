@@ -4,6 +4,11 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { computeInsightsForMatch } from '../services/computeInsights'
 import { writeAuditLog } from '../utils/writeAuditLog'
+import {
+  getStaffReadScope,
+  respondIfReadSportForbidden,
+  athleteIdsOnTeams,
+} from '../utils/organizerSportAccess'
 
 const router = createRouter()
 
@@ -17,9 +22,14 @@ const listQuerySchema = z.object({
   ),
 })
 
-router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req, res) => {
+router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
   const parsed = listQuerySchema.safeParse(req.query)
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+
+  // Organizers see their assigned sports; a coach sees their own teams (and the
+  // players on them), or their sport read-only until they coach a team.
+  const scope = await getStaffReadScope(req)
+  if (parsed.data.sport && respondIfReadSportForbidden(res, scope, parsed.data.sport)) return
 
   let seasonId = parsed.data.season_id
   if (!seasonId) {
@@ -39,6 +49,7 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
     .order('created_at', { ascending: false })
 
   if (parsed.data.sport) query = query.eq('sport', parsed.data.sport)
+  else if (scope.sports !== 'all') query = query.in('sport', scope.sports)
   if (parsed.data.entity_type) query = query.eq('entity_type', parsed.data.entity_type)
   if (parsed.data.entity_id) query = query.eq('entity_id', parsed.data.entity_id)
 
@@ -48,9 +59,24 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
     query = query.is('season_id', null)
   }
 
-  const { data, error } = await query.limit(30)
+  // A team-scoped coach is filtered after the query, so fetch a wider window
+  // first -- otherwise other teams' rows could crowd out their own.
+  const { data, error } = await query.limit(scope.teamIds ? 300 : 30)
   if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+
+  let rows = data ?? []
+  if (scope.teamIds) {
+    const teamIds = new Set(scope.teamIds)
+    const athleteIds = new Set(await athleteIdsOnTeams(scope.teamIds))
+    rows = rows.filter((r) =>
+      r.entity_type === 'team'
+        ? teamIds.has(r.entity_id as string)
+        : r.entity_type === 'player'
+          ? athleteIds.has(r.entity_id as string)
+          : true,
+    )
+  }
+  res.json(rows.slice(0, 30))
 })
 
 const backfillSeasonSchema = z.object({
@@ -68,6 +94,7 @@ router.post(
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
 
     const { seasonId, sport } = parsed.data
+    if (respondIfReadSportForbidden(res, await getStaffReadScope(req), sport)) return
 
     const { data: events, error: evErr } = await supabase
       .from('events')

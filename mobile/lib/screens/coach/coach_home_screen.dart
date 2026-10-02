@@ -167,8 +167,9 @@ class _NoTeamsState extends StatelessWidget {
         child: SheetMessage(
           icon: Icons.groups_outlined,
           text: 'No teams assigned yet\n\n'
-              'An organizer assigns coaches to teams on the web platform. '
-              'Once you are added, your roster and schedule show up here.',
+              'Teams you create on the web platform are yours automatically, and the '
+              'Super Admin or your sport\'s organizer can add you to others. '
+              'Once you are on a team, its roster and schedule show up here.',
         ),
       );
 }

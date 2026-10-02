@@ -6,7 +6,11 @@ import { writeAuditLog } from '../utils/writeAuditLog'
 import { advanceWinner } from '../services/bracketGenerator'
 import { computeInsightsForMatch } from '../services/computeInsights'
 import { getActiveSlots } from '../utils/sportConfig'
-import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
+import {
+  respondIfScopeForbidden,
+  getStaffReadScope,
+  respondIfReadSportForbidden,
+} from '../utils/organizerSportAccess'
 import {
   getMatchReviewData,
   resolveParticipantDisplayName,
@@ -1829,9 +1833,11 @@ async function fouledOutAthletes(matchId: string): Promise<string[]> {
 // screen and the match score sheet — shared assembly lives in matchReviewData.ts
 // so the score-sheet PDF route (apps/server/src/routes/reports.ts) doesn't have
 // to re-implement the roster/stat merge.
-router.get('/:matchId/review', requireAuth, requireRole('Organizer', 'Admin'), async (req, res) => {
+router.get('/:matchId/review', requireAuth, requireRole('Organizer', 'Admin'), async (req: AuthRequest, res) => {
   const data = await getMatchReviewData(req.params.matchId as string)
   if (!data) return res.status(404).json({ error: 'Match not found' })
+  // Organizers review matches of their own sports only.
+  if (respondIfReadSportForbidden(res, await getStaffReadScope(req), data.match.event?.sport)) return
   res.json(data)
 })
 
@@ -1851,6 +1857,7 @@ router.get(
     const parsed = finalizedMatchesQuerySchema.safeParse(req.query)
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
     const { seasonId, sport } = parsed.data
+    if (respondIfReadSportForbidden(res, await getStaffReadScope(req), sport)) return
 
     const { data: events } = await supabase
       .from('events')

@@ -54,6 +54,20 @@ function expiresPresetFromNow(days: number): string {
   return formatDatetimeLocalValue(new Date(Date.now() + days * MS_DAY))
 }
 
+/**
+ * Picker value -> unambiguous UTC instant. A datetime-local string carries no
+ * zone, and only the browser knows which one the person meant, so convert
+ * here instead of leaving the server to guess. Without this the server read
+ * "2:00 PM" as 2:00 PM UTC (10:00 PM in Manila), so announcements expired --
+ * and rescheduled matches moved -- eight hours late.
+ */
+function pickerValueToIso(value: string): string | undefined {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  const d = new Date(trimmed)
+  return Number.isNaN(d.getTime()) ? trimmed : d.toISOString()
+}
+
 /** Reverse of formatDatetimeLocalValue — DB gives ISO (UTC); the picker needs local `YYYY-MM-DDTHH:mm`. */
 function isoToDatetimeLocalValue(iso: string | null | undefined): string {
   if (!iso) return ''
@@ -171,9 +185,9 @@ export default function OrganizerAnnouncements() {
           form.audience_type === 'sport' ? form.audience_sport || undefined : undefined,
         is_public: form.is_public,
         display_mode: form.display_mode,
-        new_scheduled_at: form.new_scheduled_at.trim() || undefined,
+        new_scheduled_at: pickerValueToIso(form.new_scheduled_at),
         new_venue: form.new_venue.trim() || undefined,
-        expires_at: form.expires_at.trim() || undefined,
+        expires_at: pickerValueToIso(form.expires_at),
       }
       if (editingId) {
         await api.patch(`/announcements/${editingId}`, payload)

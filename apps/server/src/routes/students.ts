@@ -7,7 +7,7 @@ import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
-import { createAthleteAuthUser, inviteEmailsEnabled } from '../utils/accountEmail'
+import { createAthleteAuthUser } from '../utils/accountEmail'
 import { generatedPassword, STUDENT_EMAIL_DOMAIN } from '../utils/studentAccounts'
 import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 
@@ -151,8 +151,10 @@ router.post(
         }
 
         let userId: string
-        let mode: 'invited' | 'password'
         try {
+          // No per-row email here on purpose: mailing a whole roster trips the
+          // provider's hourly limit and would leave most of a class with a
+          // failed message. The result below lists every password instead.
           const account = await createAthleteAuthUser({
             email,
             password,
@@ -161,9 +163,9 @@ router.post(
             department: row.department,
             course: row.course,
             yearLevel,
+            sendEmail: false,
           })
           userId = account.userId
-          mode = account.mode
         } catch (e: unknown) {
           errors.push({ row: idx + 1, error: e instanceof Error ? e.message : 'Could not create auth user' })
           continue
@@ -175,7 +177,7 @@ router.post(
           full_name: row.full_name,
           role: null,
           department: row.department,
-          issued_password_scheme: mode === 'password' ? ISSUED_PASSWORD_SCHEME : null,
+          issued_password_scheme: ISSUED_PASSWORD_SCHEME,
         })
         if (profileError) {
           errors.push({ row: idx + 1, error: profileError.message })
@@ -206,9 +208,7 @@ router.post(
           student_id: row.student_id,
           email,
           athlete_id: athlete.id,
-          // Only meaningful in 'password' mode -- the invited path never
-          // sets a password server-side, the invitee picks their own.
-          ...(mode === 'password' ? { tempPassword: password } : {}),
+          tempPassword: password,
         })
       }
 
@@ -223,7 +223,8 @@ router.post(
       res.status(errors.length > 0 ? 207 : 201).json({
         created,
         errors,
-        invited: inviteEmailsEnabled(),
+        // Imports never email, so the credentials list is always the way in.
+        invited: false,
       })
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Import failed' })

@@ -53,7 +53,7 @@ export const adminTour: TourDefinition = {
       id: 'staff-add',
       target: A_STAFF_ADD,
       title: 'Add staff',
-      body: 'Assign a sport, and — if they\'re a Coach — a department. They\'ll get an email invite to set their own password.',
+      body: 'Assign a sport, and — if they\'re a Coach — a department. You\'ll get a password to hand over, and a link to choose their own is emailed too.',
       interactive: true,
     },
     {
