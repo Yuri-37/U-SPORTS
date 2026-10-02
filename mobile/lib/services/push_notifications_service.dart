@@ -43,7 +43,6 @@ class PushNotificationsService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
     await _initLocalNotifications();
 
     FirebaseMessaging.onMessage.listen(_showLocalNotification);
@@ -65,9 +64,25 @@ class PushNotificationsService {
     // Re-sync whenever auth state changes (covers already-signed-in at
     // startup, a fresh sign-in, and sign-out leaving no active session to
     // register against) and whenever FCM rotates the token underneath us.
-    Supabase.instance.client.auth.onAuthStateChange.listen((_) => _syncToken());
+    Supabase.instance.client.auth.onAuthStateChange.listen((_) async {
+      await _askPermissionIfSignedIn();
+      await _syncToken();
+    });
     messaging.onTokenRefresh.listen((_) => _syncToken());
+    await _askPermissionIfSignedIn();
     await _syncToken();
+  }
+
+  bool _askedPermission = false;
+
+  /// Shows the system "allow notifications?" prompt, but only once someone has
+  /// signed in. Guests can never receive a push (alerts go to an account's
+  /// team and announcements), so asking them on first launch was a prompt with
+  /// nothing behind it.
+  Future<void> _askPermissionIfSignedIn() async {
+    if (_askedPermission || Supabase.instance.client.auth.currentSession == null) return;
+    _askedPermission = true;
+    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
   }
 
   Future<void> _initLocalNotifications() async {

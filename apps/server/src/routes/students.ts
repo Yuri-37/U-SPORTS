@@ -5,6 +5,7 @@ import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
 import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
+import { getStaffReadScope, scopeAllowsSport } from '../utils/organizerSportAccess'
 import supabase from '../utils/supabase'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
 import { createAthleteAuthUser } from '../utils/accountEmail'
@@ -75,7 +76,7 @@ function normalizeImportRow(row: Record<string, unknown>) {
 router.post(
   '/import',
   requireAuth,
-  requireRole('Coach', 'Admin'),
+  requireRole('Organizer', 'Coach', 'Admin'),
   upload.single('file'),
   async (req: AuthRequest, res) => {
     const bodySchema = z.object({
@@ -96,6 +97,11 @@ router.post(
       if (rawRows.length === 0) {
         return res.status(400).json({ error: 'Upload a CSV or Excel file, or provide rows.' })
       }
+
+      // Rows may only add athletes to the sports this account is assigned to --
+      // the import had no sport check at all, so a volleyball coach could fill
+      // the basketball roster.
+      const scope = await getStaffReadScope(req)
 
       const created: Array<{
         student_id: string
@@ -122,6 +128,10 @@ router.post(
             row: idx + 1,
             error: 'Sport is required either in the file row or request body.',
           })
+          continue
+        }
+        if (!scopeAllowsSport(scope, row.sport)) {
+          errors.push({ row: idx + 1, error: 'You are not assigned to this sport.' })
           continue
         }
         // Blank is allowed (year level is optional); anything present must be
@@ -239,7 +249,7 @@ router.post(
 router.post(
   '/import/preview',
   requireAuth,
-  requireRole('Coach', 'Admin'),
+  requireRole('Organizer', 'Coach', 'Admin'),
   upload.single('file'),
   async (req: AuthRequest, res) => {
     const bodySchema = z.object({
@@ -261,6 +271,7 @@ router.post(
         return res.status(400).json({ error: 'Upload a CSV or Excel file, or provide rows.' })
       }
 
+      const scope = await getStaffReadScope(req)
       const seenStudentIds = new Set<string>()
       const preview: Array<{
         row: number
@@ -312,6 +323,16 @@ router.post(
             row: idx + 1,
             valid: false,
             error: 'Sport is required either in the file row or request body.',
+            ...common,
+          })
+          continue
+        }
+
+        if (!scopeAllowsSport(scope, row.sport)) {
+          preview.push({
+            row: idx + 1,
+            valid: false,
+            error: 'You are not assigned to this sport.',
             ...common,
           })
           continue
@@ -373,7 +394,7 @@ router.post(
 router.get(
   '/import-template',
   requireAuth,
-  requireRole('Coach', 'Admin'),
+  requireRole('Organizer', 'Coach', 'Admin'),
   async (_req: AuthRequest, res) => {
     try {
       const wb = new ExcelJS.Workbook()

@@ -103,6 +103,7 @@ Run `supabase db push` (or paste the files into the SQL editor) for:
 - `073_profiles_issued_password_scheme.sql`, `074_hide_email_from_anon.sql` (if not applied yet)
 - `076_revoke_public_function_access.sql` -- stops the public anon key from calling the score-changing functions.
 - `077_staff_writes_through_api_only.sql` -- coaches/organizers can no longer write team and roster tables directly with their own token.
+- `078_indexes_for_common_filters.sql` -- speeds up the lists and rankings as data grows (safe to re-run).
 
 ### Domain
 
