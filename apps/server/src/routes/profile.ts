@@ -1,6 +1,7 @@
 import { createRouter } from '../utils/asyncRouter'
 import multer from 'multer'
 import { z } from 'zod'
+import { createClient } from '@supabase/supabase-js'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvatar } from '../utils/avatarStorage'
 import supabase from '../utils/supabase'
@@ -84,6 +85,150 @@ router.delete('/avatar', requireAuth, async (req: AuthRequest, res) => {
   } catch (err: unknown) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Could not remove avatar' })
   }
+})
+
+// ─── Your data (Data Privacy Act, RA 10173: right to access and to erasure) ───
+
+/**
+ * A copy of everything the system holds about the signed-in person, as a JSON
+ * download. Open to every role; it only ever reads the caller's own rows.
+ * Push tokens are summarised, not exported (they are credentials for a device).
+ */
+router.get('/export', requireAuth, async (req: AuthRequest, res) => {
+  const userId = req.user!.id
+
+  const { data: profileRow, error: profileErr } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profileErr) return res.status(500).json({ error: profileErr.message })
+  const { issued_password_scheme: _scheme, ...profile } = (profileRow ?? {}) as Record<string, unknown>
+
+  const [athleteRes, organizerRes, notificationsRes, tokensRes] = await Promise.all([
+    supabase.from('athletes').select('*').eq('profile_id', userId).maybeSingle(),
+    supabase.from('organizers').select('*').eq('profile_id', userId).maybeSingle(),
+    supabase
+      .from('notifications')
+      .select('type, title, body, read, created_at')
+      .eq('recipient_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1000),
+    supabase.from('push_tokens').select('platform, created_at').eq('profile_id', userId),
+  ])
+
+  const athlete = athleteRes.data as { id: string } | null
+  const organizer = organizerRes.data as { id: string } | null
+
+  const [memberships, seasonStats, coachedTeams] = await Promise.all([
+    athlete
+      ? supabase
+          .from('team_members')
+          .select('*, team:teams(name, sport, season_id)')
+          .eq('athlete_id', athlete.id)
+      : Promise.resolve({ data: [] }),
+    athlete
+      ? supabase.from('player_season_stats').select('*').eq('athlete_id', athlete.id)
+      : Promise.resolve({ data: [] }),
+    organizer
+      ? supabase.from('team_coaches').select('team:teams(name, sport)').eq('organizer_id', organizer.id)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  await writeAuditLog({
+    actorId: userId,
+    action: 'personal_data_exported',
+    entityType: 'profile',
+    entityId: userId,
+  })
+
+  const stamp = new Date().toISOString().slice(0, 10)
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="u-sports-my-data-${stamp}.json"`)
+  res.send(
+    JSON.stringify(
+      {
+        exported_at: new Date().toISOString(),
+        note: 'This is the personal data U-Sports holds about you. Match results you took part in are also shown publicly on the website once an event is completed.',
+        profile,
+        athlete: athlete ?? null,
+        team_memberships: memberships.data ?? [],
+        season_statistics: seasonStats.data ?? [],
+        staff_assignment: organizer ?? null,
+        teams_coached: coachedTeams.data ?? [],
+        notifications: notificationsRes.data ?? [],
+        registered_devices: tokensRes.data ?? [],
+      },
+      null,
+      2,
+    ),
+  )
+})
+
+// Anon-key client used only to re-verify the password before an irreversible action.
+const anonClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Enter your password to confirm'),
+})
+
+/**
+ * Erasure for athletes: removes the sign-in account, and with it the profile,
+ * roster memberships, season statistics and notifications (all cascade). Needs
+ * the current password so a borrowed phone cannot do it.
+ *
+ * Staff accounts own records others rely on (announcements, audit trail,
+ * events), so they are removed by the Super Admin rather than from here.
+ */
+router.post('/delete-account', requireAuth, async (req: AuthRequest, res) => {
+  const parsed = deleteAccountSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
+  }
+  if (req.user!.role !== 'Athlete') {
+    return res.status(403).json({
+      error:
+        'Staff accounts are removed by the Super Admin. Ask them to deactivate or delete your account.',
+    })
+  }
+
+  const userId = req.user!.id
+  const { error: verifyError } = await anonClient.auth.signInWithPassword({
+    email: req.user!.email,
+    password: parsed.data.password,
+  })
+  if (verifyError) {
+    // 400, not 401: a wrong password is a form error, not an expired session.
+    return res.status(400).json({ error: 'Password is incorrect' })
+  }
+
+  const { data: athlete } = await supabase
+    .from('athletes')
+    .select('id, student_id')
+    .eq('profile_id', userId)
+    .maybeSingle()
+
+  // The only record that remains: that an account was erased, and when -- not
+  // who it was beyond the student id the school already holds.
+  await writeAuditLog({
+    actorId: userId,
+    action: 'account_self_deleted',
+    entityType: 'athlete',
+    entityId: athlete?.id ?? userId,
+    details: { student_id: athlete?.student_id ?? null },
+  })
+
+  try {
+    await deleteAvatar(userId)
+  } catch {
+    // A missing photo must not stop the erasure.
+  }
+
+  const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+  if (deleteError) {
+    return res.status(500).json({ error: `Could not delete the account: ${deleteError.message}` })
+  }
+  res.json({ success: true })
 })
 
 const tourCompletionSchema = z.object({

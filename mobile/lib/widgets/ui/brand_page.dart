@@ -230,11 +230,14 @@ class _Hero extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (title != null)
-              Text(
-                title!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTheme.display(size: 21, color: Colors.white, height: 1.2),
+              Semantics(
+                header: true,
+                child: Text(
+                  title!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.display(size: 21, color: Colors.white, height: 1.2),
+                ),
               ),
             if (subtitle != null)
               Padding(
@@ -418,7 +421,7 @@ class HeroAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
     final contained = fit == BoxFit.contain;
-    return Container(
+    return Semantics(image: true, excludeSemantics: true, label: contained ? name : 'Photo of $name', child: Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
@@ -438,7 +441,7 @@ class HeroAvatar extends StatelessWidget {
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: AppTheme.display(size: radius * 0.78, color: Colors.white, height: 1),
                 )),
-    );
+    ));
   }
 }
 

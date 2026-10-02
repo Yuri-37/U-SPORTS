@@ -89,6 +89,15 @@ class AthleteProfileScreen extends ConsumerWidget {
         final teams = teamsAsync.valueOrNull ?? [];
 
         return BrandPage.scroll(
+          onRefresh: () async {
+            ref.invalidate(_athleteStatsProvider(athleteId));
+            ref.invalidate(_athleteInsightsProvider(athleteId));
+            ref.invalidate(_athleteTeamsProvider(athleteId));
+            ref.invalidate(_athletePublicProvider(athleteId));
+            try {
+              await ref.read(_athletePublicProvider(athleteId).future);
+            } catch (_) {}
+          },
           title: name,
           subtitle: '${sportEmoji(sport)}  ${sportLabel(sport)}',
           hero: Column(

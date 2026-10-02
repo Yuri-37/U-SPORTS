@@ -1,6 +1,7 @@
 import React from 'react'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
+import YourDataSection from '../../components/settings/YourDataSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 import PageHeader from '../../components/layout/PageHeader'
 
@@ -15,6 +16,8 @@ export default function AthleteSettings() {
       <ChangePasswordSection />
 
       <PrivacyNoticeLinkSection />
+
+      <YourDataSection canDelete />
 
       <SettingsSignOutSection />
     </div>

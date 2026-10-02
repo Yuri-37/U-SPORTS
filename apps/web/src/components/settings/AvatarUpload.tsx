@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { Camera, Loader2 } from 'lucide-react'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -48,6 +49,7 @@ export default function AvatarUpload({
       const formData = new FormData()
       formData.append('file', file)
       const { data } = await api.post<{ avatar_url: string }>('/profile/avatar', formData)
+      toast.success('Profile photo updated')
       if (profile) setProfile({ ...profile, avatar_url: data.avatar_url })
     } catch (e: unknown) {
       setError(apiErrorMessage(e, 'Could not upload photo'))
@@ -62,6 +64,7 @@ export default function AvatarUpload({
     setBusy(true)
     try {
       await api.delete('/profile/avatar')
+      toast.success('Profile photo removed')
       if (profile) setProfile({ ...profile, avatar_url: null })
     } catch (e: unknown) {
       setError(apiErrorMessage(e, 'Could not remove photo'))

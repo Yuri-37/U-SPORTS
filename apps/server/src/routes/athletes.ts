@@ -32,15 +32,24 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
     .from('athletes')
     .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url)')
     .order('created_at', { ascending: false })
+    .order('id')
 
   if (scope.sports !== 'all') query = query.in('sport', scope.sports)
   if (req.query.sport) query = query.eq('sport', req.query.sport as string)
   if (req.query.department) query = query.eq('department', req.query.department as string)
   if (req.query.season_status) query = query.eq('season_status', req.query.season_status as string)
 
-  const { data, error } = await query
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  // The database caps one response at 1,000 rows and would silently drop the
+  // rest, so a large school would see a truncated roster. Read every page.
+  const PAGE = 1000
+  const rows: unknown[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await query.range(from, from + PAGE - 1)
+    if (error) return res.status(500).json({ error: error.message })
+    rows.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+  res.json(rows)
 })
 
 // Add a single athlete -- the bulk importer (routes/students.ts) was

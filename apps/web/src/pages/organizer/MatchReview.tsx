@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router'
 import { CheckCircle, Save, FileText } from 'lucide-react'
 import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Skeleton, Modal, Input } from '../../components/ui'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import { formatEnumLabel } from '../../lib/utils'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
@@ -195,6 +196,7 @@ export default function MatchReview() {
       }
 
       await api.post(`/scoring/${matchId}/finalize`, { winnerId })
+      toast.success('Match finalized')
       setFinalized(true)
       setFinalizeConfirmOpen(false)
     } catch (e: unknown) {

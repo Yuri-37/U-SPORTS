@@ -6,6 +6,7 @@ import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
+import YourDataSection from '../../components/settings/YourDataSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 import AvatarUpload from '../../components/settings/AvatarUpload'
 import StaffManualLinkSection from '../../components/settings/StaffManualLinkSection'
@@ -68,6 +69,8 @@ export default function OrganizerSettings() {
       <StaffManualLinkSection />
 
       <PrivacyNoticeLinkSection />
+
+      <YourDataSection canDelete={false} />
 
       <SettingsSignOutSection />
     </div>

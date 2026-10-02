@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +14,12 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 class ApiClient {
+  /// How long to wait for one request. The API runs on a free-tier host that
+  /// goes to sleep when idle; waking it can take most of a minute, and without
+  /// a limit a dead connection left the spinner turning forever.
+  static const _timeout = Duration(seconds: 25);
+  static const _uploadTimeout = Duration(seconds: 60);
+
   Uri _uri(String path, [Map<String, String>? query]) {
     final base = Env.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
     final rel = path.startsWith('/') ? path.substring(1) : path;
@@ -24,15 +32,29 @@ class ApiClient {
     return session?.accessToken;
   }
 
-  Future<dynamic> getJson(String path, {Map<String, String>? query}) async {
-    final token = await _bearer();
-    final res = await http.get(
-      _uri(path, query),
-      headers: {
+  /// Sends a request with a time limit. Reads ([retry]) get one more attempt
+  /// after a timeout or a dropped connection -- the first try is usually what
+  /// wakes the sleeping server -- while writes are never repeated, so a slow
+  /// save can't be applied twice.
+  Future<http.Response> _send(Future<http.Response> Function() request, {bool retry = false}) async {
+    try {
+      return await request().timeout(_timeout);
+    } on TimeoutException {
+      if (!retry) rethrow;
+    } on SocketException {
+      if (!retry) rethrow;
+    }
+    return request().timeout(_timeout);
+  }
+
+  Map<String, String> _headers(String? token) => {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
-      },
-    );
+      };
+
+  Future<dynamic> getJson(String path, {Map<String, String>? query}) async {
+    final token = await _bearer();
+    final res = await _send(() => http.get(_uri(path, query), headers: _headers(token)), retry: true);
     _throwIfError(res);
     if (res.body.isEmpty) return null;
     return jsonDecode(res.body);
@@ -40,13 +62,8 @@ class ApiClient {
 
   Future<dynamic> postJson(String path, {Map<String, dynamic>? body}) async {
     final token = await _bearer();
-    final res = await http.post(
-      _uri(path),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: body == null ? null : jsonEncode(body),
+    final res = await _send(
+      () => http.post(_uri(path), headers: _headers(token), body: body == null ? null : jsonEncode(body)),
     );
     _throwIfError(res);
     if (res.body.isEmpty) return null;
@@ -55,13 +72,8 @@ class ApiClient {
 
   Future<dynamic> patchJson(String path, {Map<String, dynamic>? body}) async {
     final token = await _bearer();
-    final res = await http.patch(
-      _uri(path),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: body == null ? null : jsonEncode(body),
+    final res = await _send(
+      () => http.patch(_uri(path), headers: _headers(token), body: body == null ? null : jsonEncode(body)),
     );
     _throwIfError(res);
     if (res.body.isEmpty) return null;
@@ -77,8 +89,8 @@ class ApiClient {
     final request = http.MultipartRequest('POST', _uri(path));
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
+    final streamed = await request.send().timeout(_uploadTimeout);
+    final res = await http.Response.fromStream(streamed).timeout(_uploadTimeout);
     _throwIfError(res);
     if (res.body.isEmpty) return null;
     return jsonDecode(res.body);
@@ -86,13 +98,8 @@ class ApiClient {
 
   Future<dynamic> deleteJson(String path, {Map<String, dynamic>? body}) async {
     final token = await _bearer();
-    final res = await http.delete(
-      _uri(path),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: body == null ? null : jsonEncode(body),
+    final res = await _send(
+      () => http.delete(_uri(path), headers: _headers(token), body: body == null ? null : jsonEncode(body)),
     );
     _throwIfError(res);
     if (res.body.isEmpty) return null;

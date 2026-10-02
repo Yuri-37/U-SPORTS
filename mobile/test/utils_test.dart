@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:u_sports_mobile/services/api_service.dart';
+import 'package:u_sports_mobile/utils/error_helpers.dart';
 import 'package:u_sports_mobile/utils/event_placements.dart';
 import 'package:u_sports_mobile/utils/format_helpers.dart';
 import 'package:u_sports_mobile/utils/leaderboard_stats.dart';
@@ -103,6 +105,18 @@ void main() {
       expect(eventPublicLifecycleLabel('in_progress'), 'Ongoing');
       expect(matchStatusLabel('live'), 'Live now');
       expect(formatDateTime(null), '—');
+    });
+  });
+
+  group('error messages', () {
+    test('show the servers own sentence for a rejected action', () {
+      expect(friendlyError(ApiException(400, 'Jersey number 7 is already taken.')), 'Jersey number 7 is already taken.');
+    });
+
+    test('hide server faults and raw HTML behind plain wording', () {
+      const plain = 'The server had a problem. Please try again in a moment.';
+      expect(friendlyError(ApiException(500, 'boom')), plain);
+      expect(friendlyError(ApiException(502, '<html>Bad gateway</html>')), plain);
     });
   });
 }

@@ -1,10 +1,12 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { cn } from '../../lib/utils'
+import { useNavDrawer } from '../../stores/navDrawerStore'
+import { DESKTOP_QUERY, useMediaQuery } from '../../hooks/useMediaQuery'
 import HeaderAccountCluster from './HeaderAccountCluster'
 import {
   groupNav,
@@ -47,8 +49,29 @@ export default function Sidebar() {
   const { profile, session } = useAuthStore()
   const scopedProfile = sessionScopedProfile(session, profile)
   const { institution } = useInstitutionStore()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsedPref, setCollapsed] = useState(false)
   const location = useLocation()
+  const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer()
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
+  // Icon-only mode is a desktop nicety; the phone drawer always shows labels.
+  const collapsed = collapsedPref && isDesktop
+
+  // Below the desktop breakpoint the sidebar is a slide-in drawer: close it when
+  // you pick a page, press Escape, or the window grows to desktop width.
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [location.pathname, setDrawerOpen])
+  useEffect(() => {
+    if (isDesktop) setDrawerOpen(false)
+  }, [isDesktop, setDrawerOpen])
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawerOpen, setDrawerOpen])
 
   const role = scopedProfile?.role
   const { primary, secondary, help } = groupNav(navForRole(role))
@@ -58,10 +81,24 @@ export default function Sidebar() {
   )
 
   return (
+    <>
+    {drawerOpen && (
+      <div
+        className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+    )}
     <aside
+      id="app-sidebar"
+      aria-label="Main navigation"
+      // Hidden off-screen drawers must not be reachable with the keyboard.
+      inert={!isDesktop && !drawerOpen}
       className={cn(
-        'relative z-40 flex h-full shrink-0 flex-col transition-[width] duration-200',
-        collapsed ? 'w-[72px]' : 'w-[220px]',
+        'z-50 flex h-full shrink-0 flex-col bg-[var(--shell-frame)] transition-[width,transform] duration-200',
+        'fixed inset-y-0 left-0 w-[260px] shadow-2xl lg:relative lg:z-40 lg:bg-transparent lg:shadow-none',
+        drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        collapsed ? 'lg:w-[72px]' : 'lg:w-[220px]',
       )}
     >
       {/* Brand */}
@@ -89,13 +126,21 @@ export default function Sidebar() {
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-muted)] shadow-[var(--shadow-raised)] transition-colors hover:text-[var(--text-primary)]"
+          className="hidden h-7 w-7 shrink-0 place-items-center rounded-md border border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-muted)] shadow-[var(--shadow-raised)] transition-colors hover:text-[var(--text-primary)] lg:grid"
         >
           {collapsed ? (
             <PanelLeftOpen className="h-3.5 w-3.5" />
           ) : (
             <PanelLeftClose className="h-3.5 w-3.5" />
           )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(false)}
+          aria-label="Close menu"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] lg:hidden"
+        >
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -116,5 +161,6 @@ export default function Sidebar() {
         <HeaderAccountCluster placement="sidebar" collapsed={collapsed} activeTo={activeTo} />
       </div>
     </aside>
+    </>
   )
 }

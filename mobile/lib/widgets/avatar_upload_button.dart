@@ -117,7 +117,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
     // Sits on the profile screen's navy hero, so it borrows HeroAvatar's
     // frosted-white treatment rather than a solid brand fill — a navy circle
     // on a navy gradient would have no visible edge.
-    return GestureDetector(
+    return Semantics(button: true, enabled: !_busy, label: 'Change profile photo', child: GestureDetector(
       onTap: _busy ? null : _openSheet,
       child: Stack(
         children: [
@@ -165,6 +165,6 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
           ),
         ],
       ),
-    );
+    ));
   }
 }

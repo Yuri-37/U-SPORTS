@@ -3,6 +3,7 @@ import { Keyboard, Shield } from 'lucide-react'
 import { Card } from '../../components/ui'
 import PageHeader from '../../components/layout/PageHeader'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import YourDataSection from '../../components/settings/YourDataSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
 import AvatarUpload from '../../components/settings/AvatarUpload'
@@ -25,6 +26,8 @@ export default function SuperAdminPreferences() {
       </Card>
 
       <ChangePasswordSection />
+
+      <YourDataSection canDelete={false} />
 
       <Card className="p-6">
         <h2 className="font-bold text-lg mb-1 flex items-center gap-2">

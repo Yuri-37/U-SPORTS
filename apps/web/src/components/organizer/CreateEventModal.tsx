@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, Modal, Input, Select, Textarea } from '../ui'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import { fetchSeasonsForEventForms } from '../../lib/seasonsLookup'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
@@ -122,6 +123,7 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
         best_of:
           form.sport === 'volleyball' || form.sport === 'table-tennis' ? form.best_of : undefined,
       })
+      toast.success('Event created')
       onCreated?.()
       onClose()
       navigate(`/organizer/events/${res.data.id}`)

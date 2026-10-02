@@ -7,6 +7,7 @@ import '../providers/appearance_provider.dart';
 import '../services/push_notifications_service.dart';
 import '../theme/layout_tokens.dart';
 import '../widgets/change_password_section.dart';
+import '../widgets/delete_account_tile.dart';
 import '../widgets/ui/brand_page.dart';
 
 enum SettingsShell { guest, athlete, coach }
@@ -78,6 +79,7 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: Icon(Icons.chevron_right_rounded, size: 20, color: LayoutTokens.mutedText(context)),
                   onTap: () => context.push('/privacy-notice?readonly=true'),
                 ),
+                if (shell == SettingsShell.athlete) const DeleteAccountTile(),
                 SheetTile(
                   leading: IconTile(icon: Icons.logout_rounded, color: LayoutTokens.danger(context)),
                   title: 'Sign out',

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Search } from 'lucide-react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import {
   Button,
@@ -103,6 +104,8 @@ export default function OrganizerEvents() {
       )
     })
   }, [events, tab, listSearch, sportFilter])
+
+  const pager = usePagination(filtered, 12)
 
   return (
     <div className="space-y-6">
@@ -234,7 +237,7 @@ export default function OrganizerEvents() {
         )
       ) : filtered.length > 0 ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((e) => (
+          {pager.pageItems.map((e) => (
             <Card
               key={e.id}
               className="cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
@@ -260,6 +263,7 @@ export default function OrganizerEvents() {
               {e.category && <p className="text-xs text-[var(--text-muted)] mt-1">{e.category}</p>}
             </Card>
           ))}
+          <Pagination {...pager.pagerProps} className="col-span-full" />
         </div>
       ) : null}
 

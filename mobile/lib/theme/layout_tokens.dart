@@ -50,7 +50,7 @@ class LayoutTokens {
   static Color mutedText(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFF7E7E9A)
-        : const Color(0xFF64748B);
+        : const Color(0xFF586478);
   }
 
   static Color primaryText(BuildContext context) {

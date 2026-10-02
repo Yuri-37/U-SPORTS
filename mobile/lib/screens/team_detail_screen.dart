@@ -202,6 +202,14 @@ class TeamDetailScreen extends ConsumerWidget {
         final pct = total > 0 ? ((w / total) * 100).round() : 0;
 
         return BrandPage.scroll(
+          onRefresh: () async {
+            ref.invalidate(_teamStatsProvider(teamId));
+            ref.invalidate(_teamMatchesProvider(teamId));
+            ref.invalidate(_teamDetailProvider(teamId));
+            try {
+              await ref.read(_teamDetailProvider(teamId).future);
+            } catch (_) {}
+          },
           title: team.name,
           subtitle: sportLabel(team.sport),
           hero: stats != null

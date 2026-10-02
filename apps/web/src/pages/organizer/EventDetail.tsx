@@ -25,6 +25,7 @@ import {
   Textarea,
   Skeleton,
 } from '../../components/ui'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import type { Event, Match, Bracket, Team } from '../../types'
@@ -107,6 +108,7 @@ export default function OrganizerEventDetail() {
     setError('')
     try {
       await api.delete(`/events/${id}/participants/${removeParticipantConfirm.participant_id}`)
+      toast.success('Participant removed')
       setRemoveParticipantConfirm(null)
       await fetchAll()
     } catch (e: unknown) {
@@ -127,6 +129,7 @@ export default function OrganizerEventDetail() {
     try {
       const participantIds = event.participants.map((p: any) => p.participant_id)
       await api.post(`/brackets/${id}/generate`, { participantIds })
+      toast.success('Bracket generated')
       setBracketGenConfirm(null)
       await fetchAll()
     } catch (e: unknown) {
@@ -278,6 +281,7 @@ export default function OrganizerEventDetail() {
         })
       }
       await fetchAll()
+      toast.success('Crossover teams saved')
     } catch (e: unknown) {
       const msg =
         e && typeof e === 'object' && 'response' in e
@@ -298,6 +302,7 @@ export default function OrganizerEventDetail() {
         participant_ids: [...selectedTeamIds],
         participant_type: 'team',
       })
+      toast.success('Participants added')
       setSelectedTeamIds(new Set())
       fetchAll()
     } catch (e: any) {
@@ -320,6 +325,7 @@ export default function OrganizerEventDetail() {
     setError('')
     try {
       await api.patch(`/events/${id}/status`, { newStatus })
+      toast.success('Event status updated')
       await fetchAll()
       return true
     } catch (e: unknown) {
@@ -358,6 +364,7 @@ export default function OrganizerEventDetail() {
     setError('')
     try {
       await api.delete(`/events/${id}`)
+      toast.success('Event deleted')
       navigate('/organizer/events')
     } catch (e: unknown) {
       const msg =
@@ -386,6 +393,7 @@ export default function OrganizerEventDetail() {
         description: editDescription.trim() === '' ? null : editDescription.trim(),
         ...(event?.sport === 'table-tennis' ? { table_tennis_format: editTTFormat } : {}),
       })
+      toast.success('Event updated')
       setEditDetailsOpen(false)
       await fetchAll()
     } catch (e: unknown) {
@@ -427,6 +435,7 @@ export default function OrganizerEventDetail() {
         scheduled_at,
         venue: schedVenue.trim() || null,
       })
+      toast.success('Match scheduled')
       setScheduleMatch(null)
       await fetchAll()
     } catch (e: unknown) {

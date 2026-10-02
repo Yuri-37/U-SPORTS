@@ -136,7 +136,8 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                       if (_seasonId == null) return const SheetMessage(text: 'No seasons available yet.');
                       if (rows.isEmpty) return const SheetMessage(text: 'No team rankings yet.');
                       final standings = sortTeamStandings(rows);
-                      return ListView(
+                      return RefreshIndicator(onRefresh: _refresh, child: ListView(
+physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                         children: [
                           SheetGroup(
@@ -145,7 +146,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                             ],
                           ),
                         ],
-                      );
+                      ));
                     },
                   ) ??
                   const SizedBox()
@@ -155,7 +156,8 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                     data: (rows) {
                       if (_seasonId == null) return const SheetMessage(text: 'No seasons available yet.');
                       if (rows.isEmpty) return const SheetMessage(text: 'No stats yet for this season.');
-                      return ListView(
+                      return RefreshIndicator(onRefresh: _refresh, child: ListView(
+physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                         children: [
                           SheetGroup(
@@ -210,7 +212,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
                             ],
                           ),
                         ],
-                      );
+                      ));
                     },
                   ) ??
                   const SizedBox(),
@@ -252,7 +254,8 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
         }
         final sorted = events.toList()
           ..sort((a, b) => (b['created_at'] as String? ?? '').compareTo(a['created_at'] as String? ?? ''));
-        return ListView.separated(
+        return RefreshIndicator(onRefresh: _refresh, child: ListView.separated(
+physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           itemCount: sorted.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -260,9 +263,25 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
             final ev = sorted[i];
             return EventCard(event: ev, onTap: () => context.push('/events/${ev['id']}'));
           },
-        );
+        ));
       },
     );
+  }
+
+  /// Pull-to-refresh for the rankings and events lists.
+  Future<void> _refresh() async {
+    final id = _seasonId;
+    ref.invalidate(eventListProvider(_eventFilters));
+    if (id != null) {
+      final key = (sport: widget.sport, seasonId: id);
+      ref.invalidate(leaderboardPlayersProvider(key));
+      ref.invalidate(leaderboardTeamsProvider(key));
+    }
+    try {
+      await ref.read(eventListProvider(_eventFilters).future);
+    } catch (_) {
+      // The lists show their own error state.
+    }
   }
 
   Widget _toggleChip(BuildContext context, {required String label, required bool selected, required VoidCallback onTap}) {

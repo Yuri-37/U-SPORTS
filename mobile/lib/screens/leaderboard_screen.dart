@@ -223,7 +223,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                     text: q.isNotEmpty ? 'No athletes match your search.' : 'No stats yet for this season.',
                                   );
                                 }
-                                return SingleChildScrollView(
+                                return RefreshIndicator(onRefresh: _refresh, child: SingleChildScrollView(
+physics: const AlwaysScrollableScrollPhysics(),
                                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                                   child: SheetGroup(
                                     dividers: false,
@@ -279,7 +280,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                       ),
                                     ],
                                   ),
-                                );
+                                ));
                               },
                             ) ??
                             const SizedBox(),
@@ -297,7 +298,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                             return const SheetMessage(text: 'No team rankings yet.');
                           }
                           final standings = sortTeamStandings(rows);
-                          return SingleChildScrollView(
+                          return RefreshIndicator(onRefresh: _refresh, child: SingleChildScrollView(
+physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                             child: SheetGroup(
                               children: [
@@ -305,7 +307,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                   _teamRow(context, i, standings[i]),
                               ],
                             ),
-                          );
+                          ));
                         },
                       ) ??
                       const SizedBox(),
@@ -316,6 +318,23 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
         ),
       ),
     );
+  }
+
+  /// Pull-to-refresh: reload this sport/season's player and team rankings.
+  Future<void> _refresh() async {
+    final id = _seasonId;
+    if (id == null) return;
+    final playersKey = (sport: _sport, seasonId: id);
+    ref.invalidate(leaderboardPlayersProvider(playersKey));
+    ref.invalidate(leaderboardTeamsProvider(playersKey));
+    try {
+      await Future.wait([
+        ref.read(leaderboardPlayersProvider(playersKey).future),
+        ref.read(leaderboardTeamsProvider(playersKey).future),
+      ]);
+    } catch (_) {
+      // The lists show their own error state.
+    }
   }
 
   Widget _teamRow(BuildContext context, int i, Map<String, dynamic> r) {

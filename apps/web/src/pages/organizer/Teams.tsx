@@ -28,10 +28,12 @@ import {
   Badge,
   Table,
 } from '../../components/ui'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 
 import axios from 'axios'
 
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 
 import { supabase } from '../../lib/supabase'
@@ -576,6 +578,7 @@ export default function OrganizerTeams() {
 
     try {
       await api.post('/teams', { ...form, name })
+      toast.success('Team created')
 
       setShowCreate(false)
 
@@ -735,6 +738,7 @@ export default function OrganizerTeams() {
 
         captain_id: null,
       })
+      toast.success('Team updated')
 
       const lineupNormalized = Number(res.data?.lineup_normalized ?? 0)
       if (lineupNormalized > 0) {
@@ -776,6 +780,7 @@ export default function OrganizerTeams() {
 
     try {
       await api.delete(`/teams/${deleteTarget.id}`)
+      toast.success('Team deleted')
 
       setDeleteTarget(null)
 
@@ -807,6 +812,7 @@ export default function OrganizerTeams() {
 
     try {
       await api.delete(`/teams/${editTeam.id}/members/${membershipId}`)
+      toast.success('Player removed from the roster')
 
       await refreshEditTeam()
 
@@ -834,6 +840,7 @@ export default function OrganizerTeams() {
       await api.patch(`/teams/${editTeam.id}/lineup`, {
         slots: [{ member_id: memberId, lineup_slot: slot }],
       })
+      toast.success('Lineup updated')
       await refreshEditTeam()
     } catch (e: unknown) {
       if (axios.isAxiosError(e)) {
@@ -856,6 +863,7 @@ export default function OrganizerTeams() {
       await api.patch(`/athletes/${athleteId}/roster-details`, {
         jersey_number: value === '' ? null : value,
       })
+      toast.success('Jersey number saved')
       setJerseyDrafts((d) => {
         const next = { ...d }
         delete next[athleteId]
@@ -885,6 +893,7 @@ export default function OrganizerTeams() {
     setSavingPositionId(athleteId)
     try {
       await api.patch(`/athletes/${athleteId}/roster-details`, { position: value })
+      toast.success('Position saved')
       await refreshEditTeam()
     } catch (e: unknown) {
       if (axios.isAxiosError(e)) {
@@ -1236,6 +1245,8 @@ export default function OrganizerTeams() {
     })
   }, [teams, seasons, teamListSearch, teamSeasonFilter, teamDepartmentFilter, teamSportFilter])
 
+  const pager = usePagination(filteredTeams, 12)
+
   const clearTeamListFilters = () => {
     setTeamListSearch('')
 
@@ -1434,7 +1445,7 @@ export default function OrganizerTeams() {
             />
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTeams.map((team) => {
+              {pager.pageItems.map((team) => {
                 const myProfileId = organizer?.profile_id
 
                 const isCoach = team.coaches?.some(
@@ -1592,6 +1603,7 @@ export default function OrganizerTeams() {
                   </div>
                 )
               })}
+              <Pagination {...pager.pagerProps} className="col-span-full" />
             </div>
           )}
         </>

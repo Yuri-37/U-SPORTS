@@ -88,6 +88,7 @@ class _HubAnnouncementStripState extends State<HubAnnouncementStrip> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),
+                    tooltip: 'Dismiss announcement',
                     onPressed: () => setState(() => _dismissed.add(id)),
                     visualDensity: VisualDensity.compact,
                   ),

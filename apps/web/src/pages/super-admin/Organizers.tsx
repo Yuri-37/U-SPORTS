@@ -13,6 +13,7 @@ import {
   Select,
   PasswordStrengthMeter,
 } from '../../components/ui'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import type { Organizer, Profile } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
@@ -450,6 +451,7 @@ export default function SuperAdminOrganizers() {
     setToggleBusy(true)
     try {
       await api.patch(`/admin/organizers/${toggleConfirm.id}/toggle`)
+      toast.success('Account status updated')
       setToggleConfirm(null)
       setListError('')
       fetchStaff()

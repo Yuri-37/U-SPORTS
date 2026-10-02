@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/api_service.dart';
+
 /// A short, non-technical message safe to show directly in the UI. Screens
 /// were previously interpolating raw exceptions (`'$e'`) into error states,
 /// surfacing things like `ClientException with SocketException: Failed host
@@ -24,6 +26,16 @@ String friendlyError(Object error, {String? authActionLabel}) {
     return actionFailedMessage;
   }
   if (error is AuthException) return actionFailedMessage;
+  if (error is ApiException) {
+    // A rejected action ("jersey number taken", "lineup full") arrives as the
+    // server's own sentence and is exactly what the person needs to read. A
+    // server fault, or a proxy's HTML error page, is not.
+    final m = error.message.trim();
+    if (error.statusCode >= 500 || m.length > 200 || m.startsWith('<')) {
+      return 'The server had a problem. Please try again in a moment.';
+    }
+    return m;
+  }
   if (error is PostgrestException) return "Couldn't load this right now. Please try again.";
   if (error is SocketException) return 'No internet connection. Check your network and try again.';
   if (error is TimeoutException) return 'This is taking too long. Please try again.';

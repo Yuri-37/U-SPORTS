@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { Stepper } from '../../components/ui/Stepper'
 import { SportCheckboxes } from '../../components/ui/SportCheckboxes'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import type { Season, Sport } from '../../types'
 import { formatDate, formatEnumLabel, getSportLabel } from '../../lib/utils'
@@ -73,6 +75,8 @@ function StaffCheckboxes({
 
 export default function SuperAdminSeasons() {
   const [seasons, setSeasons] = useState<Season[]>([])
+
+  const pager = usePagination(seasons, 10)
   const [loading, setLoading] = useState(true)
   const [sportOptions, setSportOptions] = useState<Sport[]>([])
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
@@ -158,6 +162,7 @@ export default function SuperAdminSeasons() {
       const { staff_ids, ...rest } = form
       const payload = staff_ids.length > 0 ? form : rest
       const { data: created } = await api.post<{ id: string }>('/admin/seasons', payload)
+      toast.success('Season created')
 
       // Placeholders are a convenience on top of a season that already exists.
       // A failure here must not read as "season creation failed" — the season
@@ -221,6 +226,7 @@ export default function SuperAdminSeasons() {
     setEditing(true)
     try {
       await api.patch(`/admin/seasons/${editSeason.id}`, editForm)
+      toast.success('Season updated')
       setEditSeason(null)
       fetch()
     } catch (e: unknown) {
@@ -251,6 +257,7 @@ export default function SuperAdminSeasons() {
       await api.patch(`/admin/seasons/${transitionConfirm.id}/status`, {
         status: transitionConfirm.nextStatus,
       })
+      toast.success('Season status updated')
       setTransitionConfirm(null)
       fetch()
     } catch (e: unknown) {
@@ -271,6 +278,7 @@ export default function SuperAdminSeasons() {
     setDeleteError('')
     try {
       await api.delete(`/admin/seasons/${deleteConfirm.id}`)
+      toast.success('Season deleted')
       setDeleteConfirm(null)
       fetch()
     } catch (e: unknown) {
@@ -322,7 +330,7 @@ export default function SuperAdminSeasons() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {seasons.map((s) => (
+          {pager.pageItems.map((s) => (
             <Card key={s.id} className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <p className="font-bold">{s.name}</p>
@@ -400,6 +408,7 @@ export default function SuperAdminSeasons() {
               </div>
             </Card>
           ))}
+          <Pagination {...pager.pagerProps} className="col-span-full" />
         </div>
       )}
 

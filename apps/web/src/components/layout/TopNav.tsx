@@ -1,5 +1,7 @@
 import React from 'react'
 import { useLocation } from 'react-router'
+import { Menu } from 'lucide-react'
+import { useNavDrawer } from '../../stores/navDrawerStore'
 import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import OnlineOrganizers from './OnlineOrganizers'
@@ -18,9 +20,20 @@ export default function TopNav() {
   const role = scopedProfile?.role
   const section = sectionForPath(location.pathname, role)
   const SectionIcon = section?.icon
+  const { open, setOpen } = useNavDrawer()
 
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-[var(--border-subtle)] px-5">
+    <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-[var(--border-subtle)] px-3 sm:px-5">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        aria-controls="app-sidebar"
+        aria-expanded={open}
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] lg:hidden"
+      >
+        <Menu className="h-4 w-4" />
+      </button>
       <div className="flex min-w-0 items-center gap-2 text-sm">
         {section && SectionIcon && (
           <>

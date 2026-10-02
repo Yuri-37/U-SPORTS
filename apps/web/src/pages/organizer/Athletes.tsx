@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check, UserPlus } from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select, TabBar } from '../../components/ui'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import AccountCredentialsModal from '../../components/accounts/AccountCredentialsModal'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
@@ -233,6 +235,7 @@ export default function OrganizerAthletes() {
         sport: editSport,
         year_level: editYearLevel,
       })
+      toast.success('Athlete updated')
       setEditTarget(null)
       fetchAthletes()
     } catch (e: unknown) {
@@ -248,6 +251,7 @@ export default function OrganizerAthletes() {
     setDeleteBusy(true)
     try {
       await api.delete(`/athletes/${deleteTarget.id}`, { timeout: 60000 })
+      toast.success('Athlete deleted')
       setDeleteTarget(null)
       fetchAthletes()
     } catch (e: unknown) {
@@ -308,6 +312,8 @@ export default function OrganizerAthletes() {
     })
   }, [athletes, listSearch, sportFilter, departmentFilter])
 
+  const pager = usePagination(filteredAthletes, 25)
+
   const visibleIds = filteredAthletes.map((a) => a.id)
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
 
@@ -339,6 +345,7 @@ export default function OrganizerAthletes() {
     setLoadMessage('')
     try {
       await api.patch('/athletes/bulk', { ids, action })
+      toast.success('Athletes updated')
       setSelectedIds(new Set())
       fetchAthletes()
       return true
@@ -367,6 +374,7 @@ export default function OrganizerAthletes() {
       await api.patch(`/athletes/${seasonToggleConfirm.id}/season-status`, {
         season_status: seasonToggleConfirm.nextInactive ? 'inactive' : 'active',
       })
+      toast.success('Season status updated')
       setSeasonToggleConfirm(null)
       fetchAthletes()
     } catch (e: unknown) {
@@ -661,7 +669,7 @@ export default function OrganizerAthletes() {
       <Table
         loading={loading}
         columns={columns}
-        data={filteredAthletes.map((a) => ({
+        data={pager.pageItems.map((a) => ({
           select: (
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
               <input
@@ -741,6 +749,7 @@ export default function OrganizerAthletes() {
               : 'No inactive athletes.'
         }
       />
+      <Pagination {...pager.pagerProps} />
 
       {selectedIds.size > 0 && (
         // Sticks to the bottom of the content panel's scroll area rather than the

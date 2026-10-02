@@ -49,8 +49,23 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
   ),
   PrivacyNoticeSection(
     'How long',
-    'For as long as your account exists, and afterward as historical season '
-        'records.',
+    'For as long as your account exists. If you delete your account, your '
+        'profile, roster memberships, season statistics and notifications are '
+        'removed. Team results of events that already finished are kept as '
+        'historical records of the competition, and a minimal note that the '
+        'account was removed (the student ID and the date) stays in the audit '
+        'log for accountability.',
+  ),
+  PrivacyNoticeSection(
+    'Your rights',
+    'Under the Data Privacy Act you may be informed about how your data is '
+        'used, get a copy of it, ask for corrections, object to its use, and '
+        'ask for it to be erased. On the U-Sports website (Settings → Your '
+        'data) you can download a copy of your data at any time and, if you '
+        'are an athlete, delete your account yourself. For a correction — a '
+        'misspelled name or a wrong student ID, for example — or to raise a '
+        'concern, use the contact below. You may also bring a complaint to '
+        'the National Privacy Commission (privacy.gov.ph).',
   ),
   PrivacyNoticeSection(
     'The law behind this',
@@ -62,7 +77,10 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
   ),
   PrivacyNoticeSection(
     'Questions?',
-    "Contact your sport's organizer or a platform administrator.",
+    "Contact your sport's organizer or the U-Sports Super Admin (the "
+        "platform administrator). For privacy matters concerning NU "
+        "Dasmariñas systems in general, the school's Data Protection Officer "
+        "is the right office.",
   ),
   PrivacyNoticeSection(
     '',

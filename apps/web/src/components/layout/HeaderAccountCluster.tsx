@@ -434,7 +434,7 @@ export default function HeaderAccountCluster({
               </span>
             )}
           </button>
-          {inboxPopover('bottom-0 left-full ml-3')}
+          {inboxPopover('bottom-full left-0 mb-2 max-w-[calc(100vw-2rem)] lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3')}
         </div>
 
         <div className="mx-1 my-3 h-px bg-[var(--border-subtle)]" />
@@ -457,7 +457,7 @@ export default function HeaderAccountCluster({
               </span>
             )}
           </button>
-          {accountMenu('bottom-0 left-full ml-3')}
+          {accountMenu('bottom-full left-0 mb-2 lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3')}
         </div>
 
         {modals}

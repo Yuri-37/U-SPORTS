@@ -98,6 +98,15 @@ export function Card({
         className,
       )}
       onClick={onClick}
+      // A clickable card is a button to everyone who isn't using a mouse.
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (onClick && e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          e.currentTarget.click()
+        }
+      }}
       {...rest}
     >
       {children}
@@ -116,12 +125,24 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, errorPosition = 'below', hint, icon, className, ...props }, ref) => {
-    const errEl = error ? <p className="text-xs text-[#FF3355]">{error}</p> : null
+  ({ label, error, errorPosition = 'below', hint, icon, className, id, ...props }, ref) => {
+    // Every field gets an id so its <label> is programmatically tied to it --
+    // that is what lets a screen reader say "Email, edit text" instead of
+    // just "edit text" -- and its error/hint is read with it.
+    const autoId = React.useId()
+    const inputId = id ?? autoId
+    const describedBy = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
+    const errEl = error ? (
+      <p id={`${inputId}-error`} role="alert" className="text-xs text-[#FF3355]">
+        {error}
+      </p>
+    ) : null
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>
+          <label htmlFor={inputId} className="text-sm font-medium text-[var(--text-secondary)]">
+            {label}
+          </label>
         )}
         {error && errorPosition === 'above' && errEl}
         <div className="relative">
@@ -132,6 +153,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
             className={cn(
               'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors',
               'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
@@ -143,7 +167,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && errorPosition === 'below' && errEl}
-        {hint && !error && <p className="text-xs text-[var(--text-muted)]">{hint}</p>}
+        {hint && !error && (
+          <p id={`${inputId}-hint`} className="text-xs text-[var(--text-muted)]">
+            {hint}
+          </p>
+        )}
       </div>
     )
   },
@@ -157,11 +185,20 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   options: { value: string; label: string }[]
 }
 
-export function Select({ label, error, options, className, ...props }: SelectProps) {
+export function Select({ label, error, options, className, id, ...props }: SelectProps) {
+  const autoId = React.useId()
+  const selectId = id ?? autoId
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
+      {label && (
+        <label htmlFor={selectId} className="text-sm font-medium text-[var(--text-secondary)]">
+          {label}
+        </label>
+      )}
       <select
+        id={selectId}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${selectId}-error` : undefined}
         className={cn(
           'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors',
           'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
@@ -176,7 +213,11 @@ export function Select({ label, error, options, className, ...props }: SelectPro
           </option>
         ))}
       </select>
-      {error && <p className="text-xs text-[#FF3355]">{error}</p>}
+      {error && (
+        <p id={`${selectId}-error`} role="alert" className="text-xs text-[#FF3355]">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -187,11 +228,20 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string
 }
 
-export function Textarea({ label, error, className, ...props }: TextareaProps) {
+export function Textarea({ label, error, className, id, ...props }: TextareaProps) {
+  const autoId = React.useId()
+  const areaId = id ?? autoId
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-medium text-[var(--text-secondary)]">{label}</label>}
+      {label && (
+        <label htmlFor={areaId} className="text-sm font-medium text-[var(--text-secondary)]">
+          {label}
+        </label>
+      )}
       <textarea
+        id={areaId}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${areaId}-error` : undefined}
         className={cn(
           'w-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-[10px] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors resize-none',
           'focus:border-[var(--accent-default)] focus:ring-[3px] focus:ring-[var(--accent-default)]/15',
@@ -201,7 +251,11 @@ export function Textarea({ label, error, className, ...props }: TextareaProps) {
         rows={4}
         {...props}
       />
-      {error && <p className="text-xs text-[#FF3355]">{error}</p>}
+      {error && (
+        <p id={`${areaId}-error`} role="alert" className="text-xs text-[#FF3355]">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -253,7 +307,65 @@ interface ModalProps {
   layer?: 'base' | 'nested'
 }
 
+// Open modals, oldest first. Escape closes only the top one, so a confirmation
+// stacked on a form doesn't take the form down with it.
+const openModals: symbol[] = []
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function Modal({ open, onClose, title, children, size = 'md', layer = 'base' }: ModalProps) {
+  const dialogRef = React.useRef<HTMLDivElement>(null)
+  const titleId = React.useId()
+  const onCloseRef = React.useRef(onClose)
+  onCloseRef.current = onClose
+
+  React.useEffect(() => {
+    if (!open) return
+    const token = Symbol('modal')
+    openModals.push(token)
+    const previouslyFocused = document.activeElement as HTMLElement | null
+
+    // Move focus into the dialog unless something inside already took it.
+    const dialog = dialogRef.current
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus()
+
+    const onKey = (e: KeyboardEvent) => {
+      if (openModals[openModals.length - 1] !== token) return
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onCloseRef.current()
+        return
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const items = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+          (el) => el.offsetParent !== null,
+        )
+        if (items.length === 0) {
+          e.preventDefault()
+          return
+        }
+        const first = items[0]
+        const last = items[items.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === first || active === dialogRef.current)) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      const at = openModals.indexOf(token)
+      if (at >= 0) openModals.splice(at, 1)
+      previouslyFocused?.focus?.()
+    }
+  }, [open])
+
   if (!open) return null
   const sizes = {
     sm: 'max-w-sm',
@@ -272,15 +384,22 @@ export function Modal({ open, onClose, title, children, size = 'md', layer = 'ba
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={cn(
-          'relative w-full max-h-[min(90vh,100dvh)] flex flex-col overflow-hidden bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl',
+          'relative w-full max-h-[min(90vh,100dvh)] flex flex-col overflow-hidden bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl outline-none',
           sizes[size],
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--border-subtle)] shrink-0">
-            <h2 className="text-lg font-semibold">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold">
+              {title}
+            </h2>
             <button
               type="button"
               onClick={onClose}
@@ -559,7 +678,7 @@ export function Table({
         <thead>
           <tr>
             {columns.map((col, i) => (
-              <th key={col.key} className={headCell(i)} style={{ width: col.width }}>
+              <th key={col.key} scope="col" className={headCell(i)} style={{ width: col.width }}>
                 {col.label}
               </th>
             ))}
@@ -591,6 +710,17 @@ export function Table({
                   onRowClick && 'cursor-pointer hover:bg-[var(--surface-elevated)]',
                 )}
                 onClick={() => onRowClick?.(row, i)}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          onRowClick(row, i)
+                        }
+                      }
+                    : undefined
+                }
               >
                 {columns.map((col) => (
                   <td key={col.key} className={bodyCell}>

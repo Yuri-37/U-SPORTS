@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil } from 'lucide-react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import {
   Button,
@@ -12,6 +13,7 @@ import {
   Alert,
   EmptyState,
 } from '../../components/ui'
+import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import type { Announcement } from '../../types'
 import { formatDateTime, getSportLabel } from '../../lib/utils'
@@ -103,6 +105,8 @@ interface TeamOption {
 
 export default function OrganizerAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+
+  const pager = usePagination(announcements, 10)
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -194,6 +198,7 @@ export default function OrganizerAnnouncements() {
       } else {
         await api.post('/announcements', payload)
       }
+      toast.success(editingId ? 'Announcement updated' : 'Announcement posted')
       setShowCreate(false)
       setEditingId(null)
       fetchAnnouncements()
@@ -216,6 +221,7 @@ export default function OrganizerAnnouncements() {
     setDeleting(true)
     try {
       await api.delete(`/announcements/${deleteConfirmId}`)
+      toast.success('Announcement deleted')
       setDeleteConfirmId(null)
       fetchAnnouncements()
     } catch {
@@ -258,7 +264,7 @@ export default function OrganizerAnnouncements() {
         />
       ) : (
         <div className="space-y-3">
-          {announcements.map((a) => {
+          {pager.pageItems.map((a) => {
             const Icon = TYPE_ICONS[a.type] ?? Bell
             const colors = TYPE_COLORS[a.type] ?? TYPE_COLORS.system
             return (
@@ -323,6 +329,7 @@ export default function OrganizerAnnouncements() {
               </Card>
             )
           })}
+          <Pagination {...pager.pagerProps} className="col-span-full" />
         </div>
       )}
 
