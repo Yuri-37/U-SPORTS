@@ -12,6 +12,9 @@ export default function ResetPasswordPage() {
   const { institution } = useInstitutionStore()
   const [ready, setReady] = useState(false)
   const [checking, setChecking] = useState(true)
+  /** token_hash from the link, held until the person presses Continue. */
+  const [pendingHash, setPendingHash] = useState<string | null>(null)
+  const [redeeming, setRedeeming] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -38,15 +41,14 @@ export default function ResetPasswordPage() {
       // clicking a dead link still saw the form and "updated" their live
       // session — appearing to work while doing the wrong thing.
       if (tokenHash) {
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          type: 'recovery',
-          token_hash: tokenHash,
-        })
-        // Strip the token from the URL so a refresh or back-button can't replay it.
-        window.history.replaceState({}, document.title, '/auth/reset-password')
+      // The one-time token is NOT redeemed here. Microsoft's mail scanner (NU's
+      // Defender "Safe Links") opens links in a real browser that runs this
+      // script, and redeemed the token within seconds of sending -- long before
+      // the person clicked -- so every link arrived already used. Redeeming only
+      // after a person presses the button below means the scanner's visit leaves
+      // the token intact.
         if (!active) return
-        setReady(!verifyError)
+        setPendingHash(tokenHash)
         setChecking(false)
         return
       }
@@ -85,6 +87,21 @@ export default function ResetPasswordPage() {
       cleanup()
     }
   }, [])
+
+  const redeemLink = async () => {
+    if (!pendingHash) return
+    setRedeeming(true)
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      type: 'recovery',
+      token_hash: pendingHash,
+    })
+    // Strip the token from the URL so a refresh or back-button can't replay it.
+    window.history.replaceState({}, document.title, window.location.pathname)
+    setPendingHash(null)
+    setReady(!verifyError)
+    setRedeeming(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,6 +153,22 @@ export default function ResetPasswordPage() {
           </Alert>
         ) : checking ? (
           <p className="text-center text-sm text-[var(--text-muted)]">Verifying your link…</p>
+        ) : pendingHash ? (
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold">Choose your password</h2>
+            <p className="text-[var(--text-muted)] text-sm">
+              Press Continue to open the form where you choose your U-Sports password.
+            </p>
+            <Button
+              className="w-full"
+              size="lg"
+              loading={redeeming}
+              icon={<KeyRound className="w-4 h-4" />}
+              onClick={() => void redeemLink()}
+            >
+              Continue
+            </Button>
+          </div>
         ) : !ready ? (
           <Alert type="danger">
             This reset link is invalid or has expired. Request a new one from the{' '}

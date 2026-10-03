@@ -8,15 +8,18 @@ import { friendlyAuthError } from '../../lib/utils'
 import { passwordZ } from '../../lib/validation/forms'
 
 // Where invited accounts land after clicking the invite email link. The link
-// carries a token_hash in the query, which we redeem here in JavaScript — the
-// same approach as ResetPasswordPage, and for the same reasons: a mail scanner
-// that pre-opens the link can't consume a token it never runs JS to redeem,
-// and a pre-existing login can never be mistaken for the invite session.
+// carries a token_hash in the query. It is redeemed only after the person
+// presses Continue (see ResetPasswordPage): mail scanners run the page's script
+// and used the token up before anyone clicked. A pre-existing login can never
+// be mistaken for the invite session either.
 export default function AcceptInvitePage() {
   const navigate = useNavigate()
   const { institution } = useInstitutionStore()
   const [ready, setReady] = useState(false)
   const [checking, setChecking] = useState(true)
+  /** token_hash from the link, held until the person presses Continue. */
+  const [pendingHash, setPendingHash] = useState<string | null>(null)
+  const [redeeming, setRedeeming] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -35,14 +38,14 @@ export default function AcceptInvitePage() {
       const linkError = hash.get('error_description') || hash.get('error')
 
       if (tokenHash) {
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          type: 'invite',
-          token_hash: tokenHash,
-        })
-        window.history.replaceState({}, document.title, '/auth/accept-invite')
+      // The one-time token is NOT redeemed here. Microsoft's mail scanner (NU's
+      // Defender "Safe Links") opens links in a real browser that runs this
+      // script, and redeemed the token within seconds of sending -- long before
+      // the person clicked -- so every link arrived already used. Redeeming only
+      // after a person presses the button below means the scanner's visit leaves
+      // the token intact.
         if (!active) return
-        setReady(!verifyError)
+        setPendingHash(tokenHash)
         setChecking(false)
         return
       }
@@ -77,6 +80,21 @@ export default function AcceptInvitePage() {
       cleanup()
     }
   }, [])
+
+  const redeemLink = async () => {
+    if (!pendingHash) return
+    setRedeeming(true)
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      type: 'invite',
+      token_hash: pendingHash,
+    })
+    // Strip the token from the URL so a refresh or back-button can't replay it.
+    window.history.replaceState({}, document.title, window.location.pathname)
+    setPendingHash(null)
+    setReady(!verifyError)
+    setRedeeming(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +145,22 @@ export default function AcceptInvitePage() {
           </Alert>
         ) : checking ? (
           <p className="text-center text-sm text-[var(--text-muted)]">Verifying your invite…</p>
+        ) : pendingHash ? (
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold">Welcome to U-Sports</h2>
+            <p className="text-[var(--text-muted)] text-sm">
+              Press Continue to choose the password for your account.
+            </p>
+            <Button
+              className="w-full"
+              size="lg"
+              loading={redeeming}
+              icon={<KeyRound className="w-4 h-4" />}
+              onClick={() => void redeemLink()}
+            >
+              Continue
+            </Button>
+          </div>
         ) : !ready ? (
           <Alert type="danger">
             This invite link is invalid or has expired. Ask whoever invited you to send a new
