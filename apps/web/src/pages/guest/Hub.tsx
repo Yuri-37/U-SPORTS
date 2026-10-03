@@ -324,13 +324,20 @@ export default function GuestHub() {
                   className="hover:border-[var(--danger)]/50 transition-colors"
                   onClick={() => setSelectedLiveId(m.id)}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="danger">LIVE</Badge>
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
-                      {v.sportPretty}
-                    </span>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0">
+                      <Badge variant="danger">LIVE</Badge>
+                      <p className="mt-1.5 text-sm font-extrabold uppercase tracking-wide text-[var(--text-primary)]">
+                        {v.sportPretty}
+                      </p>
+                    </div>
+                    <p
+                      className="min-w-0 max-w-[55%] truncate pt-1 text-right text-xs text-[var(--text-muted)]"
+                      title={v.eventTitle}
+                    >
+                      {v.eventTitle}
+                    </p>
                   </div>
-                  <p className="text-xs text-[var(--text-muted)] truncate mb-1">{v.eventTitle}</p>
                   <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-secondary)] mb-2">
                     <span className="truncate">{v.phase}</span>
                     <span className="shrink-0 font-medium text-[var(--accent-default)]">

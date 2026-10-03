@@ -79,18 +79,19 @@ class LiveMatchCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
+                      Text(
+                        sportLabel(sport).toUpperCase(),
+                        style: TextStyle(fontSize: 12.5, letterSpacing: 0.6, color: ink, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           evName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
                           style: TextStyle(fontSize: 12.5, color: muted, fontWeight: FontWeight.w500),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        sportLabel(sport),
-                        style: TextStyle(fontSize: 11.5, color: LayoutTokens.secondaryText(context), fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
