@@ -55,7 +55,16 @@ router.get('/stats', requireAuth, requireRole('Admin', 'Organizer'), async (_req
       .from('events')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'in_progress'),
-    supabase.from('seasons').select('id').eq('status', 'active').single(),
+    // The dashboard card shows the season's NAME and status, so select them (it
+    // used to fetch only the id and always rendered "None"). maybeSingle +
+    // limit(1) also stops two active seasons, or none, from erroring out.
+    supabase
+      .from('seasons')
+      .select('id, name, status')
+      .eq('status', 'active')
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   res.json({
