@@ -19,7 +19,7 @@ import '../widgets/double_back_exit.dart';
 import '../widgets/event_card.dart';
 import '../widgets/hub_live_match_sheet.dart';
 import '../widgets/institution_brand.dart';
-import '../widgets/usports_mark.dart';
+import '../widgets/institution_logo.dart';
 import '../widgets/live_match_card.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/hub_header_actions.dart';
@@ -39,6 +39,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final open = ref.watch(hubRecentEventsProvider).valueOrNull?.length ?? 0;
     final abbr = ins?.abbreviation;
     final tagline = ins?.tagline;
+    final logo = ins?.logoUrl?.trim();
     final schoolName = (ins?.name.trim().isNotEmpty == true)
         ? ins!.name
         : (abbr?.isNotEmpty == true ? abbr! : 'Intramural sports');
@@ -46,27 +47,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       children: [
         const HeroPill(text: 'Live platform'),
-        const SizedBox(height: 14),
-        // The product first -- the school's own name sits under it.
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const UsportsMark(size: 46),
-            const SizedBox(width: 12),
-            Text('U-Sports', style: AppTheme.display(size: 38, color: Colors.white, height: 1.05)),
-          ],
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 22),
+        // The school, once: its crest, its name, its tagline. ("U-Sports" is
+        // the header above, so it is not repeated here.)
+        if (logo != null && logo.isNotEmpty) ...[
+          InstitutionLogo(
+            url: logo,
+            height: 60,
+            fallback: const SizedBox(height: 60),
+          ),
+          const SizedBox(height: 14),
+        ],
         Text(
           schoolName,
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 15.5, fontWeight: FontWeight.w700),
+          style: AppTheme.display(size: 25, color: Colors.white, height: 1.15),
         ),
         if (tagline != null && tagline.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
               tagline,
               textAlign: TextAlign.center,
@@ -77,7 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 26),
         FrostedCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: FrostedStats(

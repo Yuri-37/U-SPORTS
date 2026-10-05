@@ -9,7 +9,7 @@ import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
-import '../widgets/institution_logo.dart';
+import '../widgets/usports_mark.dart';
 import '../widgets/ui/brand_page.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -119,8 +119,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final institution = ref.watch(institutionProvider).valueOrNull;
     final hintDomain = institution?.studentEmailDomain ?? 'students.nu-dasma.edu.ph';
-    final abbr = institution?.abbreviation?.trim();
-    final schoolName = (abbr?.isNotEmpty == true ? abbr! : 'U-Sports');
+    final schoolName = institution?.name.trim() ?? '';
 
     // Reached via context.go(), which replaces the shell rather than pushing
     // on top of it, so there's nothing on the stack for the system back
@@ -135,24 +134,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         showBack: false,
         hero: Column(
           children: [
-            // The institution's own crest reads clearest bare on the gradient
-            // -- a circular badge behind it just added an extra ring with no
-            // purpose. Only the "no logo yet" fallback needs a shape at all,
-            // so it has something to sit on.
-            (institution?.logoUrl?.trim().isNotEmpty ?? false)
-                ? InstitutionLogo(
-                    url: institution!.logoUrl!,
-                    height: 68,
-                    fallback: HeroAvatar(name: schoolName, radius: 34),
-                  )
-                : HeroAvatar(name: schoolName, radius: 34),
-            const SizedBox(height: 14),
-            Text(schoolName, textAlign: TextAlign.center, style: AppTheme.display(size: 26, color: Colors.white)),
-            if (institution?.name != null)
+            // Signing in is to U-Sports, so the screen carries the U-Sports
+            // identity; the school is named quietly underneath.
+            const UsportsMark(size: 76),
+            const SizedBox(height: 16),
+            Text('U-Sports', textAlign: TextAlign.center, style: AppTheme.display(size: 30, color: Colors.white)),
+            if (schoolName.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  institution!.name,
+                  schoolName,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.72), fontSize: 13.5),
                 ),
