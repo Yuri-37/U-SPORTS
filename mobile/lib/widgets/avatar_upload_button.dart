@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../utils/feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -46,6 +47,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
             fieldName: 'file',
           );
       ref.invalidate(profileProvider);
+      if (mounted) showSuccess(context, 'Profile photo updated');
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -60,6 +62,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
     try {
       await ref.read(apiClientProvider).deleteJson('/profile/avatar');
       ref.invalidate(profileProvider);
+      if (mounted) showSuccess(context, 'Profile photo removed');
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -71,7 +74,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    showError(context, message);
   }
 
   void _openSheet() {

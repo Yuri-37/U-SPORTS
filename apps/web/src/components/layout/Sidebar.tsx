@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils'
 import { useNavDrawer } from '../../stores/navDrawerStore'
 import { DESKTOP_QUERY, useMediaQuery } from '../../hooks/useMediaQuery'
 import HeaderAccountCluster from './HeaderAccountCluster'
+import UsportsMark from '../brand/UsportsMark'
 import {
   groupNav,
   navForRole,
@@ -105,21 +106,26 @@ export default function Sidebar() {
       <div
         className={cn('flex items-center gap-2.5 pb-4 pt-5', collapsed ? 'flex-col px-2' : 'px-5')}
       >
-        {institution?.logo_url ? (
-          <img
-            src={institution.logo_url}
-            alt="Logo"
-            className="h-8 w-auto max-w-[5rem] shrink-0 object-contain"
-          />
-        ) : (
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--school-primary)] text-xs font-bold text-[var(--school-secondary)]">
-            {institution?.abbreviation?.slice(0, 2) ?? 'US'}
-          </div>
-        )}
+        <UsportsMark size={32} />
         {!collapsed && (
-          <span className="min-w-0 flex-1 truncate text-[17px] font-bold tracking-[-0.02em] text-[var(--text-primary)]">
-            U-Sports
-          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
+              U-Sports
+            </span>
+            {/* The school's own mark, smaller, under the product name. */}
+            <span className="flex min-w-0 items-center gap-1.5">
+              {institution?.logo_url ? (
+                <img
+                  src={institution.logo_url}
+                  alt=""
+                  className="h-3.5 w-auto max-w-[1.5rem] shrink-0 object-contain"
+                />
+              ) : null}
+              <span className="truncate text-[11px] text-[var(--text-muted)]">
+                {institution?.abbreviation || institution?.name}
+              </span>
+            </span>
+          </div>
         )}
         <button
           type="button"

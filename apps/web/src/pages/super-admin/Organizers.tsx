@@ -433,6 +433,7 @@ export default function SuperAdminOrganizers() {
         season_ids: editSeasonIds,
       })
       setSuccess(`${editTarget.profile?.full_name} updated successfully.`)
+      toast.success('Staff account updated')
       setEditTarget(null)
       fetchStaff()
     } catch (e: unknown) {

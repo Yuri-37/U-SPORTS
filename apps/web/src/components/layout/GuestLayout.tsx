@@ -8,6 +8,7 @@ import AnnouncementBanner from '../announcements/AnnouncementBanner'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import HeaderAccountCluster from './HeaderAccountCluster'
 import DarkModeToggle from './DarkModeToggle'
+import UsportsMark from '../brand/UsportsMark'
 
 const GUEST_NAV = [
   { to: '/guest', label: 'Hub', Icon: Globe, end: true },
@@ -38,35 +39,23 @@ export default function GuestLayout() {
       <header className="h-14 bg-[var(--surface-card)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 gap-2">
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            {institution?.logo_url ? (
-              <div className="flex h-8 max-h-8 items-center justify-center shrink-0 overflow-visible">
-                <img
-                  src={institution.logo_url}
-                  alt="Logo"
-                  className="max-h-8 w-auto max-w-[min(100%,7rem)] object-contain object-center"
-                />
+            <UsportsMark size={32} />
+            <div className="min-w-0">
+              <p className="font-bold text-sm leading-tight">U-Sports</p>
+              {/* The school's crest and name, smaller, under the product name. */}
+              <div className="flex min-w-0 items-center gap-1.5">
+                {institution?.logo_url ? (
+                  <img
+                    src={institution.logo_url}
+                    alt=""
+                    className="h-3.5 w-auto max-w-[1.5rem] shrink-0 object-contain"
+                  />
+                ) : null}
+                <p className="hidden sm:block text-[10px] text-[var(--text-muted)] truncate">
+                  {institution?.abbreviation}
+                  {institution?.tagline ? ` · ${institution.tagline}` : ''}
+                </p>
               </div>
-            ) : (
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={{
-                  backgroundColor: 'var(--school-primary)',
-                  color: 'var(--school-secondary)',
-                }}
-              >
-                {institution?.abbreviation?.slice(0, 2) ?? 'US'}
-              </div>
-            )}
-            <div className="min-w-0 hidden sm:block">
-              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[var(--accent-default)] leading-none mb-0.5">
-                U-Sports
-              </p>
-              <p className="font-bold text-sm leading-tight truncate">
-                {institution?.abbreviation ?? 'U-Sports'}
-              </p>
-              <p className="text-[10px] text-[var(--text-muted)] truncate">
-                {institution?.tagline}
-              </p>
             </div>
           </div>
         </div>

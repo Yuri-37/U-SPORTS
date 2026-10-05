@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
+import '../utils/feedback.dart';
 
 /// Position options per sport. Mirrors POSITIONS_BY_SPORT in
 /// apps/web/src/pages/organizer/Teams.tsx so a coach picks from the same list
@@ -130,6 +131,7 @@ class _CoachRosterEditSheetState extends ConsumerState<CoachRosterEditSheet> {
         // generic failure.
         _error = friendlyError(e);
       });
+      showError(context, _error!);
     }
   }
 

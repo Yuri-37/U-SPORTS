@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_service.dart';
@@ -70,12 +71,15 @@ class _ChangePasswordSectionState extends ConsumerState<ChangePasswordSection> {
         _newCtrl.clear();
         _confirmCtrl.clear();
       });
+      showSuccess(context, 'Password changed');
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
+      showError(context, e.message);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not change password');
+      showError(context, 'Could not change password');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -19,6 +19,7 @@ import '../widgets/double_back_exit.dart';
 import '../widgets/event_card.dart';
 import '../widgets/hub_live_match_sheet.dart';
 import '../widgets/institution_brand.dart';
+import '../widgets/usports_mark.dart';
 import '../widgets/live_match_card.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/hub_header_actions.dart';
@@ -38,15 +39,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final open = ref.watch(hubRecentEventsProvider).valueOrNull?.length ?? 0;
     final abbr = ins?.abbreviation;
     final tagline = ins?.tagline;
+    final schoolName = (ins?.name.trim().isNotEmpty == true)
+        ? ins!.name
+        : (abbr?.isNotEmpty == true ? abbr! : 'Intramural sports');
 
     return Column(
       children: [
         const HeroPill(text: 'Live platform'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
+        // The product first -- the school's own name sits under it.
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const UsportsMark(size: 46),
+            const SizedBox(width: 12),
+            Text('U-Sports', style: AppTheme.display(size: 38, color: Colors.white, height: 1.05)),
+          ],
+        ),
+        const SizedBox(height: 10),
         Text(
-          abbr?.isNotEmpty == true ? abbr! : 'U-Sports',
+          schoolName,
           textAlign: TextAlign.center,
-          style: AppTheme.display(size: 44, color: Colors.white, height: 1.05),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 15.5, fontWeight: FontWeight.w700),
         ),
         if (tagline != null && tagline.isNotEmpty)
           Padding(

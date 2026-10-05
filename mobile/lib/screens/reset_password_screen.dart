@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/feedback.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -56,12 +57,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
       setState(() => _done = true);
+      showSuccess(context, 'Password updated — sign in with your new password');
       Future.delayed(const Duration(milliseconds: 1800), () {
         if (mounted) context.go('/auth/login');
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = friendlyError(e, authActionLabel: 'Updating your password'));
+      showError(context, _error!);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

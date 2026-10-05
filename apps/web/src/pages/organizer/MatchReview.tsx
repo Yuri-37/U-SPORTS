@@ -172,9 +172,11 @@ export default function MatchReview() {
       setEditReason('')
       setStatOverrideWarning(null)
       await loadReview()
+      toast.success('Stat corrections saved')
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } }).response?.data?.error
       setError(msg ?? 'Failed to save stats')
+      toast.error(msg ?? 'Failed to save stats')
     } finally {
       setSaving(false)
     }

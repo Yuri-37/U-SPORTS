@@ -8,17 +8,23 @@ interface InstitutionState {
   institution: Institution | null
   sports: SportConfig[]
   loading: boolean
-  fetchInstitution: () => Promise<void>
+  /** `silent` refreshes in the background without flipping `loading` (no spinner flash). */
+  fetchInstitution: (opts?: { silent?: boolean }) => Promise<void>
   setInstitution: (institution: Institution) => void
 }
+
+let lastFetchedAt = 0
+/** How stale the school profile may get before a returning tab re-reads it. */
+const REFRESH_AFTER_MS = 5 * 60 * 1000
 
 export const useInstitutionStore = create<InstitutionState>()((set) => ({
   institution: null,
   sports: [],
   loading: true,
 
-  fetchInstitution: async () => {
-    set({ loading: true })
+  fetchInstitution: async (opts) => {
+    if (!opts?.silent) set({ loading: true })
+    lastFetchedAt = Date.now()
     try {
       const { data: institution, error: instError } = await supabase
         .from('institution')
@@ -72,3 +78,17 @@ export const useInstitutionStore = create<InstitutionState>()((set) => ({
     })
   },
 }))
+
+// A tab left open for a while keeps the colors/logo it loaded with. When the
+// person comes back to it, re-read the school profile (at most every few
+// minutes) so a theme change made by the Super Admin shows up without a manual
+// reload.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    const { institution, fetchInstitution } = useInstitutionStore.getState()
+    if (!institution) return
+    if (Date.now() - lastFetchedAt < REFRESH_AFTER_MS) return
+    void fetchInstitution({ silent: true })
+  })
+}

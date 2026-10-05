@@ -9,6 +9,7 @@ import { loginFormSchema } from '../../lib/validation/forms'
 import { defaultPostLoginPath, safeInternalPath } from '../../lib/navigation'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { friendlyAuthError } from '../../lib/utils'
+import UsportsMark from '../../components/brand/UsportsMark'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -91,9 +92,12 @@ export default function LoginPage() {
               🏆
             </div>
           )}
-          <p className="text-white/50 font-bold text-xs uppercase tracking-[0.25em] mb-2">
-            U-Sports
-          </p>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <UsportsMark size={36} />
+            <span className="text-white font-black text-2xl font-[Barlow_Condensed] tracking-widest">
+              U-SPORTS
+            </span>
+          </div>
           <h1
             className="text-4xl font-black font-[Barlow_Condensed] tracking-widest"
             style={{ color: 'var(--school-secondary)' }}
@@ -116,7 +120,10 @@ export default function LoginPage() {
                 className="max-h-16 w-auto max-w-[12rem] mx-auto mb-3 object-contain object-center"
               />
             ) : null}
-            <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
+            <div className="flex items-center justify-center gap-2">
+              <UsportsMark size={28} />
+              <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
+            </div>
             <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
           </div>
 

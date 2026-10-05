@@ -12,6 +12,7 @@ import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
+import '../utils/feedback.dart';
 import '../widgets/coach_roster_edit_sheet.dart';
 import '../widgets/ui/brand_page.dart';
 
@@ -43,6 +44,9 @@ Future<void> _openRosterEdit(
     ref.invalidate(_teamDetailProvider(teamId));
     // The coach home shows jersey/starting counts off the same data.
     ref.invalidate(coachTeamsProvider);
+    if (context.mounted) showSuccess(context, 'Saved changes for ${player.name}');
+  } else if (result != null && context.mounted) {
+    showSuccess(context, 'No changes to save');
   }
 }
 

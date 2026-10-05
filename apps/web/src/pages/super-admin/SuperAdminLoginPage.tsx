@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router'
-import { Shield, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { Button, Input, Alert } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
@@ -9,6 +9,7 @@ import { loginFormSchema } from '../../lib/validation/forms'
 import { defaultPostLoginPath } from '../../lib/navigation'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { friendlyAuthError } from '../../lib/utils'
+import UsportsMark from '../../components/brand/UsportsMark'
 
 const STAFF_ROLES = new Set(['Admin', 'Organizer', 'Coach'])
 
@@ -79,12 +80,8 @@ export default function SuperAdminLoginPage() {
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#0066FF]/10 border border-[#0066FF]/20 mb-4 overflow-hidden">
-            {institution?.logo_url ? (
-              <img src={institution.logo_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <Shield className="w-8 h-8 text-[#0066FF]" />
-            )}
+          <div className="mb-4 flex justify-center">
+            <UsportsMark size={64} />
           </div>
           <p className="text-[var(--accent-default)] font-bold text-xs uppercase tracking-[0.2em] mb-1.5">
             U-Sports

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { KeyRound, Lock, Eye, EyeOff } from 'lucide-react'
 import { Card, Input, Button, Alert, PasswordStrengthMeter } from '../ui'
 import api from '../../lib/api'
+import { toast } from '../../stores/toastStore'
 import { passwordZ } from '../../lib/validation/forms'
 
 /** Change-password card with 7-day cooldown enforced server-side — include on each role's Settings page. */
@@ -37,6 +38,7 @@ export default function ChangePasswordSection() {
     try {
       await api.post('/auth/change-password', { currentPassword, newPassword })
       setSuccess('Password changed successfully.')
+      toast.success('Password changed')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,7 +32,7 @@ class DeleteAccountTile extends ConsumerWidget {
     }
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your account was deleted.')));
+      showSuccess(context, 'Your account was deleted');
       context.go('/');
     }
   }

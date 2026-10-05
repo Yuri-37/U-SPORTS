@@ -10,6 +10,7 @@ import 'config/env.dart';
 import 'providers/appearance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/connectivity_provider.dart';
+import 'providers/institution_provider.dart';
 import 'services/push_notifications_service.dart';
 import 'services/router.dart';
 import 'widgets/offline_banner.dart';
@@ -64,13 +65,27 @@ class USportsApp extends ConsumerStatefulWidget {
   ConsumerState<USportsApp> createState() => _USportsAppState();
 }
 
-class _USportsAppState extends ConsumerState<USportsApp> {
+class _USportsAppState extends ConsumerState<USportsApp> with WidgetsBindingObserver {
   final _appLinks = AppLinks();
+  DateTime _lastInstitutionRefresh = DateTime.now();
   StreamSubscription<Uri>? _linkSub;
+
+  /// Coming back to the app after a while re-reads the school profile, so a
+  /// color, logo or name change made on the website shows up without killing
+  /// and restarting the app. (The theme rebuilds from institutionProvider.)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final now = DateTime.now();
+    if (now.difference(_lastInstitutionRefresh) < const Duration(minutes: 2)) return;
+    _lastInstitutionRefresh = now;
+    ref.invalidate(institutionProvider);
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (_firebaseReady) {
       ref.read(pushNotificationsServiceProvider).init();
     }
@@ -113,6 +128,7 @@ class _USportsAppState extends ConsumerState<USportsApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSub?.cancel();
     super.dispose();
   }
