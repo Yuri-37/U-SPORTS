@@ -11,6 +11,7 @@ import {
   profileIdsForTeamRoster,
 } from '../utils/athleteNotifications'
 import { slugifyEventName } from '../utils/eventSlug'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -161,7 +162,7 @@ router.patch(
       })
       res.json(data)
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Update failed') })
     }
   },
 )
@@ -232,7 +233,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
     })
     res.status(201).json(data)
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create failed') })
   }
 })
 
@@ -404,7 +405,7 @@ router.post(
 
       res.status(201).json(data)
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Add participant failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Add participant failed') })
     }
   },
 )
@@ -494,7 +495,7 @@ router.post(
     } catch (err: unknown) {
       res
         .status(400)
-        .json({ error: err instanceof Error ? err.message : 'Bulk add participants failed' })
+        .json({ error: describeCaughtError(err, 'Bulk add participants failed') })
     }
   },
 )
@@ -600,7 +601,7 @@ router.patch(
       notifyMatchSchedule(updatedMatch).catch((err) => console.error('Schedule notify error:', err))
       res.json({ success: true })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Update failed') })
     }
   },
 )

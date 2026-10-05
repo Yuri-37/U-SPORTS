@@ -16,6 +16,7 @@ import { respondIfSportNotInSeason, fetchSeasonSportSlugs } from '../utils/seaso
 import { insertNotificationsForProfiles } from '../utils/athleteNotifications'
 import { getMaxRoster, getMaxActiveSlots } from '../utils/sportConfig'
 import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spreadsheetImport'
+import { describeCaughtError } from '../utils/describeCaughtError'
 import {
   loadTeamRosterContext,
   addAthleteToTeam,
@@ -546,7 +547,7 @@ router.get(
       res.setHeader('Content-Disposition', 'attachment; filename="teams-import-template.xlsx"')
       res.send(Buffer.from(buffer))
     } catch (err: unknown) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Could not build template' })
+      res.status(500).json({ error: describeCaughtError(err, 'Could not build template') })
     }
   },
 )
@@ -578,7 +579,7 @@ router.post(
         invalidCount: rows.length - validCount,
       })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Could not preview file' })
+      res.status(400).json({ error: describeCaughtError(err, 'Could not preview file') })
     }
   },
 )
@@ -685,7 +686,7 @@ router.post(
           for (const i of g.rows) {
             errors.push({
               row: rows[i].row,
-              error: err instanceof Error ? err.message : 'Roster check failed',
+              error: describeCaughtError(err, 'Roster check failed'),
             })
           }
           continue
@@ -774,7 +775,7 @@ router.post(
 
       res.status(errors.length > 0 ? 207 : 201).json({ created_teams: createdTeams, added, errors })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Import failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Import failed') })
     }
   },
 )
@@ -865,7 +866,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
 
     res.status(201).json(data)
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create failed') })
   }
 })
 
@@ -1086,7 +1087,7 @@ router.post(
     } catch (err: unknown) {
       return res
         .status(500)
-        .json({ error: err instanceof Error ? err.message : 'Roster check failed' })
+        .json({ error: describeCaughtError(err, 'Roster check failed') })
     }
 
     const result = await addAthleteToTeam(ctx, athlete)

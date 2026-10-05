@@ -11,6 +11,7 @@ import { XLSX_MIME, spreadsheetUpload, parseUploadedRows } from '../utils/spread
 import { createAthleteAuthUser } from '../utils/accountEmail'
 import { generatedPassword, STUDENT_EMAIL_DOMAIN } from '../utils/studentAccounts'
 import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -177,7 +178,7 @@ router.post(
           })
           userId = account.userId
         } catch (e: unknown) {
-          errors.push({ row: idx + 1, error: e instanceof Error ? e.message : 'Could not create auth user' })
+          errors.push({ row: idx + 1, error: describeCaughtError(e, 'Could not create auth user') })
           continue
         }
 
@@ -237,7 +238,7 @@ router.post(
         invited: false,
       })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Import failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Import failed') })
     }
   },
 )
@@ -386,7 +387,7 @@ router.post(
       const validCount = preview.filter((p) => p.valid).length
       res.json({ rows: preview, validCount, invalidCount: preview.length - validCount })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Could not preview file' })
+      res.status(400).json({ error: describeCaughtError(err, 'Could not preview file') })
     }
   },
 )
@@ -457,7 +458,7 @@ router.get(
     } catch (err: unknown) {
       res
         .status(500)
-        .json({ error: err instanceof Error ? err.message : 'Could not build template' })
+        .json({ error: describeCaughtError(err, 'Could not build template') })
     }
   },
 )

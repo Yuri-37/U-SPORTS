@@ -18,6 +18,7 @@ import {
 } from '../services/matchReviewData'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
 import { summarizeFinalScore } from '../utils/matchScorePresentation'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -500,7 +501,7 @@ router.post(
 
       res.json({ success: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Action failed'
+      const message = describeCaughtError(err, 'Action failed')
       res.status(400).json({ error: message })
     }
   },
@@ -558,7 +559,7 @@ router.patch(
     } catch (err: unknown) {
       res
         .status(400)
-        .json({ error: err instanceof Error ? err.message : 'Could not change period' })
+        .json({ error: describeCaughtError(err, 'Could not change period') })
     }
   },
 )
@@ -630,7 +631,7 @@ router.patch(
 
       res.json({ success: true })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Could not update clock' })
+      res.status(400).json({ error: describeCaughtError(err, 'Could not update clock') })
     }
   },
 )
@@ -729,7 +730,7 @@ router.patch(
     } catch (err: unknown) {
       res
         .status(400)
-        .json({ error: err instanceof Error ? err.message : 'Could not set first server' })
+        .json({ error: describeCaughtError(err, 'Could not set first server') })
     }
   },
 )
@@ -824,7 +825,7 @@ router.post(
     } catch (err: unknown) {
       res
         .status(400)
-        .json({ error: err instanceof Error ? err.message : 'Could not validate period' })
+        .json({ error: describeCaughtError(err, 'Could not validate period') })
     }
   },
 )
@@ -1161,7 +1162,7 @@ router.post(
 
       res.json({ success: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'End match failed'
+      const message = describeCaughtError(err, 'End match failed')
       res.status(400).json({ error: message })
     }
   },
@@ -1855,7 +1856,7 @@ router.get(
   requireRole('Organizer', 'Admin'),
   async (req: AuthRequest, res) => {
     const parsed = finalizedMatchesQuerySchema.safeParse(req.query)
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
     const { seasonId, sport } = parsed.data
     if (respondIfReadSportForbidden(res, await getStaffReadScope(req), sport)) return
 
@@ -2119,7 +2120,7 @@ router.patch(
       })
       res.json({ success: true, changed })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Update failed'
+      const message = describeCaughtError(err, 'Update failed')
       res.status(400).json({ error: message })
     }
   },
@@ -2185,7 +2186,7 @@ router.post(
 
       res.json({ success: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Finalize failed'
+      const message = describeCaughtError(err, 'Finalize failed')
       res.status(400).json({ error: message })
     }
   },

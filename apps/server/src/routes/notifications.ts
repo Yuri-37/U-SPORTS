@@ -2,6 +2,7 @@ import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -26,7 +27,7 @@ router.post('/push-token', requireAuth, async (req: AuthRequest, res) => {
     if (error) throw new Error(error.message)
     res.json({ ok: true })
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid push token' })
+    res.status(400).json({ error: describeCaughtError(err, 'Invalid push token') })
   }
 })
 

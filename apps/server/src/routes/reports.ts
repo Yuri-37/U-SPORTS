@@ -13,6 +13,7 @@ import {
   athleteIdsOnTeams,
 } from '../utils/organizerSportAccess'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
+import { describeCaughtError } from '../utils/describeCaughtError'
 import {
   aggregateInsightPlainText,
   buildSeasonAggregateInsights,
@@ -93,7 +94,7 @@ router.get(
   requireRole('Organizer', 'Admin', 'Coach'),
   async (req: AuthRequest, res) => {
     const parsed = analyticsCsvQuerySchema.safeParse(req.query)
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
 
     let seasonId = parsed.data.seasonId?.trim() ?? ''
     let seasonName = 'season'
@@ -308,7 +309,7 @@ router.get(
         rowsNamed,
       )
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'CSV export failed'
+      const msg = describeCaughtError(e, 'CSV export failed')
       res.status(500).json({ error: msg })
     }
   },
@@ -353,7 +354,7 @@ router.get(
   requireRole('Organizer', 'Admin', 'Coach'),
   async (req: AuthRequest, res) => {
     const parsed = insightsXlsxQuerySchema.safeParse(req.query)
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
 
     let seasonId = parsed.data.seasonId?.trim() ?? ''
     let seasonName = 'season'
@@ -562,7 +563,7 @@ router.get(
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
       res.send(Buffer.from(buffer))
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Insights export failed'
+      const msg = describeCaughtError(e, 'Insights export failed')
       res.status(500).json({ error: msg })
     }
   },

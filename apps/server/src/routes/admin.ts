@@ -23,6 +23,7 @@ import {
   type PasswordResetResult,
 } from '../utils/accountEmail'
 import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -191,7 +192,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
         email, password: parsed.password, role, fullName: full_name, department,
       })
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Could not create staff account'
+      const msg = describeCaughtError(e, 'Could not create staff account')
       if (/already registered|already exists/i.test(msg)) {
         return res.status(400).json({
           error:
@@ -284,7 +285,7 @@ router.post('/organizers', requireAuth, requireRole('Admin'), async (req: AuthRe
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create staff failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create staff failed') })
   }
 })
 
@@ -428,7 +429,7 @@ router.patch(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
       }
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Update failed') })
     }
   },
 )
@@ -518,7 +519,7 @@ router.post(
         mode,
       })
     } catch (e: unknown) {
-      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not reset password' })
+      return res.status(400).json({ error: describeCaughtError(e, 'Could not reset password') })
     }
 
     await supabase.from('audit_logs').insert({
@@ -565,7 +566,7 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
         email, password: parsed.password, role: 'Admin', fullName: full_name, department: null,
       })
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Could not create admin account'
+      const msg = describeCaughtError(e, 'Could not create admin account')
       if (/already registered|already exists/i.test(msg)) {
         return res.status(400).json({
           error:
@@ -606,7 +607,7 @@ router.post('/admins', requireAuth, requireRole('Admin'), async (req: AuthReques
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create admin failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create admin failed') })
   }
 })
 
@@ -727,7 +728,7 @@ router.post('/seasons', requireAuth, requireRole('Admin'), async (req: AuthReque
     })
     res.status(201).json({ ...data, sports, staff_ids: staffIds })
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create season failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create season failed') })
   }
 })
 
@@ -917,7 +918,7 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Update season failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Update season failed') })
   }
 })
 
@@ -1056,7 +1057,7 @@ router.post(
 
       res.json(data)
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Upload failed'
+      const message = describeCaughtError(e, 'Upload failed')
       res.status(400).json({ error: message })
     }
   },
@@ -1180,7 +1181,7 @@ router.post(
 
       res.json({ ok: true, player_season_stats: row })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid request' })
+      res.status(400).json({ error: describeCaughtError(err, 'Invalid request') })
     }
   },
 )

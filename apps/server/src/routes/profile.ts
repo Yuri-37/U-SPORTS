@@ -6,6 +6,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvatar } from '../utils/avatarStorage'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -59,7 +60,7 @@ router.post(
 
       res.json({ avatar_url: publicUrl })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Upload failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Upload failed') })
     }
   },
 )
@@ -83,7 +84,7 @@ router.delete('/avatar', requireAuth, async (req: AuthRequest, res) => {
 
     res.json({ success: true })
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not remove avatar' })
+    res.status(400).json({ error: describeCaughtError(err, 'Could not remove avatar') })
   }
 })
 
@@ -282,7 +283,7 @@ router.post('/tour-completion', requireAuth, async (req: AuthRequest, res) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not save tour progress' })
+    res.status(400).json({ error: describeCaughtError(err, 'Could not save tour progress') })
   }
 })
 

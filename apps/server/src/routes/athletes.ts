@@ -19,6 +19,7 @@ import {
 import { generatedPassword } from '../utils/studentAccounts'
 import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 import supabase from '../utils/supabase'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -112,7 +113,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
         sendEmail: true,
       })
     } catch (e: unknown) {
-      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not create auth user' })
+      return res.status(400).json({ error: describeCaughtError(e, 'Could not create auth user') })
     }
 
     const { error: profileError } = await supabase.from('profiles').upsert({
@@ -161,7 +162,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not create athlete' })
+    res.status(400).json({ error: describeCaughtError(err, 'Could not create athlete') })
   }
 })
 
@@ -212,7 +213,7 @@ router.patch(
 
       res.json({ success: true, updated: body.ids.length })
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Bulk update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Bulk update failed') })
     }
   },
 )
@@ -348,7 +349,7 @@ router.patch(
 
       res.json(data)
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Update failed') })
     }
   },
 )
@@ -480,7 +481,7 @@ router.patch(
       }
       res
         .status(400)
-        .json({ error: err instanceof Error ? err.message : 'Could not update athlete' })
+        .json({ error: describeCaughtError(err, 'Could not update athlete') })
     }
   },
 )
@@ -639,7 +640,7 @@ router.post(
       }
       result = await resetAccountPassword({ profileId: athlete.profile_id, email: email ?? '', mode })
     } catch (e: unknown) {
-      return res.status(400).json({ error: e instanceof Error ? e.message : 'Could not reset password' })
+      return res.status(400).json({ error: describeCaughtError(e, 'Could not reset password') })
     }
 
     await supabase.from('audit_logs').insert({

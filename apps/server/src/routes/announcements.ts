@@ -5,6 +5,7 @@ import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { insertNotificationsForProfiles } from '../utils/athleteNotifications'
 import { localDatetimeStringToIso } from '../utils/localTime'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -215,7 +216,7 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin'), async (req: Aut
 
     res.status(201).json(announcement)
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Create failed' })
+    res.status(400).json({ error: describeCaughtError(err, 'Create failed') })
   }
 })
 
@@ -299,7 +300,7 @@ router.patch(
 
       res.json(announcement)
     } catch (err: unknown) {
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Update failed' })
+      res.status(400).json({ error: describeCaughtError(err, 'Update failed') })
     }
   },
 )

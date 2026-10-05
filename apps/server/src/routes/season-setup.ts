@@ -8,6 +8,7 @@ import { fetchSeasonSportSlugs } from '../utils/seasonSports'
 import { slugifyEventName } from '../utils/eventSlug'
 import { EVENT_CATEGORIES } from './events'
 import type { AppSport } from '../utils/organizerSportAccess'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -275,7 +276,7 @@ router.post('/placeholders', requireAuth, requireRole('Admin'), async (req: Auth
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' })
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Could not generate placeholders' })
+    res.status(400).json({ error: describeCaughtError(err, 'Could not generate placeholders') })
   }
 })
 

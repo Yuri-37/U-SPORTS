@@ -5,6 +5,7 @@ import { generateBracket, advanceWinner } from '../services/bracketGenerator'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { respondIfScopeForbidden } from '../utils/organizerSportAccess'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -163,7 +164,7 @@ router.post(
       })
       res.json(result)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Bracket generation failed'
+      const message = describeCaughtError(err, 'Bracket generation failed')
       res.status(400).json({ error: message })
     }
   },
@@ -225,7 +226,7 @@ router.post(
       })
       res.json({ success: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Advance failed'
+      const message = describeCaughtError(err, 'Advance failed')
       res.status(400).json({ error: message })
     }
   },

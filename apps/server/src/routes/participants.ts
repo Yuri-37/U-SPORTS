@@ -1,6 +1,7 @@
 import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { resolveParticipantLabelMap } from '../utils/participantLabelMap'
+import { describeCaughtError } from '../utils/describeCaughtError'
 
 const router = createRouter()
 
@@ -25,7 +26,7 @@ router.get('/labels', async (req, res) => {
     const map = await resolveParticipantLabelMap(parsed)
     res.json(map)
   } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid ids' })
+    res.status(400).json({ error: describeCaughtError(err, 'Invalid ids') })
   }
 })
 

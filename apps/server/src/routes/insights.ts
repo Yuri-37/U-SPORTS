@@ -24,7 +24,7 @@ const listQuerySchema = z.object({
 
 router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (req: AuthRequest, res) => {
   const parsed = listQuerySchema.safeParse(req.query)
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
 
   // Organizers see their assigned sports; a coach sees their own teams (and the
   // players on them), or their sport read-only until they coach a team.
@@ -91,7 +91,7 @@ router.post(
   requireRole('Organizer', 'Admin', 'Coach'),
   async (req: AuthRequest, res) => {
     const parsed = backfillSeasonSchema.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
 
     const { seasonId, sport } = parsed.data
     if (respondIfReadSportForbidden(res, await getStaffReadScope(req), sport)) return
