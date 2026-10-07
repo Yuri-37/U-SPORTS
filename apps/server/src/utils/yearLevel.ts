@@ -47,6 +47,22 @@ export function normalizeYearLevel(raw: string, department: string): string | nu
   return n >= 1 && n <= 4 ? COLLEGE_YEAR_LEVELS[n - 1] : null
 }
 
+/**
+ * The level after `current` for that department -- "1st Year" -> "2nd Year",
+ * "Grade 11" -> "Grade 12" -- or null when there is no next one: already the
+ * last level (4th Year / Grade 12, who graduate rather than advance), not
+ * set, or not a recognisable level. Used by the yearly "promote everyone"
+ * action, which leaves null results untouched.
+ */
+export function nextYearLevel(current: string | null | undefined, department: string): string | null {
+  if (!current) return null
+  const normalized = normalizeYearLevel(current, department)
+  if (!normalized) return null
+  const levels = yearLevelsForDepartment(department)
+  const i = levels.indexOf(normalized)
+  return i >= 0 && i < levels.length - 1 ? levels[i + 1] : null
+}
+
 /** Human-readable rule, reused verbatim in every error message. */
 export function yearLevelErrorMessage(department: string): string {
   return department === SHS_DEPARTMENT

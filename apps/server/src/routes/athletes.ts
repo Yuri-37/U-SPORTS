@@ -2,7 +2,7 @@ import { createRouter } from '../utils/asyncRouter'
 import { z } from 'zod'
 import { passwordZ } from '../utils/passwordSchema'
 import { studentEmailZ } from '../utils/emailDomain'
-import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
+import { nextYearLevel, normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import {
   respondIfSportForbidden,
@@ -167,6 +167,105 @@ router.post('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async 
 })
 
 /** Bulk season-status updates for organizers and super admins */
+// ─── Yearly "promote everyone" (Super Admin) ─────────────────────────────────
+//
+// Year level only changed when someone edited an athlete or re-imported a
+// roster, so every athlete quietly stayed "1st Year" forever. At the start of
+// an academic year the Super Admin can move every ACTIVE athlete up one level
+// (1st -> 2nd -> 3rd -> 4th, Grade 11 -> Grade 12). Athletes already at the
+// last level (4th Year / Grade 12) and athletes with no year level set are
+// left exactly as they are -- those are graduates or unknowns for a person to
+// decide, not for a button to guess. Inactive athletes are skipped on purpose:
+// a deactivated student isn't moving through the year with everyone else.
+//
+// `dry_run` returns the numbers without changing anything, so the UI can show
+// exactly what is about to happen; `lastPromotedAt` lets it warn when this
+// already ran recently (the one realistic mistake is pressing it twice).
+router.post(
+  '/promote-year-levels',
+  requireAuth,
+  requireRole('Admin'),
+  async (req: AuthRequest, res) => {
+    const parsed = z.object({ dry_run: z.boolean() }).strict().safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Say whether this is a preview (dry_run) or the real thing.' })
+    }
+    const dryRun = parsed.data.dry_run
+
+    // Every active athlete -- paged, because one response is capped at 1,000 rows.
+    const rows: { id: string; department: string; year_level: string | null }[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('athletes')
+        .select('id, department, year_level')
+        .eq('season_status', 'active')
+        .order('id')
+        .range(from, from + 999)
+      if (error) return res.status(500).json({ error: error.message })
+      rows.push(...((data ?? []) as typeof rows))
+      if (!data || data.length < 1000) break
+    }
+
+    const moves = new Map<string, string[]>() // new level -> athlete ids
+    const summary: Record<string, number> = {}
+    let atLastLevel = 0
+    let notSet = 0
+    for (const a of rows) {
+      const next = nextYearLevel(a.year_level, a.department)
+      if (next) {
+        const ids = moves.get(next) ?? []
+        ids.push(a.id)
+        moves.set(next, ids)
+        const key = `${a.year_level} -> ${next}`
+        summary[key] = (summary[key] ?? 0) + 1
+      } else if (!a.year_level || !normalizeYearLevel(a.year_level, a.department)) {
+        notSet++
+      } else {
+        atLastLevel++
+      }
+    }
+    const promoted = [...moves.values()].reduce((n, ids) => n + ids.length, 0)
+
+    const { data: last } = await supabase
+      .from('audit_logs')
+      .select('created_at')
+      .eq('action', 'athlete_year_levels_promoted')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const lastPromotedAt = (last?.created_at as string | undefined) ?? null
+
+    if (dryRun) {
+      return res.json({ dryRun: true, promoted, atLastLevel, notSet, summary, lastPromotedAt })
+    }
+
+    for (const [level, ids] of moves) {
+      for (let i = 0; i < ids.length; i += 200) {
+        const { error } = await supabase
+          .from('athletes')
+          .update({ year_level: level })
+          .in('id', ids.slice(i, i + 200))
+        if (error) {
+          return res.status(500).json({
+            error: `Stopped part-way: ${error.message}. Run the preview again to see what is left to promote.`,
+          })
+        }
+      }
+    }
+
+    // One entry for the whole action, not one per athlete.
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: 'athlete_year_levels_promoted',
+      entity_type: 'athlete',
+      entity_id: null,
+      details: { promoted, atLastLevel, notSet, summary },
+    })
+
+    res.json({ dryRun: false, promoted, atLastLevel, notSet, summary, lastPromotedAt })
+  },
+)
+
 router.patch(
   '/bulk',
   requireAuth,

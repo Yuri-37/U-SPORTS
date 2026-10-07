@@ -7,6 +7,7 @@ import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvata
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { describeCaughtError } from '../utils/describeCaughtError'
+import { normalizeYearLevel, yearLevelErrorMessage } from '../utils/yearLevel'
 
 const router = createRouter()
 
@@ -230,6 +231,105 @@ router.post('/delete-account', requireAuth, async (req: AuthRequest, res) => {
     return res.status(500).json({ error: `Could not delete the account: ${deleteError.message}` })
   }
   res.json({ success: true })
+})
+
+// ─── Edit your own name / year level ──────────────────────────────────────────
+//
+// Anyone signed in may correct their own name; an athlete may also correct
+// their year level (the yearly bump is also done in bulk by the Super Admin).
+//
+// This is a narrow server route on purpose, NOT a reopened `profiles` UPDATE
+// policy: migration 068 removed that policy because it let a user rewrite ANY
+// column of their own row -- `role` included -- straight from the browser. The
+// schema below is `.strict()` and lists the only two fields that can change;
+// anything else (role, email, department...) is rejected, not ignored.
+
+// Letters (any script), digits, spaces and . ' - , only: enough for real names
+// ("María José", "O'Brien", "Super Admin 1") while keeping links, e-mail
+// addresses, markup and emoji out of a field shown on public pages.
+const NAME_PATTERN = /^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'’,-]*$/u
+
+const profileEditSchema = z
+  .object({
+    full_name: z
+      .string()
+      .trim()
+      .min(1, 'Full name is required')
+      .max(120, 'Name is too long')
+      .regex(NAME_PATTERN, "Names can use letters, numbers, spaces and . ' , - only.")
+      .optional(),
+    year_level: z.string().trim().max(20).optional(),
+  })
+  .strict()
+
+router.patch('/', requireAuth, async (req: AuthRequest, res) => {
+  const parsed = profileEditSchema.safeParse(req.body)
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]
+    return res.status(400).json({
+      error:
+        issue?.code === 'unrecognized_keys'
+          ? 'Only your name and year level can be changed here.'
+          : (issue?.message ?? 'Invalid request'),
+    })
+  }
+  const { full_name, year_level } = parsed.data
+  if (full_name === undefined && year_level === undefined) {
+    return res.status(400).json({ error: 'Nothing to change.' })
+  }
+
+  const userId = req.user!.id
+  const changed: Record<string, { from: string | null; to: string | null }> = {}
+  const result: { full_name?: string; year_level?: string } = {}
+
+  if (year_level !== undefined) {
+    const { data: athlete, error: athleteErr } = await supabase
+      .from('athletes')
+      .select('id, department, year_level')
+      .eq('profile_id', userId)
+      .maybeSingle()
+    if (athleteErr) return res.status(500).json({ error: athleteErr.message })
+    if (!athlete) return res.status(403).json({ error: 'Only athletes have a year level.' })
+
+    // '' clears it (year level is optional); anything else must be a real
+    // level for the athlete's department, stored in its canonical form.
+    const next = year_level === '' ? '' : normalizeYearLevel(year_level, athlete.department as string)
+    if (next === null) {
+      return res.status(400).json({ error: yearLevelErrorMessage(athlete.department as string) })
+    }
+    if (next !== (athlete.year_level ?? '')) {
+      const { error } = await supabase.from('athletes').update({ year_level: next }).eq('id', athlete.id)
+      if (error) return res.status(500).json({ error: error.message })
+      changed.year_level = { from: (athlete.year_level as string) ?? '', to: next }
+    }
+    result.year_level = next
+  }
+
+  if (full_name !== undefined) {
+    const { data: current, error: readErr } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .maybeSingle()
+    if (readErr) return res.status(500).json({ error: readErr.message })
+    if (full_name !== (current?.full_name ?? '')) {
+      const { error } = await supabase.from('profiles').update({ full_name }).eq('id', userId)
+      if (error) return res.status(500).json({ error: error.message })
+      changed.full_name = { from: (current?.full_name as string) ?? null, to: full_name }
+    }
+    result.full_name = full_name
+  }
+
+  if (Object.keys(changed).length > 0) {
+    await writeAuditLog({
+      actorId: userId,
+      action: 'profile_self_edited',
+      entityType: 'profile',
+      entityId: userId,
+      details: changed,
+    })
+  }
+  res.json({ success: true, ...result, changed: Object.keys(changed) })
 })
 
 const tourCompletionSchema = z.object({

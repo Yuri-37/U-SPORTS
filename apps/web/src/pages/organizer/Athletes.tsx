@@ -5,6 +5,7 @@ import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import AccountCredentialsModal from '../../components/accounts/AccountCredentialsModal'
 import { toast } from '../../stores/toastStore'
+import PromoteYearLevelsButton from '../../components/organizer/PromoteYearLevelsButton'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
@@ -604,6 +605,7 @@ export default function OrganizerAthletes() {
             >
               Export CSV
             </Button>
+            {isSuperAdmin && <PromoteYearLevelsButton onDone={fetchAthletes} />}
             <Button
               size="sm"
               variant="ghost"

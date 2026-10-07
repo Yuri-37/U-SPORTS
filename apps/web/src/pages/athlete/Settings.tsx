@@ -1,5 +1,6 @@
 import React from 'react'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import EditProfileSection from '../../components/settings/EditProfileSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import YourDataSection from '../../components/settings/YourDataSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
@@ -12,6 +13,8 @@ export default function AthleteSettings() {
         title="Settings"
         subtitle="Your athlete account. Profile and notifications are in the sidebar — dark mode is in the header."
       />
+
+      <EditProfileSection />
 
       <ChangePasswordSection />
 

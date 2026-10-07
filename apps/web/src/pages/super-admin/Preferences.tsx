@@ -3,6 +3,7 @@ import { Keyboard, Shield } from 'lucide-react'
 import { Card } from '../../components/ui'
 import PageHeader from '../../components/layout/PageHeader'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
+import EditProfileSection from '../../components/settings/EditProfileSection'
 import YourDataSection from '../../components/settings/YourDataSection'
 import PrivacyNoticeLinkSection from '../../components/settings/PrivacyNoticeLinkSection'
 import SettingsSignOutSection from '../../components/settings/SettingsSignOutSection'
@@ -24,6 +25,8 @@ export default function SuperAdminPreferences() {
           <p className="text-sm text-[var(--text-muted)]">{profile?.email}</p>
         </AvatarUpload>
       </Card>
+
+      <EditProfileSection />
 
       <ChangePasswordSection />
 
