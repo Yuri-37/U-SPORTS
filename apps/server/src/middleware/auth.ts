@@ -26,16 +26,28 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   if (error && isAuthRetryableFetchError(error)) {
     return res.status(503).json({ error: ACCOUNT_CHECK_UNAVAILABLE })
   }
+  // A locked account is banned in Supabase Auth (utils/accountLock.ts), so its
+  // still-unexpired token is rejected here rather than by the profile check
+  // below. Say so, so the web and mobile apps can explain why they signed out.
+  if (error && error.code === 'user_banned') {
+    return res.status(401).json({ error: 'Account deactivated. Contact your admin.' })
+  }
   if (error || !data.user) {
     return res.status(401).json({ error: 'Invalid or expired token' })
   }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, deactivated_at')
     .eq('id', data.user.id)
     .maybeSingle()
   if (profileError) return res.status(503).json({ error: ACCOUNT_CHECK_UNAVAILABLE })
+
+  // A locked account (an athlete or Super Admin deactivated by staff -- see
+  // utils/accountLock.ts) is refused here even while its token is still valid.
+  if (profile?.deactivated_at) {
+    return res.status(401).json({ error: 'Account deactivated. Contact your admin.' })
+  }
 
   let role = profile?.role as string | null | undefined
   if (!role) {

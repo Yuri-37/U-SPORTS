@@ -20,6 +20,7 @@ import { generatedPassword } from '../utils/studentAccounts'
 import { ISSUED_PASSWORD_SCHEME } from '../utils/readablePassword'
 import supabase from '../utils/supabase'
 import { describeCaughtError } from '../utils/describeCaughtError'
+import { setAccountLocked } from '../utils/accountLock'
 
 const router = createRouter()
 
@@ -31,7 +32,7 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
   const scope = await getStaffReadScope(req)
   let query = supabase
     .from('athletes')
-    .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url)')
+    .select('*, profile:profiles!athletes_profile_id_fkey(full_name, email, avatar_url, deactivated_at)')
     .order('created_at', { ascending: false })
     .order('id')
 
@@ -358,6 +359,56 @@ router.patch(
     })
 
     res.json(data)
+  },
+)
+
+// Lock or unlock an athlete's ACCOUNT. This is not the same as season-status
+// above: "inactive" only takes the athlete out of the current season (they can
+// still sign in and see their history); a deactivated account cannot sign in and
+// every API call is refused. Deactivating also sets them inactive so they leave
+// rosters; activating restores sign-in only -- put them back in the season with
+// season-status.
+router.patch(
+  '/:id/account-status',
+  requireAuth,
+  requireRole('Organizer', 'Admin'),
+  async (req: AuthRequest, res) => {
+    const parsed = z.object({ deactivated: z.boolean() }).safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
+    }
+    const { deactivated } = parsed.data
+
+    const { data: target, error: lookupError } = await supabase
+      .from('athletes')
+      .select('sport, profile_id')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (lookupError) return res.status(500).json({ error: lookupError.message })
+    if (!target) return res.status(404).json({ error: 'Athlete not found' })
+    if (await respondIfSportForbidden(req, res, target.sport)) return
+    if (await respondIfAthleteForbidden(req, res, [String(req.params.id)])) return
+
+    const locked = await setAccountLocked(target.profile_id, deactivated)
+    if (locked.error) return res.status(500).json({ error: locked.error })
+
+    if (deactivated) {
+      const { error: seasonError } = await supabase
+        .from('athletes')
+        .update({ season_status: 'inactive' })
+        .eq('id', req.params.id)
+      if (seasonError) return res.status(500).json({ error: seasonError.message })
+    }
+
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: deactivated ? 'athlete_account_deactivated' : 'athlete_account_activated',
+      entity_type: 'athlete',
+      entity_id: req.params.id,
+      details: {},
+    })
+
+    res.json({ deactivated })
   },
 )
 

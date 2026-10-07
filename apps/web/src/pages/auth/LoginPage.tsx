@@ -21,6 +21,8 @@ export default function LoginPage() {
   const { fetchProfile } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  // lib/api.ts sends a signed-out, deactivated account here with ?reason=deactivated.
+  const deactivatedBanner = new URLSearchParams(location.search).get('reason') === 'deactivated'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -130,6 +132,12 @@ export default function LoginPage() {
 
           <h2 className="text-2xl font-bold mb-1">Sign In</h2>
           <p className="text-[var(--text-muted)] text-sm mb-6">Access your U-Sports dashboard</p>
+
+          {deactivatedBanner && !error && (
+            <Alert type="warning" className="mb-4">
+              Your account was deactivated. Contact your admin if you need access restored.
+            </Alert>
+          )}
 
           {error && (
             <Alert type="danger" className="mb-4">

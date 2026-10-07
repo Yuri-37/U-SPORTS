@@ -15,6 +15,8 @@ import {
 } from '../../components/ui'
 import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
+import { describeApiError } from '../../lib/apiError'
+import { useAuthStore } from '../../stores/authStore'
 import type { Organizer, Profile } from '../../types'
 import { getSportLabel, getSportIcon } from '../../lib/utils'
 import {
@@ -26,7 +28,13 @@ import {
 } from '../../lib/validation/forms'
 
 type StaffWithProfile = Organizer & { profile: Profile & { role?: string; department?: string } }
-type AdminAccount = { id: string; full_name: string; email: string; created_at: string }
+type AdminAccount = {
+  id: string
+  full_name: string
+  email: string
+  created_at: string
+  deactivated_at: string | null
+}
 
 const SPORTS = ['basketball', 'volleyball', 'table-tennis']
 
@@ -162,6 +170,8 @@ export default function SuperAdminOrganizers() {
     emailError?: string
   } | null>(null)
 
+  const currentUserId = useAuthStore((s) => s.profile?.id)
+
   // Super Admins
   const [admins, setAdmins] = useState<AdminAccount[]>([])
   const [adminsLoading, setAdminsLoading] = useState(true)
@@ -284,6 +294,10 @@ export default function SuperAdminOrganizers() {
       .then(({ data }) => setSeasonOptions(data ?? []))
       .catch(() => setSeasonOptions([]))
   }, [])
+
+  // Lock / unlock a Super Admin account
+  const [adminLockConfirm, setAdminLockConfirm] = useState<AdminAccount | null>(null)
+  const [adminLockBusy, setAdminLockBusy] = useState(false)
 
   // Toggle active
   const [toggleConfirm, setToggleConfirm] = useState<StaffWithProfile | null>(null)
@@ -447,6 +461,24 @@ export default function SuperAdminOrganizers() {
     }
   }
 
+  const confirmAdminLock = async () => {
+    if (!adminLockConfirm) return
+    setAdminLockBusy(true)
+    try {
+      await api.patch(`/admin/admins/${adminLockConfirm.id}/account-status`, {
+        deactivated: !adminLockConfirm.deactivated_at,
+      })
+      toast.success('Account status updated')
+      setListError('')
+      fetchAdmins()
+    } catch (e: unknown) {
+      setListError(describeApiError(e, 'Could not update the Super Admin'))
+    } finally {
+      setAdminLockBusy(false)
+      setAdminLockConfirm(null)
+    }
+  }
+
   const confirmToggleActive = async () => {
     if (!toggleConfirm) return
     setToggleBusy(true)
@@ -530,6 +562,8 @@ export default function SuperAdminOrganizers() {
           columns={[
             { key: 'name', label: 'Name' },
             { key: 'created', label: 'Added' },
+            { key: 'status', label: 'Status' },
+            { key: 'actions', label: '' },
           ]}
           data={admins.map((a) => ({
             name: (
@@ -543,6 +577,30 @@ export default function SuperAdminOrganizers() {
                 {new Date(a.created_at).toLocaleDateString()}
               </span>
             ),
+            status: (
+              <Badge variant={a.deactivated_at ? 'default' : 'success'}>
+                {a.deactivated_at ? 'Inactive' : 'Active'}
+              </Badge>
+            ),
+            actions:
+              a.id === currentUserId ? (
+                <span className="text-xs text-[var(--text-muted)]">You</span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={
+                    a.deactivated_at ? (
+                      <ToggleLeft className="w-4 h-4" />
+                    ) : (
+                      <ToggleRight className="w-4 h-4" />
+                    )
+                  }
+                  onClick={() => setAdminLockConfirm(a)}
+                >
+                  {a.deactivated_at ? 'Activate' : 'Deactivate'}
+                </Button>
+              ),
           }))}
           emptyMessage="No super admins yet."
         />
@@ -714,6 +772,50 @@ export default function SuperAdminOrganizers() {
               </Button>
               <Button loading={editBusy} onClick={() => void handleEditStaff()}>
                 Save changes
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Lock / unlock Super Admin modal */}
+      <Modal
+        open={adminLockConfirm !== null}
+        onClose={() => {
+          if (!adminLockBusy) setAdminLockConfirm(null)
+        }}
+        title={adminLockConfirm?.deactivated_at ? 'Activate Super Admin?' : 'Deactivate Super Admin?'}
+        size="md"
+      >
+        {adminLockConfirm && (
+          <div className="space-y-4">
+            <Alert type={adminLockConfirm.deactivated_at ? 'info' : 'warning'}>
+              {adminLockConfirm.deactivated_at ? (
+                <>
+                  Restore access for <strong>{adminLockConfirm.full_name}</strong>? They can sign in
+                  again.
+                </>
+              ) : (
+                <>
+                  <strong>{adminLockConfirm.full_name}</strong> will be signed out and blocked from
+                  the platform until activated again.
+                </>
+              )}
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setAdminLockConfirm(null)}
+                disabled={adminLockBusy}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={adminLockConfirm.deactivated_at ? 'success' : 'danger'}
+                loading={adminLockBusy}
+                onClick={() => void confirmAdminLock()}
+              >
+                {adminLockConfirm.deactivated_at ? 'Activate' : 'Deactivate'}
               </Button>
             </div>
           </div>

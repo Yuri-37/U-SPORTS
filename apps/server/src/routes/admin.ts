@@ -24,6 +24,7 @@ import {
 } from '../utils/accountEmail'
 import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
 import { describeCaughtError } from '../utils/describeCaughtError'
+import { setAccountLocked } from '../utils/accountLock'
 
 const router = createRouter()
 
@@ -537,13 +538,71 @@ router.post(
 router.get('/admins', requireAuth, requireRole('Admin'), async (_req, res) => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, created_at')
+    .select('id, full_name, email, created_at, deactivated_at')
     .eq('role', 'Admin')
     .order('created_at', { ascending: true })
 
   if (error) return res.status(500).json({ error: error.message })
   res.json(data ?? [])
 })
+
+// Lock or unlock a Super Admin account. Nobody can lock their own account, and
+// the last active Super Admin can never be locked -- either would leave the
+// platform with no one able to unlock anything.
+router.patch(
+  '/admins/:id/account-status',
+  requireAuth,
+  requireRole('Admin'),
+  async (req: AuthRequest, res) => {
+    const parsed = z.object({ deactivated: z.boolean() }).safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' })
+    }
+    const { deactivated } = parsed.data
+    const id = String(req.params.id)
+
+    const { data: target, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id, role, full_name, deactivated_at')
+      .eq('id', id)
+      .maybeSingle()
+    if (lookupError) return res.status(500).json({ error: lookupError.message })
+    if (!target || target.role !== 'Admin') {
+      return res.status(404).json({ error: 'Super Admin not found' })
+    }
+
+    if (deactivated) {
+      if (id === req.user!.id) {
+        return res.status(400).json({ error: 'You cannot deactivate your own account.' })
+      }
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'Admin')
+        .is('deactivated_at', null)
+        .neq('id', id)
+      if (countError) return res.status(500).json({ error: countError.message })
+      if (!count) {
+        return res
+          .status(400)
+          .json({ error: 'This is the last active Super Admin and cannot be deactivated.' })
+      }
+    }
+
+    const locked = await setAccountLocked(id, deactivated)
+    if (locked.error) return res.status(500).json({ error: locked.error })
+
+    await supabase.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      action: deactivated ? 'admin_deactivated' : 'admin_activated',
+      entity_type: 'staff',
+      entity_id: id,
+      details: { name: target.full_name },
+    })
+
+    res.json({ deactivated })
+  },
+)
 
 // Create another Super Admin account. Same pattern as staff creation: the
 // account always gets a password (typed, or generated) that is returned for

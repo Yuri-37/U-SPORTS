@@ -23,6 +23,10 @@ String friendlyError(Object error, {String? authActionLabel}) {
       : 'Sign-in failed. Please try again.';
   if (error is AuthApiException) {
     if (error.code == 'invalid_credentials') return 'Incorrect email or password.';
+    // Supabase refuses a deactivated account's sign-in as "banned".
+    if (error.code == 'user_banned' || error.message.toLowerCase().contains('banned')) {
+      return deactivatedNotice;
+    }
     return actionFailedMessage;
   }
   if (error is AuthException) return actionFailedMessage;

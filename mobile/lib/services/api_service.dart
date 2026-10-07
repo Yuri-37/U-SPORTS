@@ -2,11 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/env.dart';
+
+/// Set when the server says this account was deactivated and the app signed
+/// the person out; the sign-in screen shows it once, then clears it.
+final ValueNotifier<String?> sessionNotice = ValueNotifier<String?>(null);
+
+const deactivatedNotice =
+    'Your account was deactivated. Contact your admin if you need access restored.';
 
 /// Attachment point for Bearer tokens on outgoing API calls.
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -114,6 +122,14 @@ class ApiClient {
       if (j is Map && j['error'] != null) msg = j['error'].toString();
     } catch (_) {
       msg = res.body.isNotEmpty ? res.body : msg;
+    }
+    // "Account deactivated" is the server's definite answer that this account is
+    // locked (see the API's auth middleware): the session is of no further use,
+    // so end it and explain why on the sign-in screen. Push tokens are cleared
+    // server-side when an account is locked, so nothing else needs calling here.
+    if (res.statusCode == 401 && msg.toLowerCase().contains('deactivated')) {
+      sessionNotice.value = deactivatedNotice;
+      unawaited(Supabase.instance.client.auth.signOut());
     }
     throw ApiException(res.statusCode, msg);
   }

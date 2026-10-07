@@ -116,11 +116,15 @@ const ACTIONS = [
   'organizer_deactivated',
   'organizer_password_reset',
   'admin_created',
+  'admin_deactivated',
+  'admin_activated',
   'player_season_stats_recomputed',
   'athlete_roster_details_updated',
   'athlete_password_reset',
   'athlete_season_status_active',
   'athlete_season_status_inactive',
+  'athlete_account_deactivated',
+  'athlete_account_activated',
   'athletes_imported',
 ]
 

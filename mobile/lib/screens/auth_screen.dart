@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/institution_provider.dart';
+import '../services/api_service.dart';
 import '../services/push_notifications_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
@@ -24,6 +25,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _loading = false;
   bool _showPassword = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Arrived here because the server deactivated this account mid-session.
+    _error = sessionNotice.value;
+    sessionNotice.value = null;
+  }
 
   @override
   void dispose() {

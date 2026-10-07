@@ -27,7 +27,7 @@ const DEPARTMENT_OPTIONS = [
 ] as const
 
 type AthleteWithProfile = Athlete & {
-  profile: { full_name: string; email: string }
+  profile: { full_name: string; email: string; deactivated_at?: string | null }
 }
 
 type ImportPreviewRow = {
@@ -88,6 +88,8 @@ export default function OrganizerAthletes() {
   const [loadMessage, setLoadMessage] = useState('')
   const { profile } = useAuthStore()
   const isSuperAdmin = profile?.role === 'Admin'
+  // Locking an account is for the Super Admin and organizers; coaches only manage rosters.
+  const canLockAccounts = profile?.role === 'Admin' || profile?.role === 'Organizer'
   const { sportOptionsForForms } = useOrganizerSportScope()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
@@ -99,6 +101,12 @@ export default function OrganizerAthletes() {
     name: string
     nextInactive: boolean
   } | null>(null)
+  const [accountLockConfirm, setAccountLockConfirm] = useState<{
+    id: string
+    name: string
+    deactivate: boolean
+  } | null>(null)
+  const [accountLockBusy, setAccountLockBusy] = useState(false)
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState<{
     id: string
     name: string
@@ -387,6 +395,25 @@ export default function OrganizerAthletes() {
     }
   }
 
+  const confirmAccountLock = async () => {
+    if (!accountLockConfirm) return
+    setAccountLockBusy(true)
+    setLoadMessage('')
+    try {
+      await api.patch(`/athletes/${accountLockConfirm.id}/account-status`, {
+        deactivated: accountLockConfirm.deactivate,
+      })
+      toast.success(accountLockConfirm.deactivate ? 'Account deactivated' : 'Account activated')
+      setAccountLockConfirm(null)
+      fetchAthletes()
+    } catch (e: unknown) {
+      setLoadMessage(describeApiError(e, 'Could not update the account'))
+      setAccountLockConfirm(null)
+    } finally {
+      setAccountLockBusy(false)
+    }
+  }
+
   const confirmResetPassword = async (mode: 'email' | 'password') => {
     if (!resetPasswordConfirm) return
     setResetPasswordBusy(true)
@@ -627,8 +654,8 @@ export default function OrganizerAthletes() {
       <TabBar
         className="w-fit max-w-full"
         tabs={[
-          { id: 'active', label: 'Activated' },
-          { id: 'inactive', label: 'Deactivated' },
+          { id: 'active', label: 'Active' },
+          { id: 'inactive', label: 'Inactive' },
         ]}
         active={seasonFilter}
         onChange={(id) => setSeasonFilter(id as 'active' | 'inactive')}
@@ -697,7 +724,11 @@ export default function OrganizerAthletes() {
           student_id: <code className="text-xs whitespace-nowrap">{a.student_id}</code>,
           year: <span className="text-sm whitespace-nowrap">{a.year_level}</span>,
           department: <span className="text-sm">{a.department}</span>,
-          status: (
+          status: a.profile?.deactivated_at ? (
+            <Badge variant="danger" size="sm">
+              Deactivated
+            </Badge>
+          ) : (
             <Badge variant={a.season_status === 'active' ? 'success' : 'default'} size="sm">
               {a.season_status === 'active' ? 'Active' : 'Inactive'}
             </Badge>
@@ -718,8 +749,24 @@ export default function OrganizerAthletes() {
                   })
                 }
               >
-                {a.season_status === 'active' ? 'Deactivate' : 'Reactivate'}
+                {a.season_status === 'active' ? 'Set inactive' : 'Set active'}
               </Button>
+              {canLockAccounts && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={a.profile?.deactivated_at ? undefined : 'text-[var(--danger)]'}
+                  onClick={() =>
+                    setAccountLockConfirm({
+                      id: a.id,
+                      name: a.profile?.full_name ?? 'this athlete',
+                      deactivate: !a.profile?.deactivated_at,
+                    })
+                  }
+                >
+                  {a.profile?.deactivated_at ? 'Activate account' : 'Deactivate account'}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -747,7 +794,7 @@ export default function OrganizerAthletes() {
           athletes.length > 0 && filteredAthletes.length === 0
             ? 'No athletes match your search or filters. Try different keywords or reset filters.'
             : seasonFilter === 'active'
-              ? 'No active athletes. Import athletes or reactivate deactivated ones.'
+              ? 'No active athletes. Import athletes or set inactive ones back to active.'
               : 'No inactive athletes.'
         }
       />
@@ -833,7 +880,7 @@ export default function OrganizerAthletes() {
       <Modal
         open={seasonToggleConfirm !== null}
         onClose={() => setSeasonToggleConfirm(null)}
-        title={seasonToggleConfirm?.nextInactive ? 'Deactivate athlete' : 'Reactivate athlete'}
+        title={seasonToggleConfirm?.nextInactive ? 'Set athlete inactive' : 'Set athlete active'}
         size="md"
       >
         {seasonToggleConfirm && (
@@ -841,13 +888,14 @@ export default function OrganizerAthletes() {
             <p className="text-sm text-[var(--text-secondary)]">
               {seasonToggleConfirm.nextInactive ? (
                 <>
-                  Deactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for
-                  this season? They will no longer appear as eligible for roster placement while
-                  inactive.
+                  Set <span className="font-semibold">{seasonToggleConfirm.name}</span> inactive
+                  for this season? They will no longer appear as eligible for roster placement.
+                  They can still sign in and see their history; use Deactivate account to block
+                  sign-in.
                 </>
               ) : (
                 <>
-                  Reactivate <span className="font-semibold">{seasonToggleConfirm.name}</span> for
+                  Set <span className="font-semibold">{seasonToggleConfirm.name}</span> active for
                   this season?
                 </>
               )}
@@ -857,6 +905,50 @@ export default function OrganizerAthletes() {
                 Cancel
               </Button>
               <Button onClick={() => void confirmSeasonToggle()}>Continue</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={accountLockConfirm !== null}
+        onClose={() => {
+          if (!accountLockBusy) setAccountLockConfirm(null)
+        }}
+        title={accountLockConfirm?.deactivate ? 'Deactivate account?' : 'Activate account?'}
+        size="md"
+      >
+        {accountLockConfirm && (
+          <div className="space-y-4">
+            <Alert type={accountLockConfirm.deactivate ? 'warning' : 'info'}>
+              {accountLockConfirm.deactivate ? (
+                <>
+                  <strong>{accountLockConfirm.name}</strong> will be signed out and cannot sign in
+                  again until the account is activated. They are also set inactive and removed from
+                  rosters. Nothing is deleted.
+                </>
+              ) : (
+                <>
+                  Let <strong>{accountLockConfirm.name}</strong> sign in again? They stay inactive
+                  for the season until you set them active.
+                </>
+              )}
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                disabled={accountLockBusy}
+                onClick={() => setAccountLockConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={accountLockConfirm.deactivate ? 'danger' : 'success'}
+                loading={accountLockBusy}
+                onClick={() => void confirmAccountLock()}
+              >
+                {accountLockConfirm.deactivate ? 'Deactivate account' : 'Activate account'}
+              </Button>
             </div>
           </div>
         )}
@@ -1127,7 +1219,7 @@ export default function OrganizerAthletes() {
               undone.
             </p>
             <p className="text-sm text-[var(--text-muted)]">
-              To keep their record but take them out of this season, use Deactivate instead.
+              To keep their record but take them out of this season, use Set inactive instead. To block their sign-in without deleting anything, use Deactivate account.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>

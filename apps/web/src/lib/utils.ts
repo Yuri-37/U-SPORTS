@@ -150,5 +150,9 @@ export function friendlyAuthError(err: unknown, fallback: string): string {
   if (/failed to fetch|network ?error|load failed/i.test(message)) {
     return 'No internet connection. Check your network and try again.'
   }
+  // Supabase refuses a deactivated (banned) account's sign-in with "User is banned".
+  if (/banned/i.test(message)) {
+    return 'This account has been deactivated. Contact your admin if you need access restored.'
+  }
   return message || fallback
 }
