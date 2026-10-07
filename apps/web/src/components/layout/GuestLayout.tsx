@@ -38,26 +38,30 @@ export default function GuestLayout() {
           depth rather than a hard cut. */}
       <header className="h-14 bg-[var(--surface-card)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 gap-2">
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <UsportsMark size={32} />
-            <div className="min-w-0">
-              <p className="font-bold text-sm leading-tight">U-Sports</p>
-              {/* The school's crest and name, smaller, under the product name. */}
-              <div className="flex min-w-0 items-center gap-1.5">
+          {/* Two separate zones, never merged: the product on the left, the
+              school after a divider. One line each -- no tagline, no stacked
+              sub-row -- so neither logo is shrunk to a speck. */}
+          <div className="flex items-center gap-2 shrink-0">
+            <UsportsMark size={30} />
+            <span className="font-bold text-[15px] leading-none">U-Sports</span>
+          </div>
+          {institution?.logo_url || institution?.name ? (
+            <>
+              <span className="h-6 w-px bg-[var(--border-subtle)] shrink-0" aria-hidden />
+              <div className="flex items-center gap-2 min-w-0">
                 {institution?.logo_url ? (
                   <img
                     src={institution.logo_url}
                     alt=""
-                    className="h-3.5 w-auto max-w-[1.5rem] shrink-0 object-contain"
+                    className="h-7 w-auto max-w-[2.25rem] shrink-0 object-contain"
                   />
                 ) : null}
-                <p className="hidden sm:block text-[10px] text-[var(--text-muted)] truncate">
-                  {institution?.abbreviation}
-                  {institution?.tagline ? ` · ${institution.tagline}` : ''}
-                </p>
+                <span className="hidden lg:block text-xs text-[var(--text-muted)] truncate">
+                  {institution?.name}
+                </span>
               </div>
-            </div>
-          </div>
+            </>
+          ) : null}
         </div>
 
         <nav className="hidden md:flex items-center gap-5 shrink-0 mr-1">
