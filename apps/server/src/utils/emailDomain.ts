@@ -10,19 +10,34 @@ import { STUDENT_EMAIL_DOMAIN } from './studentAccounts'
  */
 export const STAFF_EMAIL_DOMAIN = 'nu-dasma.edu.ph'
 
-function domainRestrictedEmailZ(domain: string, roleLabel: string) {
+/**
+ * A short list of addresses let through the staff-domain check anyway, for
+ * testing the staff account-creation flow (and its "set your password"
+ * email) against a real inbox when no @nu-dasma.edu.ph mailbox is available.
+ * Comma-separated in STAFF_EMAIL_TEST_ALLOWLIST; empty by default, so
+ * production stays locked to the real domain unless this is explicitly set.
+ */
+function isAllowlistedStaffEmail(email: string): boolean {
+  return (process.env.STAFF_EMAIL_TEST_ALLOWLIST ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(email)
+}
+
+function domainRestrictedEmailZ(domain: string, roleLabel: string, allowException?: (email: string) => boolean) {
   return z
     .string()
     .trim()
     .toLowerCase()
     .email('Enter a valid email')
-    .refine((email) => email.endsWith(`@${domain}`), {
+    .refine((email) => email.endsWith(`@${domain}`) || (allowException?.(email) ?? false), {
       message: `${roleLabel} accounts must use a @${domain} email address`,
     })
 }
 
 /** Required for every server-side flow that creates or invites a staff account (Organizer, Coach, Admin). */
-export const staffEmailZ = domainRestrictedEmailZ(STAFF_EMAIL_DOMAIN, 'Staff')
+export const staffEmailZ = domainRestrictedEmailZ(STAFF_EMAIL_DOMAIN, 'Staff', isAllowlistedStaffEmail)
 
 /** For athlete accounts. Callers that treat email as optional (falls back to a generated address) chain `.optional()` themselves. */
 export const studentEmailZ = domainRestrictedEmailZ(STUDENT_EMAIL_DOMAIN, 'Student')

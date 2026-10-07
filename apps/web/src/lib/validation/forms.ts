@@ -14,18 +14,36 @@ export const emailZ = z.string().trim().min(1, 'Email is required').email('Enter
 const STAFF_EMAIL_DOMAIN = 'nu-dasma.edu.ph'
 const STUDENT_EMAIL_DOMAIN = 'students.nu-dasma.edu.ph'
 
-function domainRestrictedEmailZ(domain: string, roleLabel: string) {
+/**
+ * Mirrors the server's STAFF_EMAIL_TEST_ALLOWLIST (apps/server/src/utils/
+ * emailDomain.ts) so this client-side check doesn't block a submission the
+ * server would accept. Baked in at build time via VITE_STAFF_EMAIL_TEST_
+ * ALLOWLIST; empty by default. The server is still the real enforcement
+ * point -- this only avoids a confusing "invalid email" in the form.
+ */
+const staffEmailAllowlist = new Set(
+  ((import.meta.env.VITE_STAFF_EMAIL_TEST_ALLOWLIST as string | undefined) ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+)
+
+function domainRestrictedEmailZ(domain: string, roleLabel: string, allowlist?: Set<string>) {
   return z
     .string()
     .trim()
     .min(1, 'Email is required')
     .email('Enter a valid email')
-    .refine((email) => email.toLowerCase().endsWith(`@${domain}`), {
-      message: `${roleLabel} accounts must use a @${domain} email address`,
-    })
+    .refine(
+      (email) => {
+        const lower = email.toLowerCase()
+        return lower.endsWith(`@${domain}`) || (allowlist?.has(lower) ?? false)
+      },
+      { message: `${roleLabel} accounts must use a @${domain} email address` },
+    )
 }
 
-export const staffEmailZ = domainRestrictedEmailZ(STAFF_EMAIL_DOMAIN, 'Staff')
+export const staffEmailZ = domainRestrictedEmailZ(STAFF_EMAIL_DOMAIN, 'Staff', staffEmailAllowlist)
 export const studentEmailZ = domainRestrictedEmailZ(STUDENT_EMAIL_DOMAIN, 'Student')
 
 /**
