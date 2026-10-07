@@ -195,15 +195,6 @@ export default function LoginPage() {
                 View as Guest →
               </a>
             </p>
-            <p className="text-[var(--text-muted)]">
-              Staff?{' '}
-              <a
-                href="/super-admin/login"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              >
-                Staff Portal →
-              </a>
-            </p>
           </div>
         </div>
       </div>
