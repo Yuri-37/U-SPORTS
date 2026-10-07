@@ -41,16 +41,15 @@ export default function LoginPage() {
         const { profile: nextProfile, session: nextSession } = useAuthStore.getState()
         const scoped = sessionScopedProfile(nextSession ?? data.session, nextProfile)
 
-        // Staff used to be signed back out here and told to use the Staff
-        // Portal, with nothing linking to it -- correct credentials looked
-        // like a broken account. They are already authenticated by this
-        // point and the portal uses the same Supabase auth, so send them on
-        // to their own dashboard instead of bouncing them.
+        // This page is for students. Staff have their own front door (the
+        // Staff Portal) with its own "forgot password" and deactivation
+        // handling -- letting a staff login slide through here bypassed all
+        // of that. Sign them back out and point them at it, the same way
+        // the Staff Portal already rejects a student login (SuperAdminLoginPage.tsx).
         if (scoped?.role === 'Admin' || scoped?.role === 'Organizer' || scoped?.role === 'Coach') {
-          navigate(scoped.role === 'Admin' ? '/super-admin' : defaultPostLoginPath(scoped.role), {
-            replace: true,
-          })
-          return
+          await supabase.auth.signOut()
+          useAuthStore.setState({ session: null, user: null, profile: null })
+          throw new Error('This is the student sign-in. Staff use the Staff Portal.')
         }
 
         const returnTo = safeInternalPath((location.state as { from?: string } | null)?.from)
@@ -77,35 +76,35 @@ export default function LoginPage() {
             backgroundSize: '40px 40px',
           }}
         />
-        <div className="relative z-10 text-center">
-          {institution?.logo_url ? (
-            <img
-              src={institution.logo_url}
-              alt="Logo"
-              className="max-h-32 w-auto max-w-[16rem] mx-auto mb-6 object-contain object-center"
-            />
-          ) : (
-            <div
-              className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-5xl"
-              style={{ backgroundColor: 'var(--school-secondary)', color: 'var(--school-primary)' }}
-            >
-              🏆
-            </div>
-          )}
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <UsportsMark size={36} />
-            <span className="text-white font-black text-2xl font-[Barlow_Condensed] tracking-widest">
-              U-SPORTS
-            </span>
-          </div>
-          <h1
-            className="text-4xl font-black font-[Barlow_Condensed] tracking-widest"
-            style={{ color: 'var(--school-secondary)' }}
-          >
-            {institution?.abbreviation ?? 'U-Sports'}
+        <div className="relative z-10 flex flex-col items-center text-center">
+          {/* U-Sports is the product being signed in to -- the hero here, not
+              the school's own branding (that follows below, as its own,
+              clearly separate block, not merged into this one). */}
+          <UsportsMark size={84} />
+          <h1 className="mt-4 text-3xl font-black font-[Barlow_Condensed] tracking-widest text-white">
+            U-SPORTS
           </h1>
-          <p className="text-white/70 mt-2 text-lg">{institution?.name}</p>
-          <p className="text-white/40 mt-1 italic text-sm">{institution?.tagline}</p>
+
+          <div className="mt-16 flex flex-col items-center">
+            {institution?.logo_url ? (
+              <img
+                src={institution.logo_url}
+                alt="Logo"
+                className="h-14 w-auto max-w-[8rem] object-contain object-center"
+              />
+            ) : (
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                style={{ backgroundColor: 'var(--school-secondary)', color: 'var(--school-primary)' }}
+              >
+                🏆
+              </div>
+            )}
+            <p className="text-white/70 mt-3 text-base">{institution?.name}</p>
+            {institution?.tagline ? (
+              <p className="text-white/40 mt-1 italic text-sm">{institution.tagline}</p>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -113,18 +112,20 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden text-center">
-            {institution?.logo_url ? (
-              <img
-                src={institution.logo_url}
-                alt=""
-                className="max-h-16 w-auto max-w-[12rem] mx-auto mb-3 object-contain object-center"
-              />
-            ) : null}
             <div className="flex items-center justify-center gap-2">
               <UsportsMark size={28} />
               <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
             </div>
-            <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {institution?.logo_url ? (
+                <img
+                  src={institution.logo_url}
+                  alt=""
+                  className="h-6 w-auto max-w-[2rem] object-contain object-center"
+                />
+              ) : null}
+              <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
+            </div>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Sign In</h2>
@@ -192,6 +193,15 @@ export default function LoginPage() {
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
                 View as Guest →
+              </a>
+            </p>
+            <p className="text-[var(--text-muted)]">
+              Staff?{' '}
+              <a
+                href="/super-admin/login"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                Staff Portal →
               </a>
             </p>
           </div>
