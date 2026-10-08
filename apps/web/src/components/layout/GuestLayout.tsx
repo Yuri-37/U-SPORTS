@@ -47,10 +47,16 @@ export default function GuestLayout() {
               sub-row -- so neither logo is shrunk to a speck. */}
           <div className="flex items-center gap-2 shrink-0">
             <UsportsMark size={30} />
-            <span className="font-bold text-[15px] leading-none">U-Sports</span>
+            {/* On the very narrowest phones (320px) the mark alone has to do. */}
+            <span className="hidden min-[360px]:inline font-bold text-[15px] leading-none">
+              U-Sports
+            </span>
           </div>
           {institution?.logo_url || institution?.name ? (
-            <>
+            // Below ~430px the crest zone, the Dashboard label, the bell and the
+            // account menu cannot all fit, and the right-hand group (which never
+            // shrinks) ran over the wordmark. The crest is the first to go.
+            <div className="hidden min-[430px]:flex items-center gap-2 md:gap-3 min-w-0">
               <span className="h-6 w-px bg-[var(--border-subtle)] shrink-0" aria-hidden />
               <div className="flex items-center gap-2 min-w-0">
                 {institution?.logo_url ? (
@@ -64,7 +70,7 @@ export default function GuestLayout() {
                   {institution?.name}
                 </span>
               </div>
-            </>
+            </div>
           ) : null}
         </div>
 
@@ -88,7 +94,7 @@ export default function GuestLayout() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <DarkModeToggle />
           {/* Not a nav section like Hub/Rankings/Events -- a one-off "get this"
               link, so it sits with the actions. Icon-only on small screens;
@@ -112,8 +118,9 @@ export default function GuestLayout() {
               className="shrink-0"
               onClick={() => navigate('/super-admin')}
               icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+              aria-label="Dashboard"
             >
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           )}
           {isAuthed && (role === 'Organizer' || role === 'Coach') && (
@@ -123,8 +130,9 @@ export default function GuestLayout() {
               className="shrink-0"
               onClick={() => navigate('/organizer')}
               icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+              aria-label="Dashboard"
             >
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           )}
           {isAuthed && role === 'Athlete' && (
@@ -134,8 +142,9 @@ export default function GuestLayout() {
               className="shrink-0"
               onClick={() => navigate('/athlete')}
               icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+              aria-label="Dashboard"
             >
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           )}
           {isAuthed ? (
