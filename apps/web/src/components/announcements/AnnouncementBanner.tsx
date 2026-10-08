@@ -3,6 +3,7 @@ import { AlertTriangle, X, Clock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Announcement } from '../../types'
 import { cn, formatDateTime } from '../../lib/utils'
+import { useAnnouncementAudience } from '../../hooks/useAnnouncementAudience'
 
 export type AnnouncementBannerMode = 'banner' | 'hero_slider'
 
@@ -76,6 +77,7 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
   const modesKey = modesFilterKey(modes)
+  const inAudience = useAnnouncementAudience(!!publicOnly)
 
   useEffect(() => {
     const modeList = [...modes]
@@ -98,16 +100,28 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
       .channel(`announcements-banner:${modesKey}:${publicOnly ? 'pub' : 'all'}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'announcements' },
+        // Not just INSERT: an edit that shortens the expiry or switches the
+        // display mode, and a delete, must take effect on a page that is already
+        // open. They used to be ignored until the next reload.
+        { event: '*', schema: 'public', table: 'announcements' },
         (payload) => {
-          const a = payload.new as Announcement
-          if (!isFetchedBannerMode(a.display_mode, modes)) return
-          // The initial fetch filters expired rows server-side, but a realtime
-          // INSERT bypasses that query -- check it here too.
-          if (a.expires_at && new Date(a.expires_at).getTime() <= Date.now()) return
-          if (!publicOnly || a.is_public) {
-            setAnnouncements((prev) => [a, ...prev])
+          if (payload.eventType === 'DELETE') {
+            const id = (payload.old as { id?: string }).id
+            if (id) setAnnouncements((prev) => prev.filter((x) => x.id !== id))
+            return
           }
+          const a = payload.new as Announcement
+          // The initial fetch filters server-side, but a realtime row bypasses
+          // that query -- apply the same rules here.
+          const eligible =
+            isFetchedBannerMode(a.display_mode, modes) &&
+            (!publicOnly || a.is_public) &&
+            !(a.expires_at && new Date(a.expires_at).getTime() <= Date.now())
+          setAnnouncements((prev) => {
+            const exists = prev.some((x) => x.id === a.id)
+            if (!eligible) return exists ? prev.filter((x) => x.id !== a.id) : prev
+            return exists ? prev.map((x) => (x.id === a.id ? a : x)) : [a, ...prev]
+          })
         },
       )
       .subscribe()
@@ -134,7 +148,10 @@ export default function AnnouncementBanner({ publicOnly, modes = DEFAULT_MODES }
   }, [announcements, now])
 
   const visible = announcements.filter(
-    (a) => !dismissed.has(a.id) && (!a.expires_at || new Date(a.expires_at).getTime() > now),
+    (a) =>
+      !dismissed.has(a.id) &&
+      (!a.expires_at || new Date(a.expires_at).getTime() > now) &&
+      inAudience(a),
   )
   if (visible.length === 0) return null
 

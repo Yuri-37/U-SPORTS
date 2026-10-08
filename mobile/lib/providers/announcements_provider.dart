@@ -17,6 +17,9 @@ final announcementsHubProvider = StreamProvider<List<Map<String, dynamic>>>((ref
           .select()
           .inFilter('display_mode', ['banner', 'hero_slider'])
           .eq('is_public', true)
+          // An announcement for one sport, event or team is for those people,
+          // not for the public ticker (older rows may still be marked public).
+          .eq('audience_type', 'all')
           .or('expires_at.is.null,expires_at.gt.${now.toIso8601String()}')
           .order('published_at', ascending: false);
       // The provider can be disposed while this request is in flight.

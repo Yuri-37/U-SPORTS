@@ -192,8 +192,11 @@ export default function OrganizerAnnouncements() {
             : undefined,
         audience_sport:
           form.audience_type === 'sport' ? form.audience_sport || undefined : undefined,
-        is_public: form.is_public,
-        display_mode: form.display_mode,
+        // A targeted announcement is never public or a hero slide (also covers
+        // older ones opened for editing that were saved before this rule).
+        is_public: targeted ? false : form.is_public,
+        display_mode:
+          targeted && form.display_mode === 'hero_slider' ? 'banner' : form.display_mode,
         new_scheduled_at: pickerValueToIso(form.new_scheduled_at),
         new_venue: form.new_venue.trim() || undefined,
         expires_at: pickerValueToIso(form.expires_at),
@@ -236,7 +239,18 @@ export default function OrganizerAnnouncements() {
     }
   }
 
-  const update = (field: string, value: any) => setForm((f) => ({ ...f, [field]: value }))
+  const update = (field: string, value: any) =>
+    setForm((f) => {
+      const next = { ...f, [field]: value }
+      // Aimed at a sport, event or team: it is for those people only, so it can
+      // not also be shown to guests or on the public hero slider.
+      if (field === 'audience_type' && value !== 'all') {
+        next.is_public = false
+        if (next.display_mode === 'hero_slider') next.display_mode = 'banner'
+      }
+      return next
+    })
+  const targeted = form.audience_type !== 'all'
 
   // Audience label helper for the list view
   const audienceLabel = (a: Announcement): string => {
@@ -536,7 +550,9 @@ export default function OrganizerAnnouncements() {
                 { value: 'notification_only', label: 'Notification only' },
                 { value: 'banner', label: 'Scrolling banner' },
                 { value: 'hero_slider', label: 'Hero slider' },
-              ].map(({ value, label }) => (
+              ]
+                .filter(({ value }) => !(targeted && value === 'hero_slider'))
+                .map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"
@@ -562,15 +578,22 @@ export default function OrganizerAnnouncements() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.is_public}
-              onChange={(e) => update('is_public', e.target.checked)}
-              className="accent-[#0066FF]"
-            />
-            <span className="text-sm">Visible to guests (public)</span>
-          </label>
+          {targeted ? (
+            <p className="text-xs text-[var(--text-muted)]">
+              This announcement is for a specific {form.audience_type}, so its banner is shown only
+              to the athletes it is for (and to staff), never to guests.
+            </p>
+          ) : (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_public}
+                onChange={(e) => update('is_public', e.target.checked)}
+                className="accent-[#0066FF]"
+              />
+              <span className="text-sm">Visible to guests (public)</span>
+            </label>
+          )}
 
           <Button className="w-full" loading={creating} onClick={handleSubmit}>
             {editingId ? 'Save Changes' : 'Publish Announcement'}

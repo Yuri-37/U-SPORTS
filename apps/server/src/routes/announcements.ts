@@ -123,6 +123,15 @@ const announcementSchema = z
         path: ['new_scheduled_at'],
       })
     }
+    if (data.audience_type !== 'all' && (data.is_public || data.display_mode === 'hero_slider')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'An announcement for a specific sport, event or team cannot be shown to guests or on the hero slider. Turn off "Visible to guests" and use a banner or notification only.',
+        // No path: the generic formatter would prefix "is public:" to the sentence.
+        path: [],
+      })
+    }
     if (data.audience_type === 'sport' && !data.audience_sport) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
