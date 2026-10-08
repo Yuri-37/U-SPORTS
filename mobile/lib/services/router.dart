@@ -44,6 +44,13 @@ bool _isGuestAllowedPath(String path) {
   return false;
 }
 
+/// The privacy notice must be readable without an account -- people are told
+/// what is collected before they are asked to sign in. Only the read-only view
+/// is open to a signed-out visitor; the accept-and-continue form is the
+/// signed-in gate and has no meaning without a profile to record it on.
+bool _isPublicPrivacyNotice(Uri uri) =>
+    uri.path == '/privacy-notice' && uri.queryParameters['readonly'] == 'true';
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(authRefreshNotifierProvider);
 
@@ -56,7 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final user = Supabase.instance.client.auth.currentUser;
 
       if (user == null) {
-        if (_isGuestAllowedPath(path)) return null;
+        if (_isGuestAllowedPath(path) || _isPublicPrivacyNotice(state.uri)) return null;
         return '/auth/login';
       }
 

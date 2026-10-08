@@ -37,47 +37,23 @@ export default function PublicRosterStats({ sport, playerStats, nameA, nameB, sh
     const sideA = playerStats.filter((p) => p.participant_side === 'a')
     const sideB = playerStats.filter((p) => p.participant_side === 'b')
 
-    // One side: the players on court first, then a muted bench. When nobody is
-    // benched (table tennis lists only its active competitors) the groups would
-    // be noise, so a single plain list is shown.
-    const renderSide = (name: string, players: PlayerStat[]) => {
-      const onCourt = players.filter((p) => p.on_court)
-      const bench = players.filter((p) => !p.on_court)
-      const grouped = onCourt.length > 0 && bench.length > 0
-      return (
-        <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 truncate">
-            {name}
-          </p>
-          {grouped && (
-            <p className="text-[11px] font-semibold text-[var(--accent-default)] mb-1">
-              On court ({onCourt.length})
-            </p>
-          )}
-          <ul className="space-y-1">
-            {(grouped ? onCourt : players).map((p) => (
-              <li key={p.athlete_id} className="text-[var(--text-primary)]">
-                {playerName(p)}
-              </li>
-            ))}
-          </ul>
-          {grouped && (
-            <>
-              <p className="text-[11px] font-semibold text-[var(--text-muted)] mt-3 mb-1">
-                Bench ({bench.length})
-              </p>
-              <ul className="space-y-1">
-                {bench.map((p) => (
-                  <li key={p.athlete_id} className="text-[var(--text-muted)]">
-                    {playerName(p)}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )
-    }
+    // The whole squad, one plain list per side. Who is on court or on the bench
+    // is the scorer's business and changes with every substitution; a public
+    // viewer reading the roster just wants to know who is on the team.
+    const renderSide = (name: string, players: PlayerStat[]) => (
+      <div>
+        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 truncate">
+          {name}
+        </p>
+        <ul className="space-y-1">
+          {players.map((p) => (
+            <li key={p.athlete_id} className="text-[var(--text-secondary)]">
+              {playerName(p)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
 
     return (
       <Card>
