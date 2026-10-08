@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 
 typedef LiveHubMatch = Map<String, dynamic>;
@@ -20,11 +21,23 @@ final hubLiveProvider = StreamProvider<HubLiveSnapshot>((ref) {
     try {
       final rows = await Supabase.instance.client
           .from('matches')
-          .select('*, scores:match_scores(*), event:events(name, sport)')
+          .select('*, scores:match_scores(*), event:events(name, sport, status)')
           .eq('status', 'live')
-          .limit(10);
+          .limit(60);
       if (disposed || seq != reloadSeq) return;
-      final list = (rows as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      // Only matches that can be scored right now: a "live" match whose event is
+      // already over is a leftover. The ones with points on the board lead.
+      final all = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((m) => (m['event'] as Map?)?['status'] == 'in_progress')
+          .toList();
+      final ranked = [
+        for (var i = 0; i < all.length; i++) (i, matchPointsTotal(all[i]['scores'] as List?), all[i]),
+      ]..sort((a, b) {
+          final byPoints = b.$2.compareTo(a.$2);
+          return byPoints != 0 ? byPoints : a.$1.compareTo(b.$1);
+        });
+      final list = ranked.take(10).map((r) => r.$3).toList();
       if (seq != reloadSeq) return;
       final partIds = <String>{};
       for (final m in list) {

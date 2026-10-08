@@ -184,9 +184,14 @@ router.post(
 
     const { data: event } = await supabase
       .from('events')
-      .select('sport, table_tennis_format, season_id')
+      .select('sport, table_tennis_format, season_id, status')
       .eq('id', match.event_id)
       .single()
+    // The page already hides Start for an event that is not in progress; the API
+    // never checked, so a stale link or a direct call could still start one.
+    if (event && (event as { status?: string }).status !== 'in_progress') {
+      return res.status(409).json({ error: 'This event is not in progress, so its matches cannot be scored.' })
+    }
     const sport = event?.sport ?? 'basketball'
     const ttFormat =
       (event as { table_tennis_format?: string | null } | null)?.table_tennis_format ?? null
@@ -346,12 +351,18 @@ router.post(
 
       const { data: match } = await supabase
         .from('matches')
-        .select('status, scoring_locked_by, participant_a_id, participant_b_id, current_period')
+        .select('status, scoring_locked_by, participant_a_id, participant_b_id, current_period, event_id')
         .eq('id', matchId)
         .single()
 
       if (!match || match.status !== 'live') {
         return res.status(400).json({ error: 'Match is not live' })
+      }
+      {
+        const { data: ev } = await supabase.from('events').select('status').eq('id', match.event_id).maybeSingle()
+        if (ev && ev.status !== 'in_progress') {
+          return res.status(409).json({ error: 'This event is not in progress, so its matches cannot be scored.' })
+        }
       }
 
       // Authoritative sport — never from the request body.

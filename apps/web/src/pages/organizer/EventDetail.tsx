@@ -12,6 +12,7 @@ import {
   Pencil,
   FileText,
   Lock,
+  Hourglass,
 } from 'lucide-react'
 import {
   Button,
@@ -68,7 +69,17 @@ export default function OrganizerEventDetail() {
 
   const openMatchWorkspace = (m: Match) => {
     if (m.status === 'completed') navigate(`/organizer/match-review/${m.id}`)
-    else if (!isCoach && !lockedMatchIds.has(m.id)) navigate(`/organizer/scoring/${m.id}`)
+    // A match still waiting for its teams, a cancelled one, or one in an event
+    // that is not running cannot be scored, so opening it would only dead-end.
+    else if (
+      !isCoach &&
+      (m.status === 'scheduled' || m.status === 'live') &&
+      !!m.participant_a_id &&
+      !!m.participant_b_id &&
+      event?.status === 'in_progress' &&
+      !lockedMatchIds.has(m.id)
+    )
+      navigate(`/organizer/scoring/${m.id}`)
   }
   const [event, setEvent] = useState<(Event & { participants: any[] }) | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
@@ -413,9 +424,13 @@ export default function OrganizerEventDetail() {
   const openScheduleEditor = (m: Match) => {
     setScheduleMatch(m)
     if (m.scheduled_at) {
+      // Date and time both in the viewer's local time. The date used to come from
+      // toISOString() (UTC) while the time was local, so a match between midnight
+      // and 8 AM Manila time re-opened a day early and saving moved it.
       const d = new Date(m.scheduled_at)
-      setSchedDate(d.toISOString().slice(0, 10))
-      setSchedTime(d.toTimeString().slice(0, 5))
+      const p2 = (n: number) => String(n).padStart(2, '0')
+      setSchedDate(`${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`)
+      setSchedTime(`${p2(d.getHours())}:${p2(d.getMinutes())}`)
     } else {
       setSchedDate('')
       setSchedTime('')
@@ -891,7 +906,7 @@ export default function OrganizerEventDetail() {
               ),
               actions: (
                 <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                  {m.status !== 'completed' && (
+                  {(m.status === 'scheduled' || m.status === 'live') && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -902,10 +917,18 @@ export default function OrganizerEventDetail() {
                       Schedule
                     </Button>
                   )}
-                  {m.status !== 'completed' &&
+                  {(m.status === 'scheduled' || m.status === 'live') &&
                     canScore &&
                     !isCoach &&
-                    (lockedMatchIds.has(m.id) ? (
+                    (!m.participant_a_id || !m.participant_b_id ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] self-center"
+                        title="Both teams are decided once the earlier round is played"
+                      >
+                        <Hourglass className="w-3 h-3" aria-hidden />
+                        Waiting for teams
+                      </span>
+                    ) : lockedMatchIds.has(m.id) ? (
                       <span
                         className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] self-center"
                         title="Complete earlier matches in this round first"
@@ -922,7 +945,7 @@ export default function OrganizerEventDetail() {
                         {m.status === 'live' ? 'Resume' : 'Score'}
                       </Button>
                     ))}
-                  {m.status !== 'completed' && !canScore && (
+                  {(m.status === 'scheduled' || m.status === 'live') && !canScore && (
                     <span className="text-xs text-[var(--text-muted)] self-center">
                       Start event to score
                     </span>

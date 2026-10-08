@@ -14,6 +14,25 @@ class LiveScoreView {
 
 num _nz(dynamic v) => v is num ? v : (num.tryParse('$v') ?? 0);
 
+const _scoreColumns = [
+  'q1', 'q2', 'q3', 'q4', 'ot',
+  'set1', 'set2', 'set3', 'set4', 'set5',
+  'game1', 'game2', 'game3', 'game4', 'game5',
+];
+
+/// Points on the board for both sides, whichever sport's columns are in use.
+/// Mirrors matchPointsTotal in apps/web/src/lib/liveMatchPresentation.ts.
+num matchPointsTotal(List<dynamic>? scores) {
+  num total = 0;
+  for (final row in scores ?? const []) {
+    if (row is! Map) continue;
+    for (final col in _scoreColumns) {
+      total += _nz(row[col]);
+    }
+  }
+  return total;
+}
+
 int _clampPeriod(int p) => p.clamp(1, 5);
 
 num _basketballTotal(Map<String, dynamic>? sc) {

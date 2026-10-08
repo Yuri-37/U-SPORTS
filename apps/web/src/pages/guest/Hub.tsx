@@ -17,7 +17,11 @@ import {
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 
 import { fetchParticipantLabels } from '../../lib/participantLabels'
-import { liveScorePresentation, pickScoresForMatch } from '../../lib/liveMatchPresentation'
+import {
+  liveScorePresentation,
+  matchPointsTotal,
+  pickScoresForMatch,
+} from '../../lib/liveMatchPresentation'
 import {
   deriveEliminationPodium,
   type EventPlacement,
@@ -32,7 +36,7 @@ type LiveHubMatch = {
   status: string
   venue?: string | null
   scores?: MatchScore[]
-  event?: { name?: string | null; sport?: string | null } | null
+  event?: { name?: string | null; sport?: string | null; status?: string | null } | null
 }
 
 type ChampionSpotlight = {
@@ -73,12 +77,20 @@ export default function GuestHub() {
       .select(
         `*,
         scores:match_scores(*),
-        event:events(name, sport)`,
+        event:events(name, sport, status)`,
       )
       .eq('status', 'live')
-      .limit(10)
+      .limit(60)
 
-    const list = (data ?? []) as LiveHubMatch[]
+    // Only matches that can actually be scored right now: a "live" match whose
+    // event is already over is a leftover, and the ones with points on the board
+    // lead the list.
+    const list = ((data ?? []) as LiveHubMatch[])
+      .filter((m) => m.event?.status === 'in_progress')
+      .map((m, i) => ({ m, i, pts: matchPointsTotal(m.scores) }))
+      .sort((x, y) => y.pts - x.pts || x.i - y.i)
+      .map(({ m }) => m)
+      .slice(0, 10)
     setLiveMatches(list)
 
     const partIds = new Set<string>()

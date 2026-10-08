@@ -12,6 +12,8 @@ import {
 } from '../utils/athleteNotifications'
 import { slugifyEventName } from '../utils/eventSlug'
 import { describeCaughtError } from '../utils/describeCaughtError'
+import { findScheduleConflict, sortMatchesForDisplay, bracketOf, type MatchLike } from '../utils/matchOrder'
+import { resolveParticipantDisplayName } from '../services/matchReviewData'
 
 const router = createRouter()
 
@@ -306,6 +308,49 @@ router.patch(
       })
     }
 
+    // Finishing or cancelling an event used to leave its matches behind: a
+    // match that was live stayed "live" on the hub forever (and could not be
+    // scored, because its event was no longer in progress). So the matches are
+    // settled together with the event.
+    let matchesToClose: string[] = []
+    if (newStatus === 'completed' || newStatus === 'cancelled') {
+      const { data: openRows } = await supabase
+        .from('matches')
+        .select('id, status, participant_a_id, participant_b_id, bracket:brackets(is_bye)')
+        .eq('event_id', req.params.id)
+        .in('status', ['scheduled', 'live'])
+      const open = (openRows ?? []) as unknown as Array<{
+        id: string
+        status: string
+        participant_a_id: string | null
+        participant_b_id: string | null
+        bracket?: { is_bye?: boolean } | { is_bye?: boolean }[] | null
+      }>
+      const isBye = (m: (typeof open)[number]) =>
+        (Array.isArray(m.bracket) ? m.bracket[0] : m.bracket)?.is_bye === true
+      if (newStatus === 'completed') {
+        // Anything still in play, or ready to be played, has to be finished first.
+        const blocking = open.filter(
+          (m) => m.status === 'live' || (m.participant_a_id && m.participant_b_id && !isBye(m)),
+        )
+        if (blocking.length > 0) {
+          const labels = await Promise.all(
+            blocking.slice(0, 4).map(async (m) => {
+              const a = await resolveParticipantDisplayName(m.participant_a_id)
+              const b = await resolveParticipantDisplayName(m.participant_b_id)
+              return `${a} vs ${b} (${m.status === 'live' ? 'live' : 'not played'})`
+            }),
+          )
+          const more = blocking.length > 4 ? ` and ${blocking.length - 4} more` : ''
+          return res.status(400).json({
+            error: `Finish or cancel these matches before marking the event finished: ${labels.join('; ')}${more}.`,
+          })
+        }
+      }
+      // What is left cannot be played (waiting for teams, or a bye): close it.
+      matchesToClose = open.map((m) => m.id)
+    }
+
     const { data, error } = await supabase
       .from('events')
       .update({ status: newStatus })
@@ -314,12 +359,24 @@ router.patch(
       .single()
     if (error) return res.status(500).json({ error: error.message })
 
+    if (matchesToClose.length > 0) {
+      const { error: closeError } = await supabase
+        .from('matches')
+        .update({ status: 'cancelled', scoring_locked_by: null, clock_locked_by: null })
+        .in('id', matchesToClose)
+      if (closeError) console.error('[events] closing matches failed:', closeError.message)
+    }
+
     await writeAuditLog({
       actorId: req.user!.id,
       action: 'event_status_changed',
       entityType: 'event',
       entityId: req.params.id,
-      details: { from: event.status, to: newStatus },
+      details: {
+        from: event.status,
+        to: newStatus,
+        ...(matchesToClose.length > 0 ? { matches_closed: matchesToClose.length } : {}),
+      },
     })
     res.json(data)
   },
@@ -540,11 +597,13 @@ router.delete(
 router.get('/:id/matches', async (req, res) => {
   const { data, error } = await supabase
     .from('matches')
-    .select('*, scores:match_scores(*)')
+    .select('*, scores:match_scores(*), bracket:brackets(round, match_order)')
     .eq('event_id', req.params.id)
-    .order('scheduled_at')
   if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  // Matches with scores first, then the rest in bracket order (the schedule only
+  // breaks ties) -- the same list on the organizer page, the public page and the app.
+  const ordered = sortMatchesForDisplay((data ?? []) as unknown as MatchLike[])
+  res.json(ordered.map(({ bracket: _bracket, ...m }) => m))
 })
 
 router.patch(
@@ -577,6 +636,49 @@ router.patch(
 
     try {
       const body = schema.parse(req.body)
+
+      const { data: eventRow } = await supabase
+        .from('events')
+        .select('status')
+        .eq('id', req.params.id)
+        .maybeSingle()
+      if (eventRow && (eventRow.status === 'completed' || eventRow.status === 'cancelled')) {
+        return res.status(409).json({ error: 'This event is over, so its schedule can no longer change.' })
+      }
+
+      // A time only makes sense if it matches the order the matches are played in.
+      if (body.scheduled_at) {
+        const at = new Date(body.scheduled_at)
+        if (Number.isNaN(at.getTime())) return res.status(400).json({ error: 'That date and time is not valid.' })
+        const { data: all } = await supabase
+          .from('matches')
+          .select('id, status, participant_a_id, participant_b_id, scheduled_at, bracket:brackets(round, match_order)')
+          .eq('event_id', req.params.id)
+        const rows = (all ?? []) as unknown as MatchLike[]
+        const target = rows.find((m) => m.id === req.params.matchId)
+        if (target) {
+          const conflict = findScheduleConflict(target, rows, at)
+          if (conflict) {
+            const o = conflict.other
+            const when = new Date(o.scheduled_at as string).toLocaleString('en-PH', {
+              timeZone: 'Asia/Manila',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+            const na = await resolveParticipantDisplayName(o.participant_a_id)
+            const nb = await resolveParticipantDisplayName(o.participant_b_id)
+            const name = `${na} vs ${nb}`
+            const where = conflict.sameRound ? 'in the same round' : `in round ${bracketOf(o)?.round}`
+            const dir = conflict.relation === 'after' ? 'after' : 'before'
+            return res.status(400).json({
+              error: `Matches are played in order, so this one must be scheduled ${dir} ${name} (${where}), which is set for ${when}.`,
+            })
+          }
+        }
+      }
+
       const update: Record<string, unknown> = {}
       if (body.scheduled_at !== undefined) update.scheduled_at = body.scheduled_at
       if (body.venue !== undefined) update.venue = body.venue

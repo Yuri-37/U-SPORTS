@@ -68,7 +68,7 @@ export default function OrganizerDashboard() {
           const [liveRes, upcomingRes] = await Promise.all([
             supabase
               .from('matches')
-              .select('*')
+              .select('*, event:events(status)')
               .eq('status', 'live')
               .or(
                 teamIds
@@ -87,7 +87,12 @@ export default function OrganizerDashboard() {
               .order('scheduled_at', { ascending: true })
               .limit(5),
           ])
-          setCoachLiveMatches(liveRes.data ?? [])
+          // A match left "live" inside a finished event cannot be scored; hide it.
+          setCoachLiveMatches(
+            (liveRes.data ?? []).filter(
+              (m: { event?: { status?: string } | null }) => m.event?.status === 'in_progress',
+            ),
+          )
           setCoachUpcoming(upcomingRes.data ?? [])
 
           // Resolve participant labels
@@ -120,10 +125,14 @@ export default function OrganizerDashboard() {
         .in('status', ['in_progress', 'draft', 'registration'])
         .order('created_at', { ascending: false })
         .limit(5),
-      supabase.from('matches').select('*').eq('status', 'live'),
+      supabase.from('matches').select('*, event:events(status)').eq('status', 'live'),
     ]).then(([evRes, mRes]) => {
       setEvents(evRes.data ?? [])
-      setLiveMatches(mRes.data ?? [])
+      setLiveMatches(
+        (mRes.data ?? []).filter(
+          (m: { event?: { status?: string } | null }) => m.event?.status === 'in_progress',
+        ),
+      )
       setLoading(false)
     })
   }, [isCoach, organizer?.id])

@@ -2,6 +2,21 @@ import type { MatchScore } from '../types'
 
 const nz = (v: unknown) => Number(v) || 0
 
+const SCORE_COLUMNS = [
+  'q1', 'q2', 'q3', 'q4', 'ot',
+  'set1', 'set2', 'set3', 'set4', 'set5',
+  'game1', 'game2', 'game3', 'game4', 'game5',
+] as const
+
+/** Points on the board for both sides, whichever sport's columns are in use. */
+export function matchPointsTotal(scores: Partial<MatchScore>[] | undefined): number {
+  let total = 0
+  for (const row of scores ?? []) {
+    for (const col of SCORE_COLUMNS) total += nz((row as Record<string, unknown>)[col])
+  }
+  return total
+}
+
 function clampPeriod(p: number, sport: string) {
   const max = sport === 'table-tennis' ? 7 : sport === 'basketball' ? 7 : 5
   return Math.min(Math.max(p, 1), max)

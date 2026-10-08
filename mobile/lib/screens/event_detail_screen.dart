@@ -469,16 +469,20 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
     List<Map<String, dynamic>> brackets,
     String sport,
   ) {
-    final na = _slotLabel(_participantIdForMatch(m, brackets, 'a'));
-    final nb = _slotLabel(_participantIdForMatch(m, brackets, 'b'));
+    final idA = _participantIdForMatch(m, brackets, 'a');
+    final idB = _participantIdForMatch(m, brackets, 'b');
+    final na = _slotLabel(idA);
+    final nb = _slotLabel(idB);
     final st = m['status'] as String? ?? '';
     final mid = m['id'] as String;
-    final canOpen = st == 'live' || st == 'scheduled' || st == 'completed';
+    // A scheduled match still waiting for its teams has nothing to show yet.
+    final waiting = st == 'scheduled' && (idA == null || idB == null);
+    final canOpen = !waiting && (st == 'live' || st == 'scheduled' || st == 'completed');
     return SheetTile(
       leading: IconTile(icon: sportIcon(sport), color: sportTint(context, sport), size: 40),
       title: '$na vs $nb',
       subtitle:
-          '${matchStatusLabel(st)}${m['scheduled_at'] != null ? ' · ${formatDateTime(m['scheduled_at'] as String?)}' : ''}',
+          '${waiting ? 'Waiting for teams' : matchStatusLabel(st)}${m['scheduled_at'] != null ? ' · ${formatDateTime(m['scheduled_at'] as String?)}' : ''}',
       onTap: canOpen ? () => _showMatchSheet(context, mid) : null,
       trailing: st == 'live'
           ? Container(
