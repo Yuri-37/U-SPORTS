@@ -82,7 +82,7 @@ Every account created from the app (staff, athletes) now gets a **password the c
 1. **Authentication → URL Configuration**
    - **Site URL:** `https://usports.info`
    - **Redirect URLs (allow-list):** `https://usports.info/auth/reset-password` and `https://usports.info/auth/accept-invite`. Supabase silently replaces a `redirectTo` that is not on this list with the Site URL, which is how reset links once ended up pointing at localhost.
-2. **Authentication → Emails → Templates → Reset Password** (this is the template the account-creation email uses). Make the link carry the token hash, which the web page redeems with `verifyOtp` (it survives Outlook/Safe Links pre-fetching, which otherwise burns one-time links before the person clicks):
+2. **Authentication → Emails → Templates → Reset Password** (this is the template the account-creation email uses). The full branded template lives in `supabase/templates/recovery.html` -- paste that file's contents (subject: `Set your U-Sports password`). What matters in it is that the link carries the token hash, which the web page redeems with `verifyOtp` (it survives Outlook/Safe Links pre-fetching, which otherwise burns one-time links before the person clicks); the minimal form of that link is:
 
    ```html
    <h2>Set your U-Sports password</h2>

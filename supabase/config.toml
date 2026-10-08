@@ -47,6 +47,15 @@ additional_redirect_urls = [
 jwt_expiry = 3600
 enable_signup = true
 
+# The reset-password email. This file is the source of truth for the HOSTED
+# project too, but the hosted project does not read it: paste its contents into
+# Dashboard -> Authentication -> Emails -> Templates -> Reset Password. (Do not
+# run `supabase config push` to publish it -- that would push every value in this
+# file, including the localhost Site URL above, to production.)
+[auth.email.template.recovery]
+subject = "Set your U-Sports password"
+content_path = "./supabase/templates/recovery.html"
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
