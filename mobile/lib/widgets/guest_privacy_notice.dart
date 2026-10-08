@@ -57,6 +57,9 @@ class _GuestPrivacyNoticeState extends State<GuestPrivacyNotice> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SheetGroup(
+        // SheetGroup draws a divider between its children; this card is one
+        // block of text and its buttons, not a list of rows.
+        dividers: false,
         padding: const EdgeInsets.all(16),
         children: [
           Row(
