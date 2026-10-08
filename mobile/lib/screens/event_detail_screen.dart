@@ -197,7 +197,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         // Sport + status row
                         Row(
                           children: [
-                            Text(sportEmoji(sport), style: const TextStyle(fontSize: 18)),
+                            Icon(sportIcon(sport), size: 18, color: LayoutTokens.secondaryText(context)),
                             const SizedBox(width: 8),
                             Text(sportLabel(sport), style: TextStyle(color: LayoutTokens.secondaryText(context), fontSize: 13)),
                             const Spacer(),
@@ -353,7 +353,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
 
         return BrandPage.fixed(
           title: name,
-          subtitle: '${sportEmoji(sport)}  ${sportLabel(sport)} · ${formatEnumLabel(event['format'] as String? ?? '')}',
+          subtitle: '${sportLabel(sport)} · ${formatEnumLabel(event['format'] as String? ?? '')}',
           showBack: true,
           onBack: back,
           actions: [
@@ -472,7 +472,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
     final mid = m['id'] as String;
     final canOpen = st == 'live' || st == 'scheduled' || st == 'completed';
     return SheetTile(
-      leading: IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport), size: 40),
+      leading: IconTile(icon: sportIcon(sport), color: sportTint(context, sport), size: 40),
       title: '$na vs $nb',
       subtitle:
           '${matchStatusLabel(st)}${m['scheduled_at'] != null ? ' · ${formatDateTime(m['scheduled_at'] as String?)}' : ''}',

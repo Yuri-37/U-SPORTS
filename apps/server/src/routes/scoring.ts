@@ -395,7 +395,14 @@ router.post(
       }
 
       const effect = pointEffect(sport, body.actionType)
-      if (effect.scores && match.scoring_locked_by !== req.user!.id) {
+      // Every action needs the lock, not only the ones that move the score. The
+      // check used to be `effect.scores &&`, so rebounds, assists, steals,
+      // fouls, digs, receptions and the like -- all of which feed the box score
+      // and the player's season stats -- could be logged by anyone in scope who
+      // was NOT holding the lock, in all three sports. The Scoring page already
+      // disables every one of those buttons for a non-holder, so this only
+      // closes the direct-API route.
+      if (match.scoring_locked_by !== req.user!.id) {
         return res.status(403).json({ error: 'You do not have scoring lock for this match' })
       }
 

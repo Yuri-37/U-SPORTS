@@ -140,6 +140,13 @@ class _PrivacyNoticeScreenState extends ConsumerState<PrivacyNoticeScreen> {
                             style: TextStyle(color: LayoutTokens.danger(context), fontSize: 13),
                           ),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          kPrivacyConsentLine,
+                          style: TextStyle(fontSize: 11, color: LayoutTokens.mutedText(context)),
+                        ),
+                      ),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(

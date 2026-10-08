@@ -115,7 +115,7 @@ class HubAnnouncementTicker extends StatelessWidget {
   String _heading(Map<String, dynamic> a) {
     final type = a['type'] as String? ?? '';
     final title = (a['title'] as String?)?.trim() ?? '';
-    if (type == 'reschedule') return '📅 Rescheduled: $title';
+    if (type == 'reschedule') return 'Rescheduled: $title';
     return title;
   }
 

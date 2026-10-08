@@ -48,6 +48,15 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
         "don't sell or share your data outside U-Sports.",
   ),
   PrivacyNoticeSection(
+    'Browsing without an account',
+    'You can browse published rosters, schedules, results and rankings '
+        'without signing in. We do not ask for or collect personal '
+        'information from guests — there is no account, profile or '
+        'notification token involved. Only your own device remembers small '
+        'things such as dark mode and whether you have seen this notice; '
+        'none of that is sent to us or linked to you.',
+  ),
+  PrivacyNoticeSection(
     'How long',
     'For as long as your account exists. If you delete your account, your '
         'profile, roster memberships, season statistics and notifications are '
@@ -82,10 +91,17 @@ const List<PrivacyNoticeSection> kPrivacyNoticeSections = [
         "Dasmariñas systems in general, the school's Data Protection Officer "
         "is the right office.",
   ),
-  PrivacyNoticeSection(
-    '',
-    'By tapping "I Agree — Continue," you confirm you\'ve read this notice '
-        'and agree to U-Sports collecting and using your information as '
-        'described.',
-  ),
 ];
+
+/// The guest card's wording -- the short version of "Browsing without an
+/// account".
+const String kGuestPrivacySummary =
+    'You are browsing as a guest. U-Sports shows published team rosters, '
+    'schedules and results, and collects no personal information from guests '
+    '— only your own device remembers settings such as dark mode.';
+
+/// Shown directly above the Agree button, nowhere else -- on the read-only
+/// screen (Settings) there is no button for it to refer to.
+const String kPrivacyConsentLine =
+    'By continuing, you confirm you have read this notice and agree to '
+    'U-Sports collecting and using your information as described.';

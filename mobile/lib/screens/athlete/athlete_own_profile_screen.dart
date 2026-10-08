@@ -83,7 +83,7 @@ class _AthleteOwnProfileScreenState extends ConsumerState<AthleteOwnProfileScree
                           textAlign: TextAlign.center, style: AppTheme.display(size: 21, color: Colors.white)),
                       const SizedBox(height: 4),
                       Text(
-                        '${sportEmoji(athlete.sport)}  ${sportLabel(athlete.sport)}',
+                        sportLabel(athlete.sport),
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -98,7 +98,7 @@ class _AthleteOwnProfileScreenState extends ConsumerState<AthleteOwnProfileScree
                           final m = t as Map;
                           final tSport = m['sport'] as String? ?? '';
                           return SheetTile(
-                            leading: IconTile(emoji: sportEmoji(tSport), color: sportTint(context, tSport)),
+                            leading: IconTile(icon: sportIcon(tSport), color: sportTint(context, tSport)),
                             title: m['name'] as String? ?? 'Team',
                             subtitle: sportLabel(tSport),
                           );

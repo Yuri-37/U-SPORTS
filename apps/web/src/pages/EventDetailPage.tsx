@@ -3,11 +3,11 @@ import { useParams, useNavigate, useSearchParams, useLocation } from 'react-rout
 import { Tv2, ArrowLeft, ChevronRight } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, TabBar } from '../components/ui'
 import { supabase } from '../lib/supabase'
+import SportIcon from '../components/ui/SportIcon'
 import api from '../lib/api'
 import {
   cn,
   getSportLabel,
-  getSportIcon,
   formatDateTime,
   formatEnumLabel,
   eventPublicLifecycleLabel,
@@ -200,7 +200,7 @@ export default function EventDetailPage({
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">{getSportIcon(event.sport as any)}</span>
+            <SportIcon sport={event.sport} className="w-6 h-6" />
             <h1 className="text-2xl font-bold">{event.name}</h1>
           </div>
           <p className="text-[var(--text-muted)] text-sm capitalize">

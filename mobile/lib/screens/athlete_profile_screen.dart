@@ -99,7 +99,7 @@ class AthleteProfileScreen extends ConsumerWidget {
             } catch (_) {}
           },
           title: name,
-          subtitle: '${sportEmoji(sport)}  ${sportLabel(sport)}',
+          subtitle: sportLabel(sport),
           hero: Column(
             children: [
               HeroAvatar(imageUrl: avatar, name: name, radius: 40),
@@ -145,7 +145,7 @@ class AthleteProfileScreen extends ConsumerWidget {
                   final tSport = t['sport'] as String? ?? '';
                   final tId = t['id'] as String?;
                   return SheetTile(
-                    leading: IconTile(emoji: sportEmoji(tSport), color: sportTint(context, tSport)),
+                    leading: IconTile(icon: sportIcon(tSport), color: sportTint(context, tSport)),
                     title: t['name'] as String? ?? '',
                     subtitle: sportLabel(tSport),
                     trailing: tId == null ? null : Icon(Icons.chevron_right_rounded, color: LayoutTokens.mutedText(context)),

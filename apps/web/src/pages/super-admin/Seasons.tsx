@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Play, Check, Archive, Trash2, Pencil } from 'lucide-react'
+import { Plus, Play, Check, Archive, Trash2, Pencil, AlertTriangle } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { Stepper } from '../../components/ui/Stepper'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 import { SportCheckboxes } from '../../components/ui/SportCheckboxes'
 import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
@@ -76,7 +77,16 @@ function StaffCheckboxes({
 export default function SuperAdminSeasons() {
   const [seasons, setSeasons] = useState<Season[]>([])
 
-  const pager = usePagination(seasons, 10)
+  const [search, setSearch] = useState('')
+  const filteredSeasons = seasons.filter((s) =>
+    matchesSearch(
+      search,
+      s.name,
+      s.status,
+      ...(s.sports ?? []).map((sport) => getSportLabel(sport as Sport)),
+    ),
+  )
+  const pager = usePagination(filteredSeasons, 10)
   const [loading, setLoading] = useState(true)
   const [sportOptions, setSportOptions] = useState<Sport[]>([])
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
@@ -318,6 +328,10 @@ export default function SuperAdminSeasons() {
         }
       />
 
+      {seasons.length > 0 && (
+        <SearchInput value={search} onChange={setSearch} placeholder="Season name, status or sport" />
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -327,6 +341,10 @@ export default function SuperAdminSeasons() {
       ) : seasons.length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-[var(--text-muted)]">No seasons yet</p>
+        </Card>
+      ) : filteredSeasons.length === 0 ? (
+        <Card className="text-center py-12">
+          <p className="text-[var(--text-muted)]">No season matches your search.</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -425,8 +443,9 @@ export default function SuperAdminSeasons() {
             {transitionConfirm.nextStatus === 'completed' &&
               (transitionConfirm.unfinishedMatches ?? 0) > 0 && (
                 <Alert type="danger">
-                  <span className="font-semibold">
-                    ⚠ {transitionConfirm.unfinishedMatches} unfinished{' '}
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+                    {transitionConfirm.unfinishedMatches} unfinished{' '}
                     {transitionConfirm.unfinishedMatches === 1 ? 'match' : 'matches'}
                   </span>
                   <span className="block mt-1 text-sm">

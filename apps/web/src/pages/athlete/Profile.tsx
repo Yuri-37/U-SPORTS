@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Card, Badge, Button } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
 import { supabase } from '../../lib/supabase'
-import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
+import { getSportLabel, getInitials } from '../../lib/utils'
+import { SportTag } from '../../components/ui/SportIcon'
 import { Trophy, Users } from 'lucide-react'
 import { deriveEliminationPodium, placementRankLabel } from '../../lib/eventPlacements'
 import { useNavigate } from 'react-router'
@@ -181,7 +182,7 @@ export default function AthleteProfile() {
           <p className="text-[var(--text-muted)] text-sm">{profile.email}</p>
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="info">
-              {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)}
+              <SportTag sport={athlete.sport} />
             </Badge>
             <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>
               {athlete.season_status}

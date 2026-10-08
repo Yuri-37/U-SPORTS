@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react'
 import { Button, Alert } from '../ui'
 import api from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
-import { PRIVACY_NOTICE_SECTIONS } from '../../lib/privacyNotice'
+import { PRIVACY_CONSENT_LINE, PRIVACY_NOTICE_SECTIONS } from '../../lib/privacyNotice'
 import type { Profile } from '../../types'
 
 type Props = {
@@ -61,6 +61,7 @@ export default function PrivacyNoticeGate({ profile }: Props) {
         </div>
         <div className="p-6 border-t border-[var(--border-subtle)] shrink-0 space-y-3">
           {error && <Alert type="danger">{error}</Alert>}
+          <p className="text-xs text-[var(--text-muted)]">{PRIVACY_CONSENT_LINE}</p>
           <Button className="w-full" size="lg" loading={loading} onClick={handleAgree}>
             I Agree — Continue
           </Button>

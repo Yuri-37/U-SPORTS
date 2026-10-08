@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Trophy } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import {
@@ -17,9 +17,9 @@ import {
 import { CreateEventModal } from '../../components/organizer/CreateEventModal'
 import api from '../../lib/api'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
+import SportIcon from '../../components/ui/SportIcon'
 import type { Event } from '../../types'
 import {
-  getSportIcon,
   getSportLabel,
   formatEnumLabel,
   organizerEventStatusLabel,
@@ -198,7 +198,7 @@ export default function OrganizerEvents() {
       ) : filtered.length === 0 && !loadError ? (
         events.length > 0 ? (
           <EmptyState
-            icon="🏆"
+            icon={<Trophy className="w-10 h-10" aria-hidden />}
             title={listSearch.trim() || sportFilter ? 'No matching events' : 'No events in this tab'}
             description={
               listSearch.trim() || sportFilter
@@ -221,7 +221,7 @@ export default function OrganizerEvents() {
           />
         ) : (
           <EmptyState
-            icon="🏆"
+            icon={<Trophy className="w-10 h-10" aria-hidden />}
             title="No events found"
             description="Create your first event to get started"
             action={
@@ -244,7 +244,7 @@ export default function OrganizerEvents() {
               onClick={() => navigate(`/organizer/events/${e.id}`)}
             >
               <div className="flex items-start justify-between mb-3">
-                <span className="text-2xl">{getSportIcon(e.sport as any)}</span>
+                <SportIcon sport={e.sport} className="w-6 h-6" />
                 <Badge variant={STATUS_VARIANTS[e.status]} size="sm">
                   {organizerEventStatusLabel(e.status)}
                 </Badge>

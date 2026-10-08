@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router'
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn, Trophy } from 'lucide-react'
 import { Button, Input, Alert } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
@@ -96,10 +96,10 @@ export default function LoginPage() {
               />
             ) : (
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                className="w-14 h-14 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: 'var(--school-secondary)', color: 'var(--school-primary)' }}
               >
-                🏆
+                <Trophy className="w-7 h-7" aria-hidden />
               </div>
             )}
             <p className="text-white/70 mt-3 text-base">{institution?.name}</p>

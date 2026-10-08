@@ -796,7 +796,14 @@ export default function OrganizerScoring() {
                             : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
                       )}
                     >
-                      {isFouledOut ? `⚠ ${shortLabel}` : shortLabel}
+                      {isFouledOut ? (
+                        <span className="inline-flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" aria-hidden />
+                          {shortLabel}
+                        </span>
+                      ) : (
+                        shortLabel
+                      )}
                     </button>
                     {showSub && (
                       <button

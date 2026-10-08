@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui'
 import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { getSportLabel, getSportIcon, eventPublicLifecycleLabel } from '../../lib/utils'
+import { getSportLabel, eventPublicLifecycleLabel } from '../../lib/utils'
+import SportIcon from '../../components/ui/SportIcon'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 
 export default function AthleteEvents() {
   const { athlete } = useAuthStore()
   const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (!athlete) {
@@ -106,15 +110,22 @@ export default function AthleteEvents() {
         </div>
       ) : matches.length === 0 ? (
         <EmptyState
-          icon="📅"
+          icon={<CalendarDays className="w-10 h-10" aria-hidden />}
           title="No events yet"
           description="You haven't been added to any events. Check with your organizer."
         />
       ) : (
         <div className="space-y-3">
-          {matches.map((e) => (
+          {matches.length > 3 && (
+            <SearchInput value={search} onChange={setSearch} placeholder="Event, sport or team" />
+          )}
+          {matches
+            .filter((e) =>
+              matchesSearch(search, e.name, e.teamName, getSportLabel(e.sport as any), e.status),
+            )
+            .map((e) => (
             <Card key={e.id} className="flex items-center gap-4">
-              <span className="text-3xl">{getSportIcon(e.sport as any)}</span>
+              <SportIcon sport={e.sport} className="w-7 h-7" />
               <div className="flex-1">
                 <h3 className="font-bold">{e.name}</h3>
                 <p className="text-xs text-[var(--text-muted)]">

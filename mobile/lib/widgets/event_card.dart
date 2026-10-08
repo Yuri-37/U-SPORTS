@@ -52,7 +52,7 @@ class EventCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport)),
+                IconTile(icon: sportIcon(sport), color: sportTint(context, sport)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(

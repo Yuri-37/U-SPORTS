@@ -8,6 +8,8 @@ import {
   MapPin,
   ChevronRight,
   History,
+  Trophy,
+  Medal,
 } from 'lucide-react'
 import {
   Card,
@@ -23,7 +25,8 @@ import {
 import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { getSportLabel, getSportIcon, formatEnumLabel, formatDateTime } from '../../lib/utils'
+import { getSportLabel, formatEnumLabel, formatDateTime } from '../../lib/utils'
+import SportIcon, { SportTag } from '../../components/ui/SportIcon'
 import { fetchParticipantLabels } from '../../lib/participantLabels'
 import { pickScoresForMatch } from '../../lib/liveMatchPresentation'
 import { deriveEliminationPodium } from '../../lib/eventPlacements'
@@ -779,7 +782,7 @@ export default function AthleteDashboard() {
         title={<>Welcome back, {profile?.full_name.split(' ')[0]}!</>}
         subtitle={
           <>
-            {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)} ·{' '}
+            <SportTag sport={athlete.sport} /> ·{' '}
             {positionLine}
           </>
         }
@@ -828,7 +831,7 @@ export default function AthleteDashboard() {
                     className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Card className="flex items-start gap-3 hover:border-[var(--accent-default)]/40 transition-colors">
-                      <span className="text-2xl">{getSportIcon(m.sport as any)}</span>
+                      <SportIcon sport={m.sport} className="w-6 h-6 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
                           <p className="font-semibold text-sm truncate">{m.eventName}</p>
@@ -884,7 +887,7 @@ export default function AthleteDashboard() {
             </div>
             {pastMatches.length > 0 && (
               <p className="text-xs text-[var(--text-muted)] mb-3">
-                Completed bracket games. 🏆/🥈 badge means your team placed in that event.
+                Completed bracket games. A Champion or Runner-up badge means your team placed in that event.
               </p>
             )}
             {loading || finishesLoading ? (
@@ -911,7 +914,7 @@ export default function AthleteDashboard() {
                       className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <Card className="flex items-start gap-3 hover:border-[var(--accent-default)]/40 transition-colors">
-                        <span className="text-2xl">{getSportIcon(m.sport as any)}</span>
+                        <SportIcon sport={m.sport} className="w-6 h-6 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
                             <p className="font-semibold text-sm truncate">{m.eventName}</p>
@@ -922,8 +925,17 @@ export default function AthleteDashboard() {
                               {formatEnumLabel(m.status)}
                             </Badge>
                             {placement && (
-                              <Badge size="sm" variant={placement.rank === 1 ? 'warning' : 'info'}>
-                                {placement.rank === 1 ? '🏆 Champion' : '🥈 Runner-up'}
+                              <Badge
+                                size="sm"
+                                variant={placement.rank === 1 ? 'warning' : 'info'}
+                                className="inline-flex items-center gap-1"
+                              >
+                                {placement.rank === 1 ? (
+                                  <Trophy className="w-3 h-3" aria-hidden />
+                                ) : (
+                                  <Medal className="w-3 h-3" aria-hidden />
+                                )}
+                                {placement.rank === 1 ? 'Champion' : 'Runner-up'}
                               </Badge>
                             )}
                           </div>
@@ -989,7 +1001,7 @@ export default function AthleteDashboard() {
                   <Card className="hover:border-[var(--accent-default)]/40 transition-colors">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-xl">{getSportIcon(g.sport as any)}</span>
+                        <SportIcon sport={g.sport} className="w-5 h-5" />
                         <div>
                           <p className="font-semibold">{g.teamName}</p>
                           <p className="text-xs text-[var(--text-muted)]">
@@ -1059,8 +1071,7 @@ export default function AthleteDashboard() {
         {teamDetailModal && (
           <div className="space-y-6">
             <p className="text-sm text-[var(--text-muted)]">
-              {getSportIcon(teamDetailModal.sport as any)}{' '}
-              {getSportLabel(teamDetailModal.sport as any)}
+              <SportTag sport={teamDetailModal.sport} />
             </p>
 
             {teamDetailModal.coaches.length > 0 ? (
@@ -1781,7 +1792,7 @@ export default function AthleteDashboard() {
                     {formatEnumLabel(m.status)}
                   </Badge>
                   <span className="text-[var(--text-muted)]">
-                    {getSportIcon(sport as any)} {getSportLabel(sport as any)}
+                    <SportTag sport={sport} />
                   </span>
                 </div>
                 <p className="text-[var(--text-muted)] text-xs">

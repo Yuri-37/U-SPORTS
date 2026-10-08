@@ -6,11 +6,11 @@ import { SectionLabel, SectionHeading, StatCell, MiniStat } from '../../componen
 import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { useAuthStore } from '../../stores/authStore'
+import SportIcon from '../../components/ui/SportIcon'
 
 import type { Event, MatchScore } from '../../types'
 import {
   getSportLabel,
-  getSportIcon,
   formatEnumLabel,
   eventPublicLifecycleLabel,
 } from '../../lib/utils'
@@ -477,7 +477,7 @@ export default function GuestHub() {
                 onClick={() => navigate(`/guest/events/${e.slug}`)}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xl">{getSportIcon(e.sport as any)}</span>
+                  <SportIcon sport={e.sport} className="w-5 h-5" />
                   <Badge variant={e.status === 'in_progress' ? 'danger' : 'info'} size="sm">
                     {eventPublicLifecycleLabel(e.status)}
                   </Badge>
@@ -513,13 +513,13 @@ export default function GuestHub() {
               }`}
             >
               <span
-                className="inline-flex items-center justify-center h-12 w-12 rounded-lg text-2xl shadow-sm transition-transform duration-300 group-hover:scale-110"
+                className="inline-flex items-center justify-center h-12 w-12 rounded-lg text-white shadow-sm transition-transform duration-300 group-hover:scale-110"
                 style={{
                   background:
                     'linear-gradient(to bottom right, var(--school-primary), var(--accent-default))',
                 }}
               >
-                {s.icon}
+                <SportIcon sport={s.sport} className="h-6 w-6" />
               </span>
               <h3
                 className={`mt-6 font-semibold tracking-[-0.01em] ${
@@ -603,7 +603,7 @@ export default function GuestHub() {
                   className={`h-full p-7 ${featured ? 'lg:-translate-y-6 shadow-[var(--shadow-lift-lg)]' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <span className="text-2xl">{getSportIcon(ev.sport as any)}</span>
+                    <SportIcon sport={ev.sport} className="w-6 h-6" />
                     <Badge variant="success" size="sm">
                       Completed
                     </Badge>
@@ -698,20 +698,17 @@ const SPORT_TILES = [
   {
     sport: 'basketball',
     label: 'Basketball',
-    icon: '🏀',
     blurb:
       'Per-quarter scoring, player box scores and season leaders across every division.',
   },
   {
     sport: 'volleyball',
     label: 'Volleyball',
-    icon: '🏐',
     blurb: 'Set-by-set results with attack, block and excellent-dig leaders.',
   },
   {
     sport: 'table-tennis',
     label: 'Table Tennis',
-    icon: '🏓',
     blurb: 'Best-of-series brackets and singles rankings.',
   },
 ] as const

@@ -194,7 +194,7 @@ export default function PlaceholderGeneratorStep({ ctx }: { ctx?: TourStepContex
               key={i}
               className={`text-xs ${item.skipped_reason ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text-secondary)]'}`}
             >
-              {item.skipped_reason ? `${item.name} — ${item.skipped_reason}` : `${item.kind === 'team' ? '🏷' : '🏆'} ${item.name}`}
+              {item.skipped_reason ? `${item.name} — ${item.skipped_reason}` : `${item.kind === 'team' ? 'Team' : 'Event'}: ${item.name}`}
             </p>
           ))}
           {plan.totals.teams === 0 && plan.totals.events === 0 && (

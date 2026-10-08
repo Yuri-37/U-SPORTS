@@ -9,6 +9,7 @@ import { sessionScopedProfile } from '../../lib/sessionProfile'
 import HeaderAccountCluster from './HeaderAccountCluster'
 import DarkModeToggle from './DarkModeToggle'
 import UsportsMark from '../brand/UsportsMark'
+import GuestPrivacyNotice from '../guest/GuestPrivacyNotice'
 
 const GUEST_NAV = [
   { to: '/guest', label: 'Hub', Icon: Globe, end: true },
@@ -34,6 +35,9 @@ export default function GuestLayout() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
+      {/* Signed-in users already accepted the full notice at PrivacyNoticeGate,
+          so the guest bar would be asking them a second time. */}
+      {!isAuthed && <GuestPrivacyNotice />}
       {/* Semi-transparent + blurred so content scrolling under the bar reads as
           depth rather than a hard cut. */}
       <header className="h-14 bg-[var(--surface-card)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 gap-2">
@@ -217,6 +221,7 @@ function GuestFooter() {
             { to: '/guest/events', label: 'Events' },
             { to: '/guest/leaderboards', label: 'Rankings' },
             { to: '/app', label: 'Mobile app' },
+            { to: '/privacy-notice', label: 'Privacy notice' },
           ]}
         />
         <FooterColumn

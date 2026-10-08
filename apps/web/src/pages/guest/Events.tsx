@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { ArrowLeft, Search } from 'lucide-react'
+import { ArrowLeft, Search, Trophy } from 'lucide-react'
 import {
   Card,
   Badge,
@@ -12,8 +12,8 @@ import {
   Select,
 } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
+import SportIcon from '../../components/ui/SportIcon'
 import {
-  getSportIcon,
   getSportLabel,
   formatEnumLabel,
   eventPublicLifecycleLabel,
@@ -105,7 +105,7 @@ export default function GuestEvents() {
         onClick={() => navigate(`/guest/events/${e.slug}`)}
       >
         <div className="flex items-start justify-between mb-3">
-          <span className="text-2xl">{getSportIcon(e.sport as Sport)}</span>
+          <SportIcon sport={e.sport} className="w-6 h-6" />
           <Badge
             variant={
               e.status === 'in_progress'
@@ -203,7 +203,7 @@ export default function GuestEvents() {
       ) : view === 'upcoming' ? (
         upcoming.length === 0 ? (
           <EmptyState
-            icon="🏆"
+            icon={<Trophy className="w-10 h-10" aria-hidden />}
             title="No upcoming or live events"
             description="Try Past results for brackets and scores from finished events."
             action={
@@ -219,7 +219,7 @@ export default function GuestEvents() {
         )
       ) : pastFiltered.length === 0 ? (
         <EmptyState
-          icon="🏆"
+          icon={<Trophy className="w-10 h-10" aria-hidden />}
           title={past.length === 0 ? 'No archived events yet' : 'No matches'}
           description={
             past.length === 0

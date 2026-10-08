@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import 'leaderboard_stats.dart' show statNum, pct, ratio;
 
 String sportLabel(String sport) {
@@ -16,16 +18,19 @@ String sportLabel(String sport) {
   }
 }
 
-String sportEmoji(String sport) {
+/// The sport glyph, as a drawn icon rather than an emoji -- emoji rendered as
+/// whatever colour font the device shipped and sat oddly beside the Material
+/// icons used everywhere else in the app.
+IconData sportIcon(String sport) {
   switch (sport) {
     case 'basketball':
-      return '🏀';
+      return Icons.sports_basketball_outlined;
     case 'volleyball':
-      return '🏐';
+      return Icons.sports_volleyball_outlined;
     case 'table-tennis':
-      return '🏓';
+      return Icons.sports_tennis_outlined;
     default:
-      return '🏅';
+      return Icons.emoji_events_outlined;
   }
 }
 

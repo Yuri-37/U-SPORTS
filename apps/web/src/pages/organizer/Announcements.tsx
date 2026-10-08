@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil } from 'lucide-react'
+import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil, Megaphone } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 import PageHeader from '../../components/layout/PageHeader'
 import {
   Button,
@@ -40,9 +41,9 @@ const TYPE_BADGE_VARIANTS: Record<string, string> = {
 }
 
 const SPORT_OPTIONS = [
-  { value: 'basketball', label: '🏀 Basketball' },
-  { value: 'volleyball', label: '🏐 Volleyball' },
-  { value: 'table-tennis', label: '🏓 Table Tennis' },
+  { value: 'basketball', label: 'Basketball' },
+  { value: 'volleyball', label: 'Volleyball' },
+  { value: 'table-tennis', label: 'Table Tennis' },
 ]
 
 const MS_DAY = 86_400_000
@@ -106,7 +107,11 @@ interface TeamOption {
 export default function OrganizerAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
 
-  const pager = usePagination(announcements, 10)
+  const [search, setSearch] = useState('')
+  const filteredAnnouncements = announcements.filter((a) =>
+    matchesSearch(search, a.title, a.body, a.type, a.display_mode),
+  )
+  const pager = usePagination(filteredAnnouncements, 10)
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -255,13 +260,21 @@ export default function OrganizerAnnouncements() {
         }
       />
 
+      {announcements.length > 0 && (
+        <SearchInput value={search} onChange={setSearch} placeholder="Title, message or type" />
+      )}
+
       {loading ? null : announcements.length === 0 ? (
         <EmptyState
-          icon="📢"
+          icon={<Megaphone className="w-10 h-10" aria-hidden />}
           title="No announcements yet"
           description="Create your first announcement"
           action={<Button onClick={openCreate}>Create Announcement</Button>}
         />
+      ) : filteredAnnouncements.length === 0 ? (
+        <p className="text-center text-[var(--text-muted)] py-10">
+          No announcement matches your search.
+        </p>
       ) : (
         <div className="space-y-3">
           {pager.pageItems.map((a) => {
@@ -387,10 +400,10 @@ export default function OrganizerAnnouncements() {
             value={form.type}
             onChange={(e) => update('type', e.target.value)}
             options={[
-              { value: 'emergency', label: '🚨 Emergency — critical alert' },
-              { value: 'reschedule', label: '📅 Reschedule — high priority' },
-              { value: 'reminder', label: '🔔 Reminder — normal priority' },
-              { value: 'system', label: 'ℹ️ System — low priority' },
+              { value: 'emergency', label: 'Emergency — critical alert' },
+              { value: 'reschedule', label: 'Reschedule — high priority' },
+              { value: 'reminder', label: 'Reminder — normal priority' },
+              { value: 'system', label: 'System — low priority' },
             ]}
           />
 
@@ -520,9 +533,9 @@ export default function OrganizerAnnouncements() {
             <p className="text-xs font-medium text-[var(--text-muted)]">Display type</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
-                { value: 'notification_only', label: '🔔 Notification only' },
-                { value: 'banner', label: '📢 Scrolling banner' },
-                { value: 'hero_slider', label: '✨ Hero slider' },
+                { value: 'notification_only', label: 'Notification only' },
+                { value: 'banner', label: 'Scrolling banner' },
+                { value: 'hero_slider', label: 'Hero slider' },
               ].map(({ value, label }) => (
                 <button
                   key={value}

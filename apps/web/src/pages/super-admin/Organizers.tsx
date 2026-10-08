@@ -18,7 +18,9 @@ import api from '../../lib/api'
 import { describeApiError } from '../../lib/apiError'
 import { useAuthStore } from '../../stores/authStore'
 import type { Organizer, Profile } from '../../types'
-import { getSportLabel, getSportIcon } from '../../lib/utils'
+import { getSportLabel } from '../../lib/utils'
+import { SportTag } from '../../components/ui/SportIcon'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 import {
   createOrganizerFormSchema,
   staffEmailZ,
@@ -87,7 +89,7 @@ function SportCheckboxes({
                 className="accent-[#0066FF]"
               />
               <span className="text-sm">
-                {getSportIcon(s as any)} {getSportLabel(s as any)}
+                <SportTag sport={s} />
                 {takenByName && (
                   <span className="text-[var(--text-muted)]"> — coached by {takenByName}</span>
                 )}
@@ -171,6 +173,8 @@ export default function SuperAdminOrganizers() {
   } | null>(null)
 
   const currentUserId = useAuthStore((s) => s.profile?.id)
+  const [adminSearch, setAdminSearch] = useState('')
+  const [staffSearch, setStaffSearch] = useState('')
 
   // Super Admins
   const [admins, setAdmins] = useState<AdminAccount[]>([])
@@ -555,6 +559,14 @@ export default function SuperAdminOrganizers() {
         }
       />
 
+      {admins.length > 3 && (
+        <SearchInput
+          value={adminSearch}
+          onChange={setAdminSearch}
+          placeholder="Name or email"
+        />
+      )}
+
       {adminsLoading ? (
         <Skeleton className="h-16" />
       ) : (
@@ -565,7 +577,9 @@ export default function SuperAdminOrganizers() {
             { key: 'status', label: 'Status' },
             { key: 'actions', label: '' },
           ]}
-          data={admins.map((a) => ({
+          data={admins
+            .filter((a) => matchesSearch(adminSearch, a.full_name, a.email))
+            .map((a) => ({
             name: (
               <div>
                 <p className="font-medium">{a.full_name}</p>
@@ -602,7 +616,9 @@ export default function SuperAdminOrganizers() {
                 </Button>
               ),
           }))}
-          emptyMessage="No super admins yet."
+          emptyMessage={
+            adminSearch.trim() ? 'No Super Admin matches your search.' : 'No super admins yet.'
+          }
         />
       )}
 
@@ -626,6 +642,12 @@ export default function SuperAdminOrganizers() {
         </Button>
       </div>
 
+      <SearchInput
+        value={staffSearch}
+        onChange={setStaffSearch}
+        placeholder="Name, email, role, department or sport"
+      />
+
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -642,7 +664,19 @@ export default function SuperAdminOrganizers() {
             { key: 'status', label: 'Status' },
             { key: 'actions', label: '' },
           ]}
-          data={staff.map((o) => ({
+          data={staff
+            .filter((o) =>
+              matchesSearch(
+                staffSearch,
+                o.profile?.full_name,
+                o.profile?.email,
+                o.profile?.role,
+                o.profile?.department,
+                o.is_active ? 'active' : 'inactive',
+                ...(o.assigned_sports ?? []).flatMap((s) => [s, getSportLabel(s as any)]),
+              ),
+            )
+            .map((o) => ({
             name: (
               <div>
                 <p className="font-medium">{o.profile?.full_name}</p>
@@ -663,7 +697,7 @@ export default function SuperAdminOrganizers() {
               <div className="flex gap-1 flex-wrap">
                 {(o.assigned_sports ?? []).map((s) => (
                   <Badge key={s} variant="info" size="sm">
-                    {getSportIcon(s as any)} {getSportLabel(s as any)}
+                    <SportTag sport={s} />
                   </Badge>
                 ))}
                 {(o.assigned_sports ?? []).length === 0 && (
@@ -711,7 +745,11 @@ export default function SuperAdminOrganizers() {
               </div>
             ),
           }))}
-          emptyMessage="No staff yet. Add an organizer or coach to get started."
+          emptyMessage={
+            staffSearch.trim()
+              ? 'No staff member matches your search.'
+              : 'No staff yet. Add an organizer or coach to get started.'
+          }
         />
       )}
 

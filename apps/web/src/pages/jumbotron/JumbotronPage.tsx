@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router'
+import { Trophy } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { liveScorePresentation } from '../../lib/liveMatchPresentation'
@@ -363,13 +364,13 @@ export default function JumbotronPage() {
             />
           ) : (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold"
+              className="w-12 h-12 rounded-full flex items-center justify-center"
               style={{
                 backgroundColor: 'var(--school-secondary, #FFD700)',
                 color: 'var(--school-primary, #002D62)',
               }}
             >
-              🏆
+              <Trophy className="w-6 h-6" aria-hidden />
             </div>
           )}
           <div>

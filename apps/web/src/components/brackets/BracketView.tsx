@@ -141,7 +141,7 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
   const isDoubleElim = losersBrackets.length > 0 || grandFinal !== null
 
   function roundColumnLabel(round: number, maxRound: number, inRound: Bracket[]): string {
-    if (round === maxRound) return isDoubleElim ? '🏆 Winners Final' : '🏆 Final'
+    if (round === maxRound) return isDoubleElim ? 'Winners Final' : 'Final'
     const typesInRound = new Set(inRound.map((b) => b.bracket_type))
     if (round === maxRound - 1) {
       return typesInRound.has('crossover_semi') ? 'Crossover semis' : 'Semi-Final'
@@ -255,7 +255,7 @@ export default function BracketView({ brackets, matches, participantLabels, onMa
                     {grandFinal && (
                       <div className="flex flex-col justify-around min-w-[180px]">
                         <div className="text-center text-xs text-[var(--text-muted)] mb-4 font-semibold uppercase tracking-wider px-4">
-                          🏆 Grand Final
+                          Grand Final
                         </div>
                         <div className="flex flex-col justify-around flex-1 gap-4">
                           <BracketCard

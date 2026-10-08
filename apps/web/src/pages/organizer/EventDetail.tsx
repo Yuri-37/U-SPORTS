@@ -11,6 +11,7 @@ import {
   Ban,
   Pencil,
   FileText,
+  Lock,
 } from 'lucide-react'
 import {
   Button,
@@ -41,6 +42,7 @@ import {
   fetchParticipantTypes,
 } from '../../lib/participantLabels'
 import BracketView from '../../components/brackets/BracketView'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import EventPodiumStrip from '../../components/events/EventPodiumStrip'
 import { deriveFullEventStandings } from '../../lib/eventPlacements'
@@ -81,6 +83,7 @@ export default function OrganizerEventDetail() {
   const [crossoverPick, setCrossoverPick] = useState<Record<string, { a: string; b: string }>>({})
   const [savingCrossover, setSavingCrossover] = useState(false)
   const [participantLabels, setParticipantLabels] = useState<Record<string, string>>({})
+  const [matchSearch, setMatchSearch] = useState('')
   const [participantTypes, setParticipantTypes] = useState<Record<string, 'team' | 'athlete'>>({})
   const [finishOpen, setFinishOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -481,6 +484,21 @@ export default function OrganizerEventDetail() {
     (b) => b.bracket_type === 'rr_pool_a' || b.bracket_type === 'rr_pool_b',
   )
 
+  // Row clicks index into this same array, so the filter must feed both.
+  const matchLabel = (id: string | null | undefined) =>
+    id ? (participantLabels[id] ?? teams.find((t) => t.id === id)?.name ?? '') : 'TBD'
+  const roundOf = (bracketId: string | null | undefined) =>
+    brackets.find((b) => b.id === bracketId)?.round
+  const visibleMatches = matches.filter((m) =>
+    matchesSearch(
+      matchSearch,
+      matchLabel(m.participant_a_id),
+      matchLabel(m.participant_b_id),
+      m.status,
+      roundOf(m.bracket_id) != null ? `round ${roundOf(m.bracket_id)}` : '',
+    ),
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -592,7 +610,7 @@ export default function OrganizerEventDetail() {
       >
         {event.sport === 'table-tennis' && (event as any).table_tennis_format && (
           <Badge className="mt-2" variant="default" size="sm">
-            {(event as any).table_tennis_format === 'doubles' ? '🏓🏓 Doubles' : '🏓 Singles'}
+            {(event as any).table_tennis_format === 'doubles' ? 'Doubles' : 'Singles'}
           </Badge>
         )}
         {event.description ? (
@@ -636,7 +654,7 @@ export default function OrganizerEventDetail() {
                     onClick={() => setEditTTFormat(fmt)}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${editTTFormat === fmt ? 'bg-[var(--accent-default)] border-[var(--accent-default)] text-white' : 'bg-[var(--surface-elevated)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                   >
-                    {fmt === 'singles' ? '🏓 Singles (1 vs 1)' : '🏓🏓 Doubles (2 vs 2)'}
+                    {fmt === 'singles' ? 'Singles (1 vs 1)' : 'Doubles (2 vs 2)'}
                   </button>
                 ))}
               </div>
@@ -804,6 +822,14 @@ export default function OrganizerEventDetail() {
       )}
 
       {tab === 'matches' && (
+        <div className="space-y-4">
+        {matches.length > 4 && (
+          <SearchInput
+            value={matchSearch}
+            onChange={setMatchSearch}
+            placeholder="Team, round or status"
+          />
+        )}
         <Table
           columns={[
             { key: 'teams', label: 'Match' },
@@ -812,10 +838,10 @@ export default function OrganizerEventDetail() {
             { key: 'actions', label: '' },
           ]}
           onRowClick={(_, rowIndex) => {
-            const m = matches[rowIndex]
+            const m = visibleMatches[rowIndex]
             if (m) openMatchWorkspace(m)
           }}
-          data={matches.map((m) => {
+          data={visibleMatches.map((m) => {
             const bracket = brackets.find((b) => b.id === m.bracket_id)
             const labelA = m.participant_a_id
               ? (participantLabels[m.participant_a_id] ??
@@ -881,10 +907,11 @@ export default function OrganizerEventDetail() {
                     !isCoach &&
                     (lockedMatchIds.has(m.id) ? (
                       <span
-                        className="text-xs text-[var(--text-muted)] self-center"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] self-center"
                         title="Complete earlier matches in this round first"
                       >
-                        🔒 Earlier match first
+                        <Lock className="w-3 h-3" aria-hidden />
+                        Earlier match first
                       </span>
                     ) : (
                       <Button
@@ -922,8 +949,13 @@ export default function OrganizerEventDetail() {
               ),
             }
           })}
-          emptyMessage="No matches yet. Generate bracket to create matches."
+          emptyMessage={
+            matchSearch.trim()
+              ? 'No match matches your search.'
+              : 'No matches yet. Generate bracket to create matches.'
+          }
         />
+        </div>
       )}
 
       {tab === 'participants' && (

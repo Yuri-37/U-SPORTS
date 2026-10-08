@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
-import { getSportLabel, getSportIcon, formatDateTime } from '../../lib/utils'
+import { getSportLabel, formatDateTime } from '../../lib/utils'
+import SportIcon from '../../components/ui/SportIcon'
 
 function matchStatusLabel(status: string): string {
   switch (status) {
@@ -193,8 +194,8 @@ export default function GuestTeamDetail() {
       </Button>
 
       <Card className="flex items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-3xl">
-          {getSportIcon(team.sport as any)}
+        <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-white">
+          <SportIcon sport={team.sport} className="w-8 h-8" />
         </div>
         <div>
           <h1 className="font-bold text-xl">{team.name}</h1>

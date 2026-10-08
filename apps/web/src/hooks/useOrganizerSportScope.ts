@@ -54,9 +54,9 @@ export function useOrganizerSportScope() {
 
   const sportOptionsForForms = useMemo(() => {
     const base: { value: Sport; label: string }[] = [
-      { value: 'basketball', label: '🏀 Basketball' },
-      { value: 'volleyball', label: '🏐 Volleyball' },
-      { value: 'table-tennis', label: '🏓 Table Tennis' },
+      { value: 'basketball', label: 'Basketball' },
+      { value: 'volleyball', label: 'Volleyball' },
+      { value: 'table-tennis', label: 'Table Tennis' },
     ]
     const activeSet = new Set(activeSports)
     const inInstitution = base.filter((o) => activeSet.has(o.value))

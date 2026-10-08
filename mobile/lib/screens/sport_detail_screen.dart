@@ -64,7 +64,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
     return BrandPage.fixed(
       titleWidget: Row(
         children: [
-          Text(sportEmoji(widget.sport), style: const TextStyle(fontSize: 22)),
+          Icon(sportIcon(widget.sport), size: 22, color: Colors.white),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

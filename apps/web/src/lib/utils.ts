@@ -86,15 +86,6 @@ export function getSportLabel(sport: Sport): string {
   return labels[sport]
 }
 
-export function getSportIcon(sport: Sport): string {
-  const icons: Record<Sport, string> = {
-    basketball: '🏀',
-    volleyball: '🏐',
-    'table-tennis': '🏓',
-  }
-  return icons[sport]
-}
-
 export function getSportColor(sport: Sport): string {
   const colors: Record<Sport, string> = {
     basketball: '#FF8C00',

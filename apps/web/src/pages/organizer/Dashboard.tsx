@@ -8,9 +8,9 @@ import api from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
+import SportIcon from '../../components/ui/SportIcon'
 import {
   formatEnumLabel,
-  getSportIcon,
   getSportLabel,
   organizerEventStatusLabel,
   formatDateTime,
@@ -248,7 +248,7 @@ export default function OrganizerDashboard() {
                 >
                   <Card className="hover:border-[var(--accent-default)]/40 transition-colors h-full">
                     <div className="flex items-center gap-2 mb-1">
-                      <span>{getSportIcon(t.sport)}</span>
+                      <SportIcon sport={t.sport} />
                       <p className="font-semibold truncate">{t.name}</p>
                     </div>
                     <p className="text-xs text-[var(--text-muted)]">
@@ -430,7 +430,7 @@ export default function OrganizerDashboard() {
                   className="flex items-center gap-3 py-2 border-b border-[var(--border-subtle)] last:border-0 cursor-pointer hover:bg-[var(--surface-elevated)] -mx-2 px-2 rounded-lg"
                   onClick={() => navigate(`/organizer/events/${e.id}`)}
                 >
-                  <span className="text-lg">{getSportIcon(e.sport as any)}</span>
+                  <SportIcon sport={e.sport} className="w-5 h-5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{e.name}</p>
                     <p className="text-xs text-[var(--text-muted)]">{formatEnumLabel(e.format)}</p>

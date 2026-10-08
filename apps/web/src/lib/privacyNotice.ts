@@ -9,6 +9,11 @@
  *
  * Shared between PrivacyNoticeGate.tsx (blocking, must-accept) and the
  * read-only /privacy-notice route — one copy of the copy.
+ *
+ * What agreeing means is NOT a section here: it only makes sense next to the
+ * button you press, so the gate renders PRIVACY_CONSENT_LINE itself. On the
+ * read-only page (Settings → Privacy notice) there is no button, and the
+ * sentence read as an instruction to press something that wasn't there.
  */
 export const PRIVACY_NOTICE_SECTIONS: { heading: string; body: string }[] = [
   {
@@ -28,6 +33,10 @@ export const PRIVACY_NOTICE_SECTIONS: { heading: string; body: string }[] = [
     body: "Organizers/coaches assigned to your sport and platform administrators, to manage your team and events. Once an event is completed, its rosters and stats become visible to the public on U-Sports, the same way a printed results sheet would be — matching how completed events are already shown to anyone browsing without an account. We don't sell or share your data outside U-Sports.",
   },
   {
+    heading: 'Browsing without an account',
+    body: 'You can browse published rosters, schedules, results and rankings without signing in. We do not ask for or collect personal information from guests — there is no account, profile or notification token involved. Only your own device remembers small things such as dark mode, whether you have seen this notice, and banners you have dismissed; none of that is sent to us or linked to you.',
+  },
+  {
     heading: 'How long',
     body: 'For as long as your account exists. If you delete your account, your profile, roster memberships, season statistics and notifications are removed. Team results of events that already finished are kept as historical records of the competition, and a minimal note that the account was removed (the student ID and the date) stays in the audit log for accountability.',
   },
@@ -43,8 +52,12 @@ export const PRIVACY_NOTICE_SECTIONS: { heading: string; body: string }[] = [
     heading: 'Questions?',
     body: "Contact your sport's organizer or the U-Sports Super Admin (the platform administrator). For privacy matters concerning NU Dasmariñas systems in general, the school's Data Protection Officer is the right office.",
   },
-  {
-    heading: '',
-    body: 'By tapping "I Agree — Continue," you confirm you\'ve read this notice and agree to U-Sports collecting and using your information as described.',
-  },
 ]
+
+/** The guest bar's wording — the short version of "Browsing without an account". */
+export const GUEST_PRIVACY_SUMMARY =
+  'You are browsing as a guest. U-Sports shows published team rosters, schedules and results, and collects no personal information from guests — only your own device remembers settings such as dark mode.'
+
+/** Shown directly above the Agree button, nowhere else. */
+export const PRIVACY_CONSENT_LINE =
+  'By continuing, you confirm you have read this notice and agree to U-Sports collecting and using your information as described.'

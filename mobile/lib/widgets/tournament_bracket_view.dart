@@ -139,7 +139,7 @@ class TournamentBracketView extends StatelessWidget {
           if (trailingGrandFinal != null) ...[
             const _RoundBridge(leftMatchCount: 1, rightMatchCount: 1),
             _RoundColumn(
-              label: '🏆 Grand Final',
+              label: 'Grand Final',
               roundBrackets: [trailingGrandFinal],
               cellWidth: _cellWidth,
               participantLabels: participantLabels,

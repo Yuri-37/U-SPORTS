@@ -14,6 +14,9 @@ import {
   Download,
   AlertCircle,
   RefreshCw,
+  Medal,
+  SearchX,
+  AlertTriangle,
 } from 'lucide-react'
 
 import {
@@ -40,7 +43,8 @@ import { supabase } from '../../lib/supabase'
 
 import type { Team, Season } from '../../types'
 
-import { getSportIcon, getSportLabel, getInitials } from '../../lib/utils'
+import { getSportLabel, getInitials } from '../../lib/utils'
+import SportIcon from '../../components/ui/SportIcon'
 
 import { useAuthStore } from '../../stores/authStore'
 
@@ -1330,7 +1334,7 @@ export default function OrganizerTeams() {
         </div>
       ) : teams.length === 0 ? (
         <EmptyState
-          icon="🏅"
+          icon={<Medal className="w-10 h-10" aria-hidden />}
 
           title="No teams yet"
 
@@ -1425,7 +1429,7 @@ export default function OrganizerTeams() {
 
           {filteredTeams.length === 0 ? (
             <EmptyState
-              icon="🔍"
+              icon={<SearchX className="w-10 h-10" aria-hidden />}
 
               title="No matching teams"
 
@@ -1474,7 +1478,7 @@ export default function OrganizerTeams() {
                     <Card>
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="min-w-0 flex-1">
-                          <span className="text-xl">{getSportIcon(team.sport as any)}</span>
+                          <SportIcon sport={team.sport} className="w-5 h-5" />
 
                           <h3 className="font-bold mt-1 truncate">{team.name}</h3>
 
@@ -1943,8 +1947,12 @@ export default function OrganizerTeams() {
                     student_id: r.student_id || '—',
                     full_name: r.full_name || '—',
                     lineup: r.warning ? (
-                      <span title={r.warning} className="text-[var(--warning)]">
-                        {r.lineup ?? '—'} ⚠
+                      <span
+                        title={r.warning}
+                        className="inline-flex items-center gap-1 text-[var(--warning)]"
+                      >
+                        {r.lineup ?? '—'}
+                        <AlertTriangle className="w-3 h-3" aria-hidden />
                       </span>
                     ) : (
                       (r.lineup ?? '—')

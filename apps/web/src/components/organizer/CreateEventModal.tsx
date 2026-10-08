@@ -197,7 +197,7 @@ export function CreateEventModal({ open, onClose, onCreated }: CreateEventModalP
                   onClick={() => setForm((f) => ({ ...f, table_tennis_format: fmt }))}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${form.table_tennis_format === fmt ? 'bg-[var(--accent-default)] border-[var(--accent-default)] text-white' : 'bg-[var(--surface-elevated)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                 >
-                  {fmt === 'singles' ? '🏓 Singles (1 vs 1)' : '🏓🏓 Doubles (2 vs 2)'}
+                  {fmt === 'singles' ? 'Singles (1 vs 1)' : 'Doubles (2 vs 2)'}
                 </button>
               ))}
             </div>

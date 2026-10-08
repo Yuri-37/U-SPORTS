@@ -81,7 +81,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
                   children: [
                     _sportChip(context, '', 'All sports'),
                     for (final s in ['basketball', 'volleyball', 'table-tennis'])
-                      _sportChip(context, s, '${sportEmoji(s)} ${sportLabel(s)}'),
+                      _sportChip(context, s, sportLabel(s)),
                   ],
                 ),
               ),

@@ -63,6 +63,17 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SectionHeader(title: 'Privacy', padding: EdgeInsets.fromLTRB(4, 24, 4, 12)),
+            SheetGroup(
+              children: [
+                SheetTile(
+                  leading: const IconTile(icon: Icons.privacy_tip_outlined),
+                  title: 'Privacy notice',
+                  trailing: Icon(Icons.chevron_right_rounded, size: 20, color: LayoutTokens.mutedText(context)),
+                  onTap: () => context.push('/privacy-notice?readonly=true'),
+                ),
+              ],
+            ),
           ],
           // Signed-in users (athlete or coach) can change their own password.
           if (shell != SettingsShell.guest) ...[

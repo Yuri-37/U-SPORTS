@@ -344,7 +344,7 @@ class TeamDetailScreen extends ConsumerWidget {
     ];
 
     return SheetTile(
-      leading: IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport), size: 40),
+      leading: IconTile(icon: sportIcon(sport), color: sportTint(context, sport), size: 40),
       title: 'vs $opponent',
       subtitle: subtitleParts.join(' · '),
       onTap: eventId != null ? () => context.push('/events/$eventId') : null,

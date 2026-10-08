@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
-import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
+import { getSportLabel, getInitials } from '../../lib/utils'
+import SportIcon, { SportTag } from '../../components/ui/SportIcon'
 import { seasonStatHighlights } from '../../lib/leaderboardStats'
 
 export default function GuestAthleteProfile() {
@@ -109,7 +110,7 @@ export default function GuestAthleteProfile() {
         <div>
           <h1 className="font-bold text-xl">{athlete.profile?.full_name}</h1>
           <p className="text-sm text-[var(--text-muted)]">
-            {getSportIcon(athlete.sport as any)} {getSportLabel(athlete.sport as any)}
+            <SportTag sport={athlete.sport} />
           </p>
           <div className="flex gap-2 mt-2">
             <Badge size="sm">{athlete.position}</Badge>
@@ -130,7 +131,7 @@ export default function GuestAthleteProfile() {
                 onClick={() => navigate(`/guest/teams/${t.id}`)}
                 className="w-full flex items-center gap-2 text-sm text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-[var(--surface-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-default)]"
               >
-                <span>{getSportIcon(t.sport as any)}</span>
+                <SportIcon sport={t.sport} />
                 <span className="font-medium">{t.name}</span>
                 <span className="text-[var(--text-muted)]">· {getSportLabel(t.sport as any)}</span>
                 <span className="text-[var(--text-muted)] ml-auto" aria-hidden>

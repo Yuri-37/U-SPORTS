@@ -374,7 +374,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
           Text(fullName, textAlign: TextAlign.center, style: AppTheme.display(size: 21, color: Colors.white)),
           const SizedBox(height: 4),
           Text(
-            '${sportEmoji(widget.sport)}  ${sportLabel(widget.sport)}',
+            sportLabel(widget.sport),
             style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 13, fontWeight: FontWeight.w600),
           ),
           if (infoRows.isNotEmpty) ...[
@@ -429,7 +429,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
             const SheetMessage(icon: Icons.event_available_rounded, text: 'No matches scheduled yet.')
           else
             SheetGroup(children: [for (final m in _matches) _upcomingMatchRow(context, m)]),
-          // The 🏆/🥈 note only means something once there are rows to carry a
+          // The placement note only means something once there are rows to carry a
           // badge, so it stays hidden while the section is empty.
           SectionHeader(
             title: 'Match history',
@@ -439,7 +439,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
-                'Completed bracket games. 🏆/🥈 means your team placed in that event.',
+                'Completed bracket games. A Champion or Runner-up badge means your team placed in that event.',
                 style: TextStyle(fontSize: 12, color: LayoutTokens.mutedText(context)),
               ),
             ),
@@ -480,7 +480,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final sport = ev?['sport'] as String? ?? widget.sport;
     final isLive = m['status'] == 'live';
     return SheetTile(
-      leading: IconTile(emoji: sportEmoji(sport), color: isLive ? LayoutTokens.danger(context) : sportTint(context, sport)),
+      leading: IconTile(icon: sportIcon(sport), color: isLive ? LayoutTokens.danger(context) : sportTint(context, sport)),
       title: title,
       subtitle:
           'vs ${_opponentLabel(m)} · ${matchStatusLabel(m['status'] as String? ?? '')} · ${formatDateTime(m['scheduled_at'] as String?)}',
@@ -503,7 +503,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final evId = m['event_id'] as String?;
     final rank = evId != null ? _finishes[evId] : null;
     return SheetTile(
-      leading: IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport)),
+      leading: IconTile(icon: sportIcon(sport), color: sportTint(context, sport)),
       title: title,
       subtitle: 'vs ${_opponentLabel(m)} · ${formatDateTime(m['scheduled_at'] as String?)}',
       onTap: evId != null ? () => context.push('/events/$evId') : null,
@@ -556,7 +556,7 @@ class _TeamCard extends StatelessWidget {
           // Tapping the header opens the full team page (record, roster, matches) —
           // the same destination the leaderboard and event screens already link to.
           SheetTile(
-            leading: IconTile(emoji: sportEmoji(group.sport), color: tint),
+            leading: IconTile(icon: sportIcon(group.sport), color: tint),
             title: group.teamName,
             subtitle: sportLabel(group.sport),
             onTap: () => context.push('/teams/${group.teamId}'),
@@ -623,9 +623,20 @@ class _PlacementBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        isChampion ? '🏆 Champion' : '🥈 Runner-up',
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isChampion ? Icons.emoji_events_rounded : Icons.workspace_premium_rounded,
+            size: 11,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isChampion ? 'Champion' : 'Runner-up',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color),
+          ),
+        ],
       ),
     );
   }

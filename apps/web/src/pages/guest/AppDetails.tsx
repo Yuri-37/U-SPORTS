@@ -19,6 +19,7 @@ import {
   MonitorSmartphone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import SportIcon from '../../components/ui/SportIcon'
 import { Card, Button } from '../../components/ui'
 import { SectionLabel, SectionHeading } from '../../components/marketing/Section'
 import { APP_RELEASE, APP_PERMISSIONS } from '../../lib/appRelease'
@@ -104,13 +105,17 @@ const COACH_FEATURES: Feature[] = [
 ]
 
 const SPORTS = [
-  { icon: '🏀', name: 'Basketball', note: 'Per-quarter scoring and full player box scores.' },
   {
-    icon: '🏐',
+    sport: 'basketball',
+    name: 'Basketball',
+    note: 'Per-quarter scoring and full player box scores.',
+  },
+  {
+    sport: 'volleyball',
     name: 'Volleyball',
     note: 'Set-by-set scores; attack, block, ace, excellent set, excellent dig and receive.',
   },
-  { icon: '🏓', name: 'Table Tennis', note: 'Game-by-game scoring and singles rankings.' },
+  { sport: 'table-tennis', name: 'Table Tennis', note: 'Game-by-game scoring and singles rankings.' },
 ]
 
 // Captured from the release APK in guest mode, so they show team names rather
@@ -241,9 +246,10 @@ export default function AppDetails() {
         <div className="grid gap-6 sm:grid-cols-3 stagger">
           {SPORTS.map((s) => (
             <Card key={s.name} className="p-8 text-center">
-              <span className="text-4xl" aria-hidden="true">
-                {s.icon}
-              </span>
+              <SportIcon
+                sport={s.sport}
+                className="mx-auto h-10 w-10 text-[var(--accent-default)]"
+              />
               <h3 className="mt-4 font-semibold text-lg tracking-[-0.01em]">{s.name}</h3>
               <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">{s.note}</p>
             </Card>

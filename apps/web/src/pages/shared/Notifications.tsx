@@ -5,6 +5,7 @@ import PageHeader from '../../components/layout/PageHeader'
 import { useNotificationStore } from '../../stores/notificationStore'
 import { useAuthStore } from '../../stores/authStore'
 import { formatDateTime } from '../../lib/utils'
+import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 type Filter = 'all' | 'unread' | 'recent'
@@ -17,6 +18,7 @@ export default function NotificationsPage() {
   const { notifications, fetchNotifications, markRead, markAllRead, deleteNotification, clearAll } =
     useNotificationStore()
   const [filter, setFilter] = useState<Filter>('all')
+  const [search, setSearch] = useState('')
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [clearing, setClearing] = useState(false)
 
@@ -27,13 +29,14 @@ export default function NotificationsPage() {
   const unread = notifications.filter((n) => !n.read)
 
   const visible = useMemo(() => {
-    if (filter === 'unread') return notifications.filter((n) => !n.read)
+    let rows = notifications
+    if (filter === 'unread') rows = rows.filter((n) => !n.read)
     if (filter === 'recent') {
       const cutoff = Date.now() - RECENT_WINDOW_MS
-      return notifications.filter((n) => new Date(n.created_at).getTime() >= cutoff)
+      rows = rows.filter((n) => new Date(n.created_at).getTime() >= cutoff)
     }
-    return notifications
-  }, [notifications, filter])
+    return rows.filter((n) => matchesSearch(search, n.title, n.body))
+  }, [notifications, filter, search])
 
   const handleClearAll = async () => {
     if (!profile) return
@@ -89,6 +92,10 @@ export default function NotificationsPage() {
         onChange={(id) => setFilter(id as typeof filter)}
       />
 
+      {notifications.length > 0 && (
+        <SearchInput value={search} onChange={setSearch} placeholder="Search your notifications" />
+      )}
+
       {notifications.length === 0 ? (
         <EmptyState
           icon={<Bell className="w-10 h-10" />}
@@ -97,7 +104,7 @@ export default function NotificationsPage() {
         />
       ) : visible.length === 0 ? (
         <p className="text-center text-[var(--text-muted)] py-10">
-          No notifications match this filter.
+          No notifications match your filter or search.
         </p>
       ) : (
         <div className="space-y-2">

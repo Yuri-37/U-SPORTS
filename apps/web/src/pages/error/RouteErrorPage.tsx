@@ -1,5 +1,5 @@
 import { isRouteErrorResponse, useRouteError, Link } from 'react-router'
-import { Home, RefreshCw } from 'lucide-react'
+import { Home, RefreshCw, SearchX, TriangleAlert } from 'lucide-react'
 import { EmptyState, Button } from '../../components/ui'
 
 /**
@@ -14,7 +14,13 @@ export default function RouteErrorPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-6">
       <EmptyState
-        icon={notFound ? '🔍' : '⚠️'}
+        icon={
+          notFound ? (
+            <SearchX className="w-12 h-12" aria-hidden />
+          ) : (
+            <TriangleAlert className="w-12 h-12" aria-hidden />
+          )
+        }
         title={notFound ? 'Page not found' : 'Something went wrong'}
         description={
           notFound

@@ -17,6 +17,7 @@ import '../utils/sport_helpers.dart';
 import '../widgets/announcement_banner.dart';
 import '../widgets/double_back_exit.dart';
 import '../widgets/event_card.dart';
+import '../widgets/guest_privacy_notice.dart';
 import '../widgets/hub_live_match_sheet.dart';
 import '../widgets/institution_brand.dart';
 import '../widgets/institution_logo.dart';
@@ -143,6 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ref.invalidate(unreadNotificationsCountProvider);
         },
         children: [
+          if (role == 'guest') const GuestPrivacyNotice(),
           if (role == 'guest')
             _PrimaryBanner(
               icon: Icons.login_rounded,
@@ -196,7 +198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         return '${placementRankLabel(p.rank)}: $name';
                       }).join(' · ');
                       return SheetTile(
-                        leading: IconTile(emoji: sportEmoji(s.sport), color: sportTint(context, s.sport)),
+                        leading: IconTile(icon: sportIcon(s.sport), color: sportTint(context, s.sport)),
                         title: s.eventName,
                         subtitle: lines,
                         trailing: Icon(Icons.chevron_right_rounded, color: LayoutTokens.mutedText(context)),
@@ -328,7 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 6),
             child: Column(
               children: [
-                IconTile(emoji: sportEmoji(sport), color: sportTint(context, sport), size: 52),
+                IconTile(icon: sportIcon(sport), color: sportTint(context, sport), size: 52),
                 const SizedBox(height: 10),
                 Text(
                   sportLabel(sport),

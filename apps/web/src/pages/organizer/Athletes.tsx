@@ -8,7 +8,8 @@ import { toast } from '../../stores/toastStore'
 import PromoteYearLevelsButton from '../../components/organizer/PromoteYearLevelsButton'
 import api from '../../lib/api'
 import type { Athlete, Sport } from '../../types'
-import { getSportLabel, getSportIcon } from '../../lib/utils'
+import { getSportLabel } from '../../lib/utils'
+import { SportTag } from '../../components/ui/SportIcon'
 import { useAuthStore } from '../../stores/authStore'
 import { useOrganizerSportScope } from '../../hooks/useOrganizerSportScope'
 import { studentEmailZ } from '../../lib/validation/forms'
@@ -717,9 +718,7 @@ export default function OrganizerAthletes() {
             </div>
           ),
           sport: (
-            <span className="whitespace-nowrap">
-              {getSportIcon(a.sport as any)} {getSportLabel(a.sport as any)}
-            </span>
+            <SportTag sport={a.sport} className="whitespace-nowrap" />
           ),
           student_id: <code className="text-xs whitespace-nowrap">{a.student_id}</code>,
           year: <span className="text-sm whitespace-nowrap">{a.year_level}</span>,

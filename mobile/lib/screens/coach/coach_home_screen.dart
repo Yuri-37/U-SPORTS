@@ -101,7 +101,7 @@ class CoachHomeScreen extends ConsumerWidget {
       if (starters > 0) '$starters starting',
     ].join(' · ');
     return SheetTile(
-      leading: IconTile(emoji: sportEmoji(team.sport), color: sportTint(context, team.sport)),
+      leading: IconTile(icon: sportIcon(team.sport), color: sportTint(context, team.sport)),
       title: team.name,
       subtitle: subtitle,
       trailing: Icon(Icons.chevron_right_rounded, size: 20, color: LayoutTokens.mutedText(context)),
@@ -139,7 +139,7 @@ class CoachHomeScreen extends ConsumerWidget {
 
     return SheetTile(
       leading: IconTile(
-        emoji: sportEmoji(sport),
+        icon: sportIcon(sport),
         color: highlight ? LayoutTokens.danger(context) : sportTint(context, sport),
       ),
       title: 'vs $opponent',

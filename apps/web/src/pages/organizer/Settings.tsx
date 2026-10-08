@@ -2,7 +2,8 @@ import React from 'react'
 import { Card, Badge } from '../../components/ui'
 import PageHeader from '../../components/layout/PageHeader'
 import { useAuthStore } from '../../stores/authStore'
-import { getSportLabel, getSportIcon, getInitials } from '../../lib/utils'
+import { getSportLabel, getInitials } from '../../lib/utils'
+import SportIcon from '../../components/ui/SportIcon'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import ChangePasswordSection from '../../components/settings/ChangePasswordSection'
 import EditProfileSection from '../../components/settings/EditProfileSection'
@@ -44,7 +45,7 @@ export default function OrganizerSettings() {
                   key={s}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-elevated)] text-sm"
                 >
-                  <span>{getSportIcon(s as any)}</span>
+                  <SportIcon sport={s} />
                   <span>{getSportLabel(s as any)}</span>
                 </div>
               ))}

@@ -528,7 +528,9 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
-      {icon && <div className="text-5xl mb-4 opacity-50">{icon}</div>}
+      {icon && (
+        <div className="mb-4 flex justify-center text-[var(--text-muted)]">{icon}</div>
+      )}
       <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1.5">{title}</h3>
       {description && (
         <p className="text-sm text-[var(--text-muted)] max-w-sm mb-6">{description}</p>

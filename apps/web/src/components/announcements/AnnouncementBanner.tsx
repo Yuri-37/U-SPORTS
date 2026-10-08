@@ -27,7 +27,7 @@ function isFetchedBannerMode(
 
 function announcementHeading(a: Announcement): string {
   if (a.type === 'emergency') return a.title
-  if (a.type === 'reschedule') return `📅 Rescheduled: ${a.title}`
+  if (a.type === 'reschedule') return `Rescheduled: ${a.title}`
   return a.title
 }
 
