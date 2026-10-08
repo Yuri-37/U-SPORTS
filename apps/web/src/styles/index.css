@@ -22,6 +22,11 @@
   /* Dynamic school branding - overridden by JS from institution table */
   --school-primary: #002d62;
   --school-secondary: #ffd700;
+
+  /* Tells the browser which palette to draw its OWN controls in -- the open list
+     of a native <select>, scrollbars, the date picker. Without this a dark page
+     still got a white dropdown whose option text (inherited light) was invisible. */
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
@@ -37,6 +42,15 @@
   --success: #22c55e;
   --warning: #ffb800;
   --danger: #ff3355;
+  color-scheme: dark;
+}
+
+/* Belt and braces for the same problem: browsers that ignore color-scheme for the
+   dropdown list still get readable options. */
+select option,
+select optgroup {
+  background-color: var(--surface-card);
+  color: var(--text-primary);
 }
 
 * {
