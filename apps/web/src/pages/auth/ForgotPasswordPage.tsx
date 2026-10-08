@@ -4,12 +4,14 @@ import { Button, Input, Alert } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
+import { suggestSchoolEmail } from '../../lib/emailTypo'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
+  const [suggestion, setSuggestion] = useState<string | null>(null)
   const { institution } = useInstitutionStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,6 +21,13 @@ export default function ForgotPasswordPage() {
     try {
       const trimmed = email.trim()
       if (!trimmed) throw new Error('Enter your email address')
+      // A typo'd domain would "succeed" and send nothing -- stop and offer the fix.
+      const fixed = suggestSchoolEmail(trimmed)
+      if (fixed) {
+        setSuggestion(fixed)
+        return
+      }
+      setSuggestion(null)
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       })
@@ -54,6 +63,7 @@ export default function ForgotPasswordPage() {
               If an account exists for <strong>{email.trim()}</strong>, a password reset link has
               been sent. Check your inbox (and spam folder) — it may take a few minutes.
             </Alert>
+            <p className="text-xs text-[var(--text-muted)]">Only the newest reset email works: asking for another one cancels the link in any earlier email.</p>
             <a
               href="/auth/login"
               className="flex items-center justify-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -77,13 +87,35 @@ export default function ForgotPasswordPage() {
               </Alert>
             )}
 
+            {suggestion && (
+              <Alert type="warning" className="mb-4">
+                <span className="block">
+                  That email address looks mistyped. Did you mean{' '}
+                  <strong className="break-all">{suggestion}</strong>?
+                </span>
+                <button
+                  type="button"
+                  className="mt-2 underline font-semibold"
+                  onClick={() => {
+                    setEmail(suggestion)
+                    setSuggestion(null)
+                  }}
+                >
+                  Use {suggestion}
+                </button>
+              </Alert>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 label="Email"
                 type="email"
                 placeholder="yourname@nu-dasma.edu.ph"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setSuggestion(null)
+                }}
                 icon={<Mail className="w-4 h-4" />}
                 required
               />

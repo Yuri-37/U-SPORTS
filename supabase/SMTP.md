@@ -89,6 +89,10 @@ Every account created from the app (staff, athletes) now gets a **password the c
    <p>Follow this link to choose a password for your U-Sports account:</p>
    <p><a href="{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery">Choose my password</a></p>
    ```
+   **Why this matters (seen in production, 2026-10-08):** with the default template the link is `https://<project>.supabase.co/auth/v1/verify?token=...`, and Supabase redeems the token the moment anything opens that URL. NU's Microsoft 365 opens every link in incoming mail to scan it: a reset sent at 12:03:01 was redeemed at 12:03:53, before the person had even received it, so their own click always showed "invalid or expired". With the `token_hash` link above, opening the page does nothing; the token is only redeemed when a person presses **Continue** on our page.
+
+   Also raise **Authentication → Providers → Email → Email OTP Expiration** from the default 3600 seconds (1 hour) to `10800` (3 hours): school mail scanning can hold a message long enough for a 1-hour link to expire in the inbox.
+
 3. **Project Settings → Authentication → SMTP Settings:** custom SMTP (Resend) enabled, sender on the verified `usports.info` domain. The built-in mailer is for development only (a couple of messages per hour).
 4. **Render (API) environment:**
    - `WEB_URL=https://usports.info`

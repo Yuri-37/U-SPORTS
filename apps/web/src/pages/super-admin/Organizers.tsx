@@ -959,7 +959,7 @@ export default function SuperAdminOrganizers() {
               Reset email sent to{' '}
               <span className="font-semibold">{resetPasswordResult.name}</span>. They'll get a
               link to choose a new password. School mail filters sometimes hold new senders — if
-              it hasn't arrived in a few minutes, reset again with a temporary password instead.
+              it hasn't arrived in a few minutes, reset again with a temporary password instead. Only the newest reset email works: asking for another one cancels the link in any earlier email.
             </Alert>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setResetPasswordResult(null)}>

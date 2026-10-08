@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/layout_tokens.dart';
+import '../utils/email_typo.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/ui/brand_page.dart';
 
@@ -28,6 +29,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
       setState(() => _error = 'Enter your email address.');
+      return;
+    }
+    // A typo'd domain would "succeed" and send nothing -- stop and offer the fix.
+    final fixed = suggestSchoolEmail(email);
+    if (fixed != null) {
+      setState(() {
+        _error = 'That email address looks mistyped. Did you mean $fixed? It has been corrected below; tap Send reset link again.';
+        _emailCtrl.text = fixed;
+      });
       return;
     }
     setState(() {
@@ -70,7 +80,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   border: Border.all(color: LayoutTokens.success(context).withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  'If an account exists for ${_emailCtrl.text.trim()}, a password reset link has been sent. Check your inbox (and spam folder) — it may take a few minutes.',
+                  'If an account exists for ${_emailCtrl.text.trim()}, a password reset link has been sent. Check your inbox (and spam folder) — it may take a few minutes. Only the newest reset email works: asking for another one cancels the link in any earlier email.',
                   style: TextStyle(color: LayoutTokens.success(context), fontSize: 13.5, height: 1.5),
                 ),
               ),

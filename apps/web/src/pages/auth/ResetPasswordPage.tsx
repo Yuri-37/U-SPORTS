@@ -175,7 +175,8 @@ export default function ResetPasswordPage() {
             <a href="/auth/forgot-password" className="underline">
               forgot password
             </a>{' '}
-            page.
+            page. Each link works once, and only the newest email's link works: a later
+            request cancels the earlier ones.
           </Alert>
         ) : (
           <>
