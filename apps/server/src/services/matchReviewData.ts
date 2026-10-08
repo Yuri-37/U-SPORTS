@@ -1,4 +1,5 @@
 import supabase from '../utils/supabase'
+import { getActiveSlots } from '../utils/sportConfig'
 
 /** Resolve a display name for a match participant — a team name, or an individual athlete's profile name. */
 export async function resolveParticipantDisplayName(participantId: string | null): Promise<string> {
@@ -49,6 +50,8 @@ async function rosterAthletesForMatchParticipant(
   Array<{
     athlete_id: string
     athlete: { id: string; profile: { full_name: string } | null } | null
+    /** The TEAM's lineup slot (team_members.lineup_slot), null for the bench. */
+    lineup_slot: number | null
   }>
 > {
   if (!participantId) return []
@@ -74,6 +77,7 @@ async function rosterAthletesForMatchParticipant(
       .map((r) => ({
         athlete_id: r.athlete_id as string,
         athlete: normalizeRosterAthlete(r.athlete),
+        lineup_slot: r.lineup_slot == null ? null : Number(r.lineup_slot),
       }))
   }
 
@@ -88,6 +92,7 @@ async function rosterAthletesForMatchParticipant(
       {
         athlete_id: solo.id,
         athlete: normalizeRosterAthlete(solo),
+        lineup_slot: null,
       },
     ]
   }
@@ -103,18 +108,12 @@ function ttSlotsPerSide(ttFormat: string | null | undefined): number {
  * Table tennis match review should list only active competitors (1/side singles, 2/side doubles),
  * not full squads. Prefer persisted `matches.active_lineup`; fallback to first roster slots by `lineup_slot`.
  */
-function filterTableTennisRosterSide(
-  roster: Array<{
-    athlete_id: string
-    athlete: { id: string; profile: { full_name: string } | null } | null
-  }>,
+function filterTableTennisRosterSide<T extends { athlete_id: string }>(
+  roster: T[],
   side: 'a' | 'b',
   activeLineup: Record<string, unknown> | null | undefined,
   ttFormat: string | null | undefined,
-): Array<{
-  athlete_id: string
-  athlete: { id: string; profile: { full_name: string } | null } | null
-}> {
+): T[] {
   const max = ttSlotsPerSide(ttFormat)
   const key = side === 'a' ? 'a' : 'b'
   const raw = activeLineup?.[key]
@@ -134,6 +133,40 @@ function filterTableTennisRosterSide(
   }
 
   return roster.slice(0, max)
+}
+
+/**
+ * Who is playing right now on one side, in court order.
+ *
+ * The match's own lineup (matches.active_lineup) is the truth: it is a snapshot
+ * of the team lineup taken at kick-off and then changed only by the scorer's
+ * substitutions. The team's lineup_slot is only the fallback for a match with
+ * no snapshot yet (not started, or older data), where the first slots count.
+ * Reading lineup_slot alone -- as this used to for basketball and volleyball --
+ * is why a substitution never showed on the public roster.
+ */
+function onCourtAthleteIds(
+  roster: Array<{ athlete_id: string; lineup_slot: number | null }>,
+  side: 'a' | 'b',
+  activeLineup: Record<string, unknown> | null | undefined,
+  activeSlots: number,
+): string[] {
+  const raw = activeLineup?.[side]
+  if (Array.isArray(raw)) {
+    const ids = (raw as unknown[]).filter((id): id is string => typeof id === 'string' && !!id)
+    if (ids.length > 0) return ids
+  }
+  return roster
+    .filter((r) => r.lineup_slot != null)
+    .sort((a, b) => Number(a.lineup_slot) - Number(b.lineup_slot))
+    .slice(0, activeSlots)
+    .map((r) => r.athlete_id)
+}
+
+/** True when a stats object records anything at all. */
+function hasAnyStat(stats: unknown): boolean {
+  if (!stats || typeof stats !== 'object') return false
+  return Object.values(stats as Record<string, unknown>).some((v) => Number(v) > 0)
 }
 
 type ReviewPlayerTeamMeta = {
@@ -385,6 +418,28 @@ export async function getMatchReviewData(matchId: string): Promise<{
     ])
   }
 
+  // Who is on court per side. Table tennis already lists only its active
+  // competitors, so everyone it lists is on court.
+  const activeSlots = getActiveSlots(sport, ttFormatRaw)
+  const onCourtA = new Set(
+    sport === 'table-tennis'
+      ? rosterForA.map((r) => r.athlete_id)
+      : onCourtAthleteIds(rosterA, 'a', activeLineupRaw, activeSlots),
+  )
+  const onCourtB = new Set(
+    sport === 'table-tennis'
+      ? rosterForB.map((r) => r.athlete_id)
+      : onCourtAthleteIds(rosterB, 'b', activeLineupRaw, activeSlots),
+  )
+  // On-court players first (stable within each group, so lineup order is kept),
+  // then the bench in the order the team lists it.
+  const onCourtFirst = <T extends { athlete_id: string }>(rows: T[], set: Set<string>): T[] => [
+    ...rows.filter((r) => set.has(r.athlete_id)),
+    ...rows.filter((r) => !set.has(r.athlete_id)),
+  ]
+  rosterForA = onCourtFirst(rosterForA, onCourtA)
+  rosterForB = onCourtFirst(rosterForB, onCourtB)
+
   const statsByAthlete = new Map(
     (playerStatsRes.data ?? []).map((ps) => [(ps as { athlete_id: string }).athlete_id, ps]),
   )
@@ -401,12 +456,14 @@ export async function getMatchReviewData(matchId: string): Promise<{
       team_id: participantIdForSide,
       team_name: teamName,
     }
+    const onCourt = side === 'a' ? onCourtA : onCourtB
     for (const row of roster) {
       const existing = statsByAthlete.get(row.athlete_id)
       if (existing) {
         mergedPlayerStats.push({
           ...(existing as object),
           ...tm,
+          on_court: onCourt.has(row.athlete_id),
         })
         statsByAthlete.delete(row.athlete_id)
       } else {
@@ -417,6 +474,7 @@ export async function getMatchReviewData(matchId: string): Promise<{
           stats: {},
           athlete: row.athlete,
           ...tm,
+          on_court: onCourt.has(row.athlete_id),
         })
       }
     }
@@ -432,7 +490,17 @@ export async function getMatchReviewData(matchId: string): Promise<{
   const remainderMeta = await reviewTeamMetaByAthleteId(remainderIds, pidA, pidB, nameA, nameB)
   for (const remainder of remainderRows) {
     const athleteId = (remainder as { athlete_id: string }).athlete_id
-    if (sport === 'table-tennis' && ttAllowedAthleteIds && !ttAllowedAthleteIds.has(athleteId)) {
+    // Table tennis lists only its active competitors, so a bench player's empty
+    // row is left out -- but a player who was substituted out MID-MATCH has
+    // stats on the board and must stay. This used to skip every athlete not in
+    // the final lineup, so a substitution erased the outgoing player's points
+    // from the stats table, the review screen and the PDF score sheet.
+    if (
+      sport === 'table-tennis' &&
+      ttAllowedAthleteIds &&
+      !ttAllowedAthleteIds.has(athleteId) &&
+      !hasAnyStat((remainder as { stats?: unknown }).stats)
+    ) {
       continue
     }
     const sideInfo = remainderMeta.get(athleteId)
@@ -441,6 +509,7 @@ export async function getMatchReviewData(matchId: string): Promise<{
       participant_side: sideInfo?.participant_side ?? null,
       team_id: sideInfo?.team_id ?? null,
       team_name: sideInfo?.team_name ?? 'Team',
+      on_court: false,
     })
   }
 

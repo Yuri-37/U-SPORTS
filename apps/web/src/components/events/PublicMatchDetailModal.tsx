@@ -26,6 +26,7 @@ type RosterPayload = {
     team_id?: string | null
     team_name?: string | null
     participant_side?: 'a' | 'b' | null
+    on_court?: boolean
     stats: Record<string, number>
   }>
 }
@@ -51,31 +52,53 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
       return
     }
     let cancelled = false
-    setLoading(true)
-    setError('')
-    void api
-      .get<MatchStatePayload>(`/scoring/${matchId}/state`)
-      .then((res) => {
-        if (!cancelled) setPayload(res.data)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Could not load match details.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    // Independent request/failure from /state — a missing roster shouldn't
-    // block the score view above it from rendering.
-    void api
-      .get<RosterPayload>(`/scoring/${matchId}/roster`)
-      .then((res) => {
-        if (!cancelled) setRoster(res.data)
-      })
-      .catch(() => {
-        if (!cancelled) setRoster(null)
-      })
+    let timer: ReturnType<typeof setInterval> | null = null
+    // `quiet` refreshes keep what is on screen if one request fails, instead of
+    // flipping a live sheet to an error between two good updates.
+    const load = (quiet: boolean) => {
+      if (!quiet) {
+        setLoading(true)
+        setError('')
+      }
+      void api
+        .get<MatchStatePayload>(`/scoring/${matchId}/state`)
+        .then((res) => {
+          if (cancelled) return
+          setPayload(res.data)
+          // A match that is no longer live stops refreshing itself.
+          if (res.data?.match?.status !== 'live' && timer) {
+            clearInterval(timer)
+            timer = null
+          }
+        })
+        .catch(() => {
+          if (!cancelled && !quiet) setError('Could not load match details.')
+        })
+        .finally(() => {
+          if (!cancelled && !quiet) setLoading(false)
+        })
+      // Independent request/failure from /state — a missing roster shouldn't
+      // block the score view above it from rendering.
+      void api
+        .get<RosterPayload>(`/scoring/${matchId}/roster`)
+        .then((res) => {
+          if (!cancelled) setRoster(res.data)
+        })
+        .catch(() => {
+          if (!cancelled && !quiet) setRoster(null)
+        })
+    }
+    load(false)
+    // Substitutions change who is on court mid-game, so a live sheet re-reads
+    // both every few seconds (paused while the tab is hidden). It used to
+    // fetch once on open and never again.
+    timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      load(true)
+    }, 5000)
     return () => {
       cancelled = true
+      if (timer) clearInterval(timer)
     }
   }, [open, matchId])
 

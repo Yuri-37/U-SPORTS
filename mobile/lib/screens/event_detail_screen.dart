@@ -287,7 +287,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         ],
                         const SizedBox(height: 12),
                         TextButton.icon(
-                          onPressed: () => ref.invalidate(scoringStateProvider(matchId)),
+                          onPressed: () {
+                            ref.invalidate(scoringStateProvider(matchId));
+                            ref.invalidate(matchRosterProvider(matchId));
+                          },
                           icon: const Icon(Icons.refresh, size: 16),
                           label: const Text('Refresh', style: TextStyle(fontSize: 13)),
                         ),

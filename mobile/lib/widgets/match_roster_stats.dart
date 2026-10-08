@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -73,6 +75,20 @@ class MatchRosterStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The roster is fetched once, so on its own it never shows a substitution.
+    // The live state stream already carries the match row, so re-read the
+    // roster whenever the lineup or the status in it changes.
+    ref.listen<AsyncValue<Map<String, dynamic>>>(scoringStateProvider(matchId), (prev, next) {
+      String signature(AsyncValue<Map<String, dynamic>> v) {
+        final m = v.valueOrNull?['match'];
+        if (m is! Map) return '';
+        return '${m['status']}|${jsonEncode(m['active_lineup'])}';
+      }
+
+      if (signature(prev ?? const AsyncLoading()) != signature(next) && signature(next).isNotEmpty) {
+        ref.invalidate(matchRosterProvider(matchId));
+      }
+    });
     final async = ref.watch(matchRosterProvider(matchId));
     return async.when(
       loading: () => const SizedBox.shrink(),
@@ -152,16 +168,43 @@ class _RosterList extends StatelessWidget {
           children: [
             Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: LayoutTokens.mutedText(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 6),
-            ...players.map((p) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(_playerName(p), style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface)),
-                )),
+            ..._groupedPlayers(context, players),
           ],
         ),
       );
     }
 
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [column(nameA, sideA), const SizedBox(width: 16), column(nameB, sideB)]);
+  }
+
+  /// One side's players: on court first, then a muted bench. With nobody on the
+  /// bench (table tennis lists only its active competitors) the group headings
+  /// would be noise, so it is one plain list. A substitution moves a name from
+  /// one group to the other.
+  List<Widget> _groupedPlayers(BuildContext context, List<Map<String, dynamic>> players) {
+    final onCourt = players.where((p) => p['on_court'] == true).toList();
+    final bench = players.where((p) => p['on_court'] != true).toList();
+    final grouped = onCourt.isNotEmpty && bench.isNotEmpty;
+    final primary = Theme.of(context).colorScheme.onSurface;
+    final muted = LayoutTokens.mutedText(context);
+
+    Widget name(Map<String, dynamic> p, Color color) => Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(_playerName(p), style: TextStyle(fontSize: 13, color: color)),
+        );
+    Widget heading(String text, Color color) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        );
+
+    if (!grouped) return [for (final p in players) name(p, primary)];
+    return [
+      heading('On court (${onCourt.length})', AppTheme.brandInk(context)),
+      for (final p in onCourt) name(p, primary),
+      const SizedBox(height: 6),
+      heading('Bench (${bench.length})', muted),
+      for (final p in bench) name(p, muted),
+    ];
   }
 }
 

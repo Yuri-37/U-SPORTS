@@ -43,6 +43,28 @@ class RosterEditResult {
 /// Every write goes through the API, which re-checks that this coach may touch
 /// this sport and enforces the jersey/lineup rules — the sheet only reports
 /// what comes back.
+/// How many players a team may have active at once -- mirrors the API's
+/// getMaxActiveSlots (apps/server/src/utils/sportConfig.ts). Table tennis is 2
+/// because a team may stage singles or doubles.
+int activeSlotCap(String sport) {
+  switch (sport) {
+    case 'volleyball':
+      return 6;
+    case 'table-tennis':
+      return 2;
+    default:
+      return 5;
+  }
+}
+
+/// The lowest lineup slot nobody holds, or null when every slot is taken.
+int? firstFreeLineupSlot(String sport, Set<int> taken) {
+  for (var slot = 1; slot <= activeSlotCap(sport); slot++) {
+    if (!taken.contains(slot)) return slot;
+  }
+  return null;
+}
+
 class CoachRosterEditSheet extends ConsumerStatefulWidget {
   const CoachRosterEditSheet({
     super.key,
@@ -54,6 +76,7 @@ class CoachRosterEditSheet extends ConsumerStatefulWidget {
     required this.jerseyNumber,
     required this.position,
     required this.isStarting,
+    this.takenSlots = const {},
   });
 
   final String teamId;
@@ -64,6 +87,9 @@ class CoachRosterEditSheet extends ConsumerStatefulWidget {
   final String? jerseyNumber;
   final String? position;
   final bool isStarting;
+
+  /// Lineup slots other players already hold, so a promotion can take a free one.
+  final Set<int> takenSlots;
 
   @override
   ConsumerState<CoachRosterEditSheet> createState() => _CoachRosterEditSheetState();
@@ -105,15 +131,25 @@ class _CoachRosterEditSheetState extends ConsumerState<CoachRosterEditSheet> {
       }
 
       if (_starting != widget.isStarting) {
-        // A null slot benches the player. For a promotion the server decides
-        // whether the resulting lineup is legal for the sport, so an
-        // over-full lineup comes back as an error rather than being capped
-        // silently here.
+        // A null slot benches the player. A promotion needs a slot nobody
+        // holds: this used to always send slot 1, which the API refuses
+        // whenever another starter has it -- so a coach could bench a starter
+        // but never put a replacement in.
+        int? slot;
+        if (_starting) {
+          slot = firstFreeLineupSlot(widget.sport, widget.takenSlots);
+          if (slot == null) {
+            throw ApiException(
+              400,
+              'The starting lineup is full. Move a starter to the bench first.',
+            );
+          }
+        }
         await api.patchJson('/teams/${widget.teamId}/lineup', body: {
           'slots': [
             {
               'member_id': widget.membershipId,
-              'lineup_slot': _starting ? 1 : null,
+              'lineup_slot': slot,
             }
           ],
         });

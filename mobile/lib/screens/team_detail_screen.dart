@@ -25,6 +25,7 @@ Future<void> _openRosterEdit(
   String teamId,
   String sport,
   _RosterEntry player,
+  Set<int> takenSlots,
 ) async {
   final result = await showModalBottomSheet<RosterEditResult>(
     context: context,
@@ -38,6 +39,7 @@ Future<void> _openRosterEdit(
       jerseyNumber: player.jerseyNumber,
       position: player.position,
       isStarting: player.lineupSlot != null,
+      takenSlots: takenSlots,
     ),
   );
   if (result?.changed ?? false) {
@@ -309,7 +311,17 @@ class TeamDetailScreen extends ConsumerWidget {
             IconButton(
               tooltip: 'Edit jersey, position and lineup',
               icon: const Icon(Icons.edit_outlined, size: 18),
-              onPressed: () => _openRosterEdit(context, ref, teamId, team.sport, p),
+              onPressed: () => _openRosterEdit(
+                context,
+                ref,
+                teamId,
+                team.sport,
+                p,
+                {
+                  for (final r in team.roster)
+                    if (r.lineupSlot != null && r.athleteId != p.athleteId) r.lineupSlot!,
+                },
+              ),
             ),
           ],
         ],

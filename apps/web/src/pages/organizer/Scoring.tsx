@@ -227,6 +227,20 @@ export default function OrganizerScoring() {
   const [activeLineupA, setActiveLineupA] = useState<string[]>([])
   const [activeLineupB, setActiveLineupB] = useState<string[]>([])
 
+  // A player who is no longer on court must not stay selected. After a sub the
+  // outgoing player's pill disappears but the selection used to survive, so the
+  // stat buttons stayed enabled and the next stat was logged against the bench.
+  useEffect(() => {
+    if (activeLineupA.length > 0 && selectedPlayerA && !activeLineupA.includes(selectedPlayerA)) {
+      setSelectedPlayerA('')
+    }
+  }, [activeLineupA, selectedPlayerA])
+  useEffect(() => {
+    if (activeLineupB.length > 0 && selectedPlayerB && !activeLineupB.includes(selectedPlayerB)) {
+      setSelectedPlayerB('')
+    }
+  }, [activeLineupB, selectedPlayerB])
+
   // Sub modal state
   const [subModal, setSubModal] = useState<{ side: 'a' | 'b'; outId: string } | null>(null)
   const [subInId, setSubInId] = useState('')
@@ -759,6 +773,12 @@ export default function OrganizerScoring() {
         {activeMembersFiltered.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-xs text-[var(--text-muted)]">Choose a player, then tap a stat</p>
+            {activeIds.length > 0 && (
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Who is on court is set here with Sub. Editing the team lineup on the Teams page
+                does not change a match in progress.
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5 justify-center">
               {activeMembersFiltered.map((m) => {
                 const aid = m.athlete!.id

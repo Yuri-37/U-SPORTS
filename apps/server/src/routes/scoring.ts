@@ -394,6 +394,28 @@ router.post(
         return res.status(400).json({ error: 'Athlete is not on this participant’s roster' })
       }
 
+      // Being on the team is not enough: the match has its own lineup, and a
+      // player who was substituted out must not keep collecting stats. A client
+      // that still has the benched player selected (or a stale tab) used to be
+      // able to log against them. Only enforced once the match has a lineup, so
+      // matches started before lineups existed behave as before.
+      if (body.athleteId) {
+        const { data: lineupRow } = await supabase
+          .from('matches')
+          .select('active_lineup')
+          .eq('id', matchId)
+          .maybeSingle()
+        const lineup = (lineupRow as { active_lineup?: Record<string, unknown> | null } | null)
+          ?.active_lineup
+        const sideKey = body.participantId === match.participant_a_id ? 'a' : 'b'
+        const sideIds = lineup && Array.isArray(lineup[sideKey]) ? (lineup[sideKey] as string[]) : []
+        if (sideIds.length > 0 && !sideIds.includes(body.athleteId)) {
+          return res.status(400).json({
+            error: 'That player is not on court. Substitute them in before recording stats.',
+          })
+        }
+      }
+
       const effect = pointEffect(sport, body.actionType)
       // Every action needs the lock, not only the ones that move the score. The
       // check used to be `effect.scores &&`, so rebounds, assists, steals,
@@ -1300,6 +1322,7 @@ router.get('/:matchId/roster', async (req, res) => {
       team_id: string | null
       team_name: string
       participant_side: 'a' | 'b' | null
+      on_court?: boolean
       stats: Record<string, unknown>
     }>
   ).map((p) => ({
@@ -1308,6 +1331,9 @@ router.get('/:matchId/roster', async (req, res) => {
     team_id: p.team_id,
     team_name: p.team_name,
     participant_side: p.participant_side,
+    // Whether the player is currently on court (from the match's own lineup, so
+    // a substitution moves them). The raw lineup itself is not passed through.
+    on_court: p.on_court === true,
     stats: isCompleted ? p.stats : {},
   }))
 
