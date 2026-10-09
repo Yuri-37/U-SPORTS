@@ -122,6 +122,8 @@ export default function SuperAdminSeasons() {
     unfinishedMatches?: number
     runningEvents?: number
     liveMatches?: number
+    /** Name of the active season that activating this one would complete. */
+    replacing?: string
   } | null>(null)
   const [transitionBusy, setTransitionBusy] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
@@ -252,6 +254,31 @@ export default function SuperAdminSeasons() {
     }
   }
 
+  // Only one season is active at a time, so activating one completes the current
+  // one. If that season still has running events the dialog has to say so.
+  const openActivateConfirm = async (id: string, name: string) => {
+    const current = seasons.find((s) => s.status === 'active' && s.id !== id)
+    if (!current) {
+      setTransitionConfirm({ id, name, nextStatus: 'active' })
+      return
+    }
+    try {
+      const res = await api.get<{ runningEvents?: number; liveMatches?: number }>(
+        `/admin/seasons/${current.id}/unfinished-matches`,
+      )
+      setTransitionConfirm({
+        id,
+        name,
+        nextStatus: 'active',
+        replacing: current.name,
+        runningEvents: res.data.runningEvents ?? 0,
+        liveMatches: res.data.liveMatches ?? 0,
+      })
+    } catch {
+      setTransitionConfirm({ id, name, nextStatus: 'active', replacing: current.name })
+    }
+  }
+
   const openCompleteConfirm = async (id: string, name: string) => {
     // Check for unfinished matches before showing the confirm dialog
     try {
@@ -279,7 +306,8 @@ export default function SuperAdminSeasons() {
         status: transitionConfirm.nextStatus,
         // The dialog has already told the admin that running events are finished
         // along with the season; this is their yes.
-        ...(transitionConfirm.nextStatus === 'completed' && (transitionConfirm.runningEvents ?? 0) > 0
+        ...((transitionConfirm.nextStatus === 'completed' || transitionConfirm.nextStatus === 'active') &&
+        (transitionConfirm.runningEvents ?? 0) > 0
           ? { finish_events: true }
           : {}),
       })
@@ -320,7 +348,7 @@ export default function SuperAdminSeasons() {
 
   const transitionDescription = (next: string) => {
     if (next === 'active')
-      return 'This sets the season to active. Other active seasons stay active, so more than one season can run at the same time. Continue?'
+      return 'This sets the season to active. Only one season is active at a time, so the season that is active now is completed. Continue?'
     if (next === 'completed')
       return 'Mark this season as completed? This action closes the season — events and rankings will be locked.'
     if (next === 'archived')
@@ -400,7 +428,7 @@ export default function SuperAdminSeasons() {
                       size="sm"
                       icon={<Play className="w-3 h-3" />}
                       onClick={() =>
-                        setTransitionConfirm({ id: s.id, name: s.name, nextStatus: 'active' })
+                        void openActivateConfirm(s.id, s.name)
                       }
                     >
                       Activate
@@ -472,6 +500,24 @@ export default function SuperAdminSeasons() {
                       : 'their '}
                     unplayed matches. If a game is still being scored, keep the season active
                     until it is done.
+                  </span>
+                </Alert>
+              )}
+            {transitionConfirm.nextStatus === 'active' &&
+              (transitionConfirm.runningEvents ?? 0) > 0 && (
+                <Alert type="danger">
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+                    {transitionConfirm.replacing} has {transitionConfirm.runningEvents} running{' '}
+                    {transitionConfirm.runningEvents === 1 ? 'event' : 'events'}
+                  </span>
+                  <span className="block mt-1 text-sm">
+                    Activating this season completes {transitionConfirm.replacing}, which also
+                    finishes {transitionConfirm.runningEvents === 1 ? 'that event' : 'those events'}
+                    {(transitionConfirm.liveMatches ?? 0) > 0
+                      ? ` and cancels ${transitionConfirm.liveMatches} live match${transitionConfirm.liveMatches === 1 ? '' : 'es'}`
+                      : ''}
+                    . If a game is still being scored, finish it first.
                   </span>
                 </Alert>
               )}

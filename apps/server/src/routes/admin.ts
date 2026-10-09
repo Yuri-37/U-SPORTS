@@ -982,6 +982,47 @@ router.patch('/seasons/:id', requireAuth, requireRole('Admin'), async (req: Auth
   }
 })
 
+/** Events of a season that are running right now. */
+async function runningEventsOf(seasonId: string): Promise<Array<{ id: string; name: string }>> {
+  const { data } = await supabase
+    .from('events')
+    .select('id, name')
+    .eq('season_id', seasonId)
+    .eq('status', 'in_progress')
+  return (data ?? []) as Array<{ id: string; name: string }>
+}
+
+function describeRunning(events: Array<{ name: string }>): string {
+  const names = events.slice(0, 3).map((e) => e.name).join(', ')
+  const more = events.length > 3 ? ` and ${events.length - 3} more` : ''
+  return `${events.length} running event${events.length === 1 ? '' : 's'} (${names}${more})`
+}
+
+/**
+ * Finish a season's running events together with the season: each event is
+ * completed and its live and unplayed matches are cancelled, so nothing is left
+ * running (or live) inside a completed season.
+ */
+async function settleRunningEvents(
+  events: Array<{ id: string; name: string }>,
+  actorId: string,
+): Promise<{ finished: number; matchesClosed: number }> {
+  let matchesClosed = 0
+  for (const ev of events) {
+    const closed = await closeOpenMatches(ev.id)
+    matchesClosed += closed.length
+    await supabase.from('events').update({ status: 'completed' }).eq('id', ev.id)
+    await supabase.from('audit_logs').insert({
+      actor_id: actorId,
+      action: 'event_status_changed',
+      entity_type: 'event',
+      entity_id: ev.id,
+      details: { from: 'in_progress', to: 'completed', via: 'season_completed', matches_closed: closed.length },
+    })
+  }
+  return { finished: events.length, matchesClosed }
+}
+
 router.patch(
   '/seasons/:id/status',
   requireAuth,
@@ -990,49 +1031,67 @@ router.patch(
     const { status, finish_events } = z
       .object({
         status: z.enum(['draft', 'active', 'completed', 'archived']),
-        // The admin's explicit yes to "also finish this season's running events".
+        // The admin's explicit yes to "also finish the running events".
         finish_events: z.boolean().optional(),
       })
       .parse(req.body)
 
-    // More than one season may be active at once (for example the academic year
-    // and a short event week running side by side). Activating one used to
-    // complete every other active season silently, which left that season's
-    // events running inside a "completed" season. Nothing is auto-completed now.
-
     let finishedEvents = 0
     let closedMatches = 0
+
     if (status === 'completed') {
-      const { data: running } = await supabase
-        .from('events')
-        .select('id, name')
-        .eq('season_id', req.params.id)
-        .eq('status', 'in_progress')
-      const runningEvents = running ?? []
-      if (runningEvents.length > 0) {
+      // A season cannot be completed under its own running events.
+      const running = await runningEventsOf(req.params.id as string)
+      if (running.length > 0) {
         if (finish_events !== true) {
-          const names = runningEvents.slice(0, 3).map((e) => e.name).join(', ')
-          const more = runningEvents.length > 3 ? ` and ${runningEvents.length - 3} more` : ''
           return res.status(409).json({
-            error: `This season still has ${runningEvents.length} running event${runningEvents.length === 1 ? '' : 's'} (${names}${more}). Finish them first, or confirm to finish them together with the season.`,
-            runningEvents: runningEvents.length,
+            error: `This season still has ${describeRunning(running)}. Finish them first, or confirm to finish them together with the season.`,
+            runningEvents: running.length,
           })
         }
-        // Confirmed: settle each event together with the season, so nothing is
-        // left running (or live) inside a completed season.
-        for (const ev of runningEvents) {
-          const closed = await closeOpenMatches(ev.id as string)
-          closedMatches += closed.length
-          await supabase.from('events').update({ status: 'completed' }).eq('id', ev.id)
-          await supabase.from('audit_logs').insert({
-            actor_id: req.user!.id,
-            action: 'event_status_changed',
-            entity_type: 'event',
-            entity_id: ev.id,
-            details: { from: 'in_progress', to: 'completed', via: 'season_completed', matches_closed: closed.length },
-          })
+        const settled = await settleRunningEvents(running, req.user!.id)
+        finishedEvents += settled.finished
+        closedMatches += settled.matchesClosed
+      }
+    }
+
+    // Only one season is active at a time: activating one completes the current
+    // one. That used to happen silently, which left the old season's events
+    // running inside a "completed" season; now it is refused while the current
+    // season still has running events, unless the admin confirms finishing them.
+    if (status === 'active') {
+      const { data: others } = await supabase
+        .from('seasons')
+        .select('id, name')
+        .eq('status', 'active')
+        .neq('id', req.params.id)
+      const toComplete = (others ?? []) as Array<{ id: string; name: string }>
+      const runningBySeason = await Promise.all(
+        toComplete.map(async (o) => ({ season: o, running: await runningEventsOf(o.id) })),
+      )
+      const blocking = runningBySeason.filter((x) => x.running.length > 0)
+      if (blocking.length > 0 && finish_events !== true) {
+        const first = blocking[0]
+        return res.status(409).json({
+          error: `${first.season.name} is the active season and still has ${describeRunning(first.running)}. Finish them first, or confirm to complete that season together with its events.`,
+          runningEvents: blocking.reduce((n, x) => n + x.running.length, 0),
+          replacing: first.season.name,
+        })
+      }
+      for (const { season, running } of runningBySeason) {
+        if (running.length > 0) {
+          const settled = await settleRunningEvents(running, req.user!.id)
+          finishedEvents += settled.finished
+          closedMatches += settled.matchesClosed
         }
-        finishedEvents = runningEvents.length
+        await supabase.from('seasons').update({ status: 'completed' }).eq('id', season.id)
+        await supabase.from('audit_logs').insert({
+          actor_id: req.user!.id,
+          action: 'season_completed',
+          entity_type: 'season',
+          entity_id: season.id,
+          details: { via: 'another_season_activated' },
+        })
       }
     }
 
