@@ -525,7 +525,7 @@ export default function GuestHub() {
               }`}
             >
               <span
-                className="inline-flex items-center justify-center h-12 w-12 rounded-lg text-white shadow-sm transition-transform duration-300 group-hover:scale-110"
+                className="inline-flex items-center justify-center h-12 w-12 rounded-lg text-white shadow-sm transition-transform duration-200 ease-[ease] group-hover:scale-110"
                 style={{
                   background:
                     'linear-gradient(to bottom right, var(--school-primary), var(--accent-default))',

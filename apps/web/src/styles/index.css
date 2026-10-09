@@ -196,6 +196,9 @@ code, pre, .mono {
    =========================================================================== */
 
 :root {
+  /* Strong ease-out for entrances and feedback (Emil Kowalski's UI curve). */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+
   /* Brand RGB triplets, so shadows/glows can be tinted at arbitrary alpha. */
   --school-primary-rgb: 0, 45, 98;
   --accent-rgb: 0, 102, 255;
@@ -335,21 +338,47 @@ code, pre, .mono {
 /* --- Motion -------------------------------------------------------------- */
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(1.75rem); }
+  from { opacity: 0; transform: translateY(0.5rem); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-up {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-in-up 300ms var(--ease-out-strong) both;
 }
 
 /* Staggered children: set on the parent, children pick up an index delay. */
-.stagger > * { animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.stagger > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger > *:nth-child(2) { animation-delay: 0.1s; }
-.stagger > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger > *:nth-child(4) { animation-delay: 0.2s; }
-.stagger > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger > * { animation: fade-in-up 300ms var(--ease-out-strong) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+
+/* Toasts: feedback for saves. Quick and small; never the page-entrance animation. */
+.toast-enter {
+  transition:
+    opacity 200ms var(--ease-out-strong),
+    transform 200ms var(--ease-out-strong);
+}
+@starting-style {
+  .toast-enter {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+/* Menus and popovers: open from their trigger, close instantly. */
+.menu-pop {
+  transition:
+    opacity 150ms var(--ease-out-strong),
+    transform 150ms var(--ease-out-strong);
+}
+@starting-style {
+  .menu-pop {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
 
 /* Hero graphic: a dashed ring turning slowly behind the floating cards. */
 @keyframes ring-spin {
@@ -408,9 +437,11 @@ code, pre, .mono {
 .card-lift {
   position: relative;
   transition:
-    box-shadow 0.3s ease-out,
-    transform 0.3s ease-out,
-    border-color 0.3s ease-out;
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 .card-lift::before {
   content: '';
@@ -419,18 +450,20 @@ code, pre, .mono {
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s ease-out;
+  transition: opacity 200ms ease;
   background: linear-gradient(
     to bottom right,
     rgba(var(--school-primary-rgb), 0.04),
     transparent 60%
   );
 }
-.card-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lift);
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lift);
+  }
+  .card-lift:hover::before { opacity: 1; }
 }
-.card-lift:hover::before { opacity: 1; }
 
 /* --- Nav underline ------------------------------------------------------- */
 
@@ -489,4 +522,6 @@ code, pre, .mono {
     animation: none;
   }
   .card-lift:hover { transform: none; }
+  .toast-enter { transition: opacity 200ms ease; }
+  .menu-pop { transition: opacity 150ms ease; }
 }

@@ -58,7 +58,7 @@ function BracketCard({
         role={clickable ? 'button' : undefined}
         tabIndex={clickable ? 0 : undefined}
         className={cn(
-          'border rounded-xl overflow-hidden transition-all text-left',
+          'border rounded-xl overflow-hidden transition-[border-color,box-shadow,opacity] duration-150 ease-[ease] text-left',
           isLive ? 'border-[#FF3355] shadow-[0_0_12px_rgba(255,51,85,0.3)]' : 'border-[var(--border-subtle)]',
           isDone ? 'opacity-80' : '',
           clickable

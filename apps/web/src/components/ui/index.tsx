@@ -24,7 +24,7 @@ export function Button({
 }: ButtonProps) {
   // `active:scale-[0.98]` gives every button the same tactile press.
   const base =
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-[10px] transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none'
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-[10px] transition-[scale,filter,background-color,border-color,color,box-shadow,opacity] duration-[160ms] ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none'
   const variants = {
     // The primary action carries the school's own color, not the electric-blue
     // accent it used to hardcode -- the accent is a supporting highlight
@@ -634,7 +634,7 @@ export function TabBar({ tabs, active, onChange, className }: TabBarProps) {
           type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            'flex items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-all duration-150',
+            'flex items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-150 ease-[ease]',
             active === tab.id
               ? 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-primary)] shadow-[var(--shadow-raised)]'
               : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]',

@@ -27,7 +27,7 @@ export default function ToastHost() {
           <div
             key={t.id}
             className={cn(
-              'pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-xl border bg-[var(--surface-card)] px-3.5 py-3 text-sm text-[var(--text-primary)] shadow-2xl animate-fade-in-up',
+              'pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-xl border bg-[var(--surface-card)] px-3.5 py-3 text-sm text-[var(--text-primary)] shadow-2xl toast-enter',
               s.ring,
             )}
           >

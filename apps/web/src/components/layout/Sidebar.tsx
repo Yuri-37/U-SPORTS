@@ -96,7 +96,7 @@ export default function Sidebar() {
       // Hidden off-screen drawers must not be reachable with the keyboard.
       inert={!isDesktop && !drawerOpen}
       className={cn(
-        'z-50 flex h-full shrink-0 flex-col bg-[var(--shell-frame)] transition-[width,transform] duration-200',
+        'z-50 flex h-full shrink-0 flex-col bg-[var(--shell-frame)] transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none',
         'fixed inset-y-0 left-0 w-[260px] shadow-2xl lg:relative lg:z-40 lg:bg-transparent lg:shadow-none',
         drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         collapsed ? 'lg:w-[72px]' : 'lg:w-[220px]',

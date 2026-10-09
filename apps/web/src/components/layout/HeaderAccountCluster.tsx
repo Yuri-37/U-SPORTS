@@ -173,7 +173,7 @@ export default function HeaderAccountCluster({
     usesNotificationPopover && notifOpen ? (
       <div
         className={cn(
-          'absolute w-80 max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-2xl z-50 overflow-hidden',
+          'absolute w-80 max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-2xl z-50 overflow-hidden menu-pop',
           position,
         )}
       >
@@ -263,7 +263,7 @@ export default function HeaderAccountCluster({
     menuOpen ? (
       <div
         className={cn(
-          'absolute w-48 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-xl shadow-2xl py-1 z-50',
+          'absolute w-48 bg-[var(--surface-card)] border border-[var(--border-subtle)] rounded-xl shadow-2xl py-1 z-50 menu-pop',
           position,
         )}
       >
@@ -434,7 +434,7 @@ export default function HeaderAccountCluster({
               </span>
             )}
           </button>
-          {inboxPopover('bottom-full left-0 mb-2 max-w-[calc(100vw-2rem)] lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3')}
+          {inboxPopover('bottom-full left-0 mb-2 max-w-[calc(100vw-2rem)] lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3 origin-bottom-left')}
         </div>
 
         <div className="mx-1 my-3 h-px bg-[var(--border-subtle)]" />
@@ -457,7 +457,7 @@ export default function HeaderAccountCluster({
               </span>
             )}
           </button>
-          {accountMenu('bottom-full left-0 mb-2 lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3')}
+          {accountMenu('bottom-full left-0 mb-2 lg:bottom-0 lg:left-full lg:mb-0 lg:ml-3 origin-bottom-left')}
         </div>
 
         {modals}
@@ -486,7 +486,7 @@ export default function HeaderAccountCluster({
               </span>
             )}
           </button>
-          {inboxPopover('right-0 top-full mt-1')}
+          {inboxPopover('right-0 top-full mt-1 origin-top-right')}
         </div>
 
         <div className="relative shrink-0">
@@ -501,7 +501,7 @@ export default function HeaderAccountCluster({
             </span>
             <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
           </button>
-          {accountMenu('right-0 top-full mt-1')}
+          {accountMenu('right-0 top-full mt-1 origin-top-right')}
         </div>
       </div>
 

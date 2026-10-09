@@ -186,10 +186,21 @@ export default function JumbotronPage() {
     return () => window.clearInterval(id)
   }, [])
 
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggerFlash = useCallback((side: 'A' | 'B') => {
+    if (flashTimer.current) clearTimeout(flashTimer.current)
     setFlash(side)
-    setTimeout(() => setFlash(null), 600)
+    flashTimer.current = setTimeout(() => {
+      flashTimer.current = null
+      setFlash(null)
+    }, 600)
   }, [])
+  useEffect(
+    () => () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+    },
+    [],
+  )
 
   // Read the period the scorer is actually on. This used to be inferred from
   // the most recent scoring_action, so the board kept showing the previous set
@@ -410,10 +421,12 @@ export default function JumbotronPage() {
         <div className="w-full max-w-6xl">
           <div className="grid grid-cols-[1fr_auto_1fr] gap-8 items-center">
             <div
-              className={`text-center transition-all duration-300 ${flash === 'A' ? 'scale-105' : ''}`}
+              className={`text-center ${flash === 'A' ? 'motion-safe:scale-105' : ''}`}
               style={{
-                filter:
-                  flash === 'A' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '',
+                transition:
+                  flash === 'A'
+                    ? 'scale 150ms var(--ease-out-strong)'
+                    : 'scale 300ms var(--ease-out-strong)',
               }}
             >
               <p className="text-white/50 text-lg uppercase tracking-widest mb-2">HOME</p>
@@ -432,7 +445,7 @@ export default function JumbotronPage() {
                   fontSize: 'clamp(5rem, 18vw, 14rem)',
                   color: flash === 'A' ? 'var(--school-secondary, #FFD700)' : '#FFFFFF',
                   textShadow: flash === 'A' ? '0 0 40px rgba(255, 215, 0, 0.8)' : 'none',
-                  transition: 'all 0.3s ease',
+                  transition: flash === 'A' ? 'color 150ms ease' : 'color 300ms ease',
                 }}
               >
                 {pres.left}
@@ -500,10 +513,12 @@ export default function JumbotronPage() {
             </div>
 
             <div
-              className={`text-center transition-all duration-300 ${flash === 'B' ? 'scale-105' : ''}`}
+              className={`text-center ${flash === 'B' ? 'motion-safe:scale-105' : ''}`}
               style={{
-                filter:
-                  flash === 'B' ? 'drop-shadow(0 0 30px var(--school-secondary, #FFD700))' : '',
+                transition:
+                  flash === 'B'
+                    ? 'scale 150ms var(--ease-out-strong)'
+                    : 'scale 300ms var(--ease-out-strong)',
               }}
             >
               <p className="text-white/50 text-lg uppercase tracking-widest mb-2">AWAY</p>
@@ -522,7 +537,7 @@ export default function JumbotronPage() {
                   fontSize: 'clamp(5rem, 18vw, 14rem)',
                   color: flash === 'B' ? 'var(--school-secondary, #FFD700)' : '#FFFFFF',
                   textShadow: flash === 'B' ? '0 0 40px rgba(255, 215, 0, 0.8)' : 'none',
-                  transition: 'all 0.3s ease',
+                  transition: flash === 'B' ? 'color 150ms ease' : 'color 300ms ease',
                 }}
               >
                 {pres.right}

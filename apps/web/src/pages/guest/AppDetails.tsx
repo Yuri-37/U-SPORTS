@@ -284,7 +284,7 @@ export default function AppDetails() {
             <button
               type="button"
               onClick={download}
-              className="inline-flex items-center justify-center gap-2 h-14 px-7 rounded-xl bg-white text-[var(--school-primary)] font-semibold shadow-[var(--shadow-lift-lg)] transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 h-14 px-7 rounded-xl bg-white text-[var(--school-primary)] font-semibold shadow-[var(--shadow-lift-lg)] transition-[translate,scale,box-shadow] duration-[160ms] ease-out hover:-translate-y-0.5 active:scale-[0.98]"
             >
               <Download className="w-5 h-5" />
               Download APK · {APP_RELEASE.sizeMb} MB
