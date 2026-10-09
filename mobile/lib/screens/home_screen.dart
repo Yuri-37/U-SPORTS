@@ -291,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             error: (_, __) => const SizedBox.shrink(),
           ),
-          const SectionHeader(title: 'Browse by Sport'),
+          const SectionHeader(title: 'Browse by sport'),
           Row(
             children: [
               Expanded(child: _browseSportCard(context, 'basketball')),

@@ -479,11 +479,19 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final title = ev?['name'] as String? ?? 'Match';
     final sport = ev?['sport'] as String? ?? widget.sport;
     final isLive = m['status'] == 'live';
+    // Same wording as the web dashboard when a bracket match has no time yet.
+    final scheduledAt = m['scheduled_at'] as String?;
+    final String? when = (scheduledAt != null && scheduledAt.isNotEmpty)
+        ? formatDateTime(scheduledAt)
+        : (m['status'] == 'scheduled' ? 'Date and time not set yet' : null);
     return SheetTile(
       leading: IconTile(icon: sportIcon(sport), color: isLive ? LayoutTokens.danger(context) : sportTint(context, sport)),
       title: title,
-      subtitle:
-          'vs ${_opponentLabel(m)} · ${matchStatusLabel(m['status'] as String? ?? '')} · ${formatDateTime(m['scheduled_at'] as String?)}',
+      subtitle: [
+        'vs ${_opponentLabel(m)}',
+        matchStatusLabel(m['status'] as String? ?? ''),
+        if (when != null) when,
+      ].join(' · '),
       titleMaxLines: 1,
       onTap: m['event_id'] != null ? () => context.push('/events/${m['event_id']}') : null,
       trailing: isLive
@@ -502,10 +510,12 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
     final sport = ev?['sport'] as String? ?? widget.sport;
     final evId = m['event_id'] as String?;
     final rank = evId != null ? _finishes[evId] : null;
+    final scheduledAt = m['scheduled_at'] as String?;
+    final when = (scheduledAt != null && scheduledAt.isNotEmpty) ? formatDateTime(scheduledAt) : 'Date not recorded';
     return SheetTile(
       leading: IconTile(icon: sportIcon(sport), color: sportTint(context, sport)),
       title: title,
-      subtitle: 'vs ${_opponentLabel(m)} · ${formatDateTime(m['scheduled_at'] as String?)}',
+      subtitle: 'vs ${_opponentLabel(m)} · $when',
       onTap: evId != null ? () => context.push('/events/$evId') : null,
       trailing: rank != null ? _PlacementBadge(rank: rank) : null,
     );
@@ -627,7 +637,7 @@ class _PlacementBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isChampion ? Icons.emoji_events_rounded : Icons.workspace_premium_rounded,
+            isChampion ? Icons.emoji_events_rounded : Icons.military_tech_rounded,
             size: 11,
             color: color,
           ),

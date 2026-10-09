@@ -383,20 +383,26 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
               if (standings != null && status == 'completed')
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: SheetGroup(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (var i = 0; i < standings.length && i < 2; i++)
-                        _PodiumRow(
-                          rank: standings[i].rank,
-                          name: _slotLabel(standings[i].participantId),
-                          onTap: _tapHandlerFor(standings[i].participantId),
-                        ),
-                      for (var i = 2; i < standings.length; i++)
-                        _StandingsRow(
-                          rank: standings[i].rank,
-                          name: _slotLabel(standings[i].participantId),
-                          onTap: _tapHandlerFor(standings[i].participantId),
-                        ),
+                      const SectionHeader(title: 'Final rankings', padding: EdgeInsets.only(bottom: 12)),
+                      SheetGroup(
+                        children: [
+                          for (var i = 0; i < standings.length && i < 2; i++)
+                            _PodiumRow(
+                              rank: standings[i].rank,
+                              name: _slotLabel(standings[i].participantId),
+                              onTap: _tapHandlerFor(standings[i].participantId),
+                            ),
+                          for (var i = 2; i < standings.length; i++)
+                            _StandingsRow(
+                              rank: standings[i].rank,
+                              name: _slotLabel(standings[i].participantId),
+                              onTap: _tapHandlerFor(standings[i].participantId),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -439,7 +445,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                       child: matches.isEmpty
                           ? ListView(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              children: const [SheetMessage(text: 'No matches scheduled.')],
+                              children: const [SheetMessage(text: 'No matches yet.')],
                             )
                           : ListView(
                               physics: const AlwaysScrollableScrollPhysics(),

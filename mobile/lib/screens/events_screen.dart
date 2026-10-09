@@ -50,7 +50,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
         showBack: false,
         title: 'Events',
         actions: const [HubHeaderActions()],
-        bottom: BrandTabBar(controller: _tab, tabs: const ['Upcoming & live', 'Past']),
+        bottom: BrandTabBar(controller: _tab, tabs: const ['Upcoming & live', 'Past results']),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

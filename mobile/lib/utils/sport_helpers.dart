@@ -9,7 +9,7 @@ String sportLabel(String sport) {
     case 'volleyball':
       return 'Volleyball';
     case 'table-tennis':
-      return 'Table tennis';
+      return 'Table Tennis';
     default:
       return sport.replaceAll('-', ' ').split(' ').map((w) {
         if (w.isEmpty) return w;

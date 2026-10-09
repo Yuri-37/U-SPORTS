@@ -22,7 +22,7 @@ _StrengthResult? _score(BuildContext context, String password) {
 
   if (points <= 1) return const _StrengthResult('Weak', AppTheme.danger, 0.25);
   if (points == 2) return const _StrengthResult('Fair', AppTheme.warning, 0.5);
-  if (points == 3) return const _StrengthResult('Good', AppTheme.accent, 0.75);
+  if (points == 3) return _StrengthResult('Good', AppTheme.brandInk(context), 0.75);
   return _StrengthResult('Strong', LayoutTokens.success(context), 1.0);
 }
 

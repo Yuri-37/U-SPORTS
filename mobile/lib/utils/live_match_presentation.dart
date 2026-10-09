@@ -1,3 +1,5 @@
+import 'sport_helpers.dart' show sportLabel;
+
 class LiveScoreView {
   LiveScoreView({
     required this.left,
@@ -42,13 +44,6 @@ num _basketballTotal(Map<String, dynamic>? sc) {
   return _nz(sc['total']);
 }
 
-String _sportPhrase(String sport) {
-  if (sport == 'basketball') return 'Basketball';
-  if (sport == 'volleyball') return 'Volleyball';
-  if (sport == 'table-tennis') return 'Table tennis';
-  return sport;
-}
-
 LiveScoreView liveScorePresentation(
   String sport,
   Map<String, dynamic>? sa,
@@ -61,7 +56,7 @@ LiveScoreView liveScorePresentation(
       left: _basketballTotal(sa),
       right: _basketballTotal(sb),
       phase: p <= 4 ? 'Quarter $p' : 'Overtime',
-      subtitle: '${_sportPhrase(sport)} · Game total',
+      subtitle: '${sportLabel(sport)} · Game total',
     );
   }
   if (sport == 'volleyball') {
@@ -71,7 +66,7 @@ LiveScoreView liveScorePresentation(
       left: _nz(sa?[k]),
       right: _nz(sb?[k]),
       phase: 'Set $p (rally points)',
-      subtitle: '${_nz(sa?['sets_won'])}–${_nz(sb?['sets_won'])} sets won · ${_sportPhrase(sport)}',
+      subtitle: '${_nz(sa?['sets_won'])}–${_nz(sb?['sets_won'])} sets won · ${sportLabel(sport)}',
     );
   }
   if (sport == 'table-tennis') {
@@ -81,7 +76,7 @@ LiveScoreView liveScorePresentation(
       left: _nz(sa?[k]),
       right: _nz(sb?[k]),
       phase: 'Game $p (points)',
-      subtitle: '${_nz(sa?['games_won'])}–${_nz(sb?['games_won'])} games won · ${_sportPhrase(sport)}',
+      subtitle: '${_nz(sa?['games_won'])}–${_nz(sb?['games_won'])} games won · ${sportLabel(sport)}',
     );
   }
   return LiveScoreView(left: 0, right: 0, phase: '', subtitle: sport);
