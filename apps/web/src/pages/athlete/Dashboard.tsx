@@ -1193,7 +1193,7 @@ export default function AthleteDashboard() {
           Totals for the selected season. Tap{' '}
           <span className="text-[var(--text-secondary)]">Games Played</span> for the full schedule
           including past games and your box scores. Recent finished games also appear above under
-          Recent results.
+          Match history.
         </p>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

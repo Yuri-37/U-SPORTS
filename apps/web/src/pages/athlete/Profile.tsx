@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel, getInitials } from '../../lib/utils'
 import { SportTag } from '../../components/ui/SportIcon'
-import { Trophy, Users } from 'lucide-react'
+import { Medal, Trophy, Users } from 'lucide-react'
 import { deriveEliminationPodium, placementRankLabel } from '../../lib/eventPlacements'
 import { useNavigate } from 'react-router'
 import AvatarUpload from '../../components/settings/AvatarUpload'
@@ -185,7 +185,7 @@ export default function AthleteProfile() {
               <SportTag sport={athlete.sport} />
             </Badge>
             <Badge variant={athlete.season_status === 'active' ? 'success' : 'default'}>
-              {athlete.season_status}
+              {athlete.season_status === 'active' ? 'Active' : 'Inactive'}
             </Badge>
           </div>
         </AvatarUpload>
@@ -293,7 +293,16 @@ export default function AthleteProfile() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant={f.rank === 1 ? 'success' : 'info'} size="sm">
+                    <Badge
+                      variant={f.rank === 1 ? 'warning' : 'info'}
+                      size="sm"
+                      className="inline-flex items-center gap-1"
+                    >
+                      {f.rank === 1 ? (
+                        <Trophy className="w-3 h-3" aria-hidden />
+                      ) : (
+                        <Medal className="w-3 h-3" aria-hidden />
+                      )}
                       {placementRankLabel(f.rank)}
                     </Badge>
                     <Button

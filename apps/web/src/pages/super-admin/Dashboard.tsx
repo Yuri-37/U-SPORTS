@@ -4,7 +4,8 @@ import { StatCard, Card, Skeleton, Badge } from '../../components/ui'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
-import { formatDateTime } from '../../lib/utils'
+import { formatDateTime, formatEnumLabel, organizerEventStatusLabel } from '../../lib/utils'
+import { auditLabel } from '../../lib/auditLabels'
 import type { AuditLog } from '../../types'
 
 interface PlatformStats {
@@ -45,11 +46,11 @@ export default function SuperAdminDashboard() {
         ) : (
           <>
             <StatCard label="Active Athletes" value={stats?.totalAthletes ?? 0} subValue="Active" />
-            <StatCard label="Live Events" value={stats?.activeEvents ?? 0} subValue="In Progress" />
+            <StatCard label="Live Events" value={stats?.activeEvents ?? 0} subValue={organizerEventStatusLabel('in_progress')} />
             <StatCard
               label="Current Season"
               value={stats?.currentSeason?.name ?? 'None'}
-              subValue={stats?.currentSeason?.status ?? ''}
+              subValue={stats?.currentSeason ? formatEnumLabel(stats.currentSeason.status) : ''}
             />
           </>
         )}
@@ -109,12 +110,12 @@ export default function SuperAdminDashboard() {
                     {(log.actor as any)?.full_name?.charAt(0) ?? '?'}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{log.action.replace(/_/g, ' ')}</p>
+                    <p className="text-sm font-medium truncate">{auditLabel(log.action)}</p>
                     <p className="text-xs text-[var(--text-muted)]">
                       {formatDateTime(log.created_at)}
                     </p>
                   </div>
-                  <Badge size="sm">{log.entity_type}</Badge>
+                  <Badge size="sm">{auditLabel(log.entity_type)}</Badge>
                 </div>
               ))}
             </div>

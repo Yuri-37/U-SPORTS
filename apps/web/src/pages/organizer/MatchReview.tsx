@@ -5,7 +5,8 @@ import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Skeleton, Modal, Input } from '../../components/ui'
 import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
-import { formatEnumLabel } from '../../lib/utils'
+import { getSportLabel } from '../../lib/utils'
+import type { Sport } from '../../types'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
 
 interface PlayerStat {
@@ -325,7 +326,7 @@ export default function MatchReview() {
         <p className="text-3xl font-black text-center py-4">
           {nameA} {finalScoreLabel} {nameB}
         </p>
-        <p className="text-center text-xs text-[var(--text-muted)]">{formatEnumLabel(sport)}</p>
+        <p className="text-center text-xs text-[var(--text-muted)]">{getSportLabel(sport as Sport) ?? sport}</p>
       </Card>
 
       <Card>

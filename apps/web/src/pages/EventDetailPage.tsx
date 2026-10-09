@@ -264,6 +264,8 @@ export default function EventDetailPage({
             const labelB = m.participant_b_id
               ? (participantLabels[m.participant_b_id] ?? 'Participant')
               : 'TBD'
+            const waiting =
+              m.status === 'scheduled' && (!m.participant_a_id || !m.participant_b_id)
             return (
               <Card
                 key={m.id}
@@ -302,7 +304,11 @@ export default function EventDetailPage({
                     }
                     size="sm"
                   >
-                    {m.status === 'live' ? '● LIVE' : formatEnumLabel(m.status)}
+                    {m.status === 'live'
+                      ? '● LIVE'
+                      : waiting
+                        ? 'Waiting for teams'
+                        : formatEnumLabel(m.status)}
                   </Badge>
                   {m.status === 'live' && (
                     <Button

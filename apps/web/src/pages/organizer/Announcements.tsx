@@ -17,7 +17,7 @@ import {
 import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import type { Announcement } from '../../types'
-import { formatDateTime, getSportLabel } from '../../lib/utils'
+import { formatDateTime, formatEnumLabel, getSportLabel } from '../../lib/utils'
 
 const TYPE_ICONS: Record<string, any> = {
   emergency: AlertTriangle,
@@ -303,21 +303,21 @@ export default function OrganizerAnnouncements() {
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold text-sm">{a.title}</span>
                     <Badge variant={TYPE_BADGE_VARIANTS[a.type] as any} size="sm">
-                      {a.type}
+                      {formatEnumLabel(a.type)}
                     </Badge>
                     {a.display_mode === 'banner' && (
                       <Badge variant="warning" size="sm">
-                        scrolling banner
+                        Scrolling banner
                       </Badge>
                     )}
                     {a.display_mode === 'hero_slider' && (
                       <Badge variant="info" size="sm">
-                        hero slider
+                        Hero slider
                       </Badge>
                     )}
                     {a.is_public && (
                       <Badge variant="info" size="sm">
-                        public
+                        Public
                       </Badge>
                     )}
                   </div>

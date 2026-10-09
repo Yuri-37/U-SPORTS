@@ -4,7 +4,8 @@ import { Download, FileText } from 'lucide-react'
 import PageHeader, { BackButton } from '../../components/layout/PageHeader'
 import { Button, Card, Badge, Alert, Skeleton } from '../../components/ui'
 import api from '../../lib/api'
-import { formatEnumLabel, formatDateTime } from '../../lib/utils'
+import { getSportLabel, formatDateTime } from '../../lib/utils'
+import type { Sport } from '../../types'
 import { STAT_KEYS } from '../../lib/matchStatKeys'
 import { periodScoreBreakdown } from '../../lib/liveMatchPresentation'
 
@@ -189,7 +190,7 @@ export default function ScoreSheet() {
           </div>
           <div>
             <dt className="text-[var(--text-muted)] text-xs">Sport</dt>
-            <dd>{formatEnumLabel(sport)}</dd>
+            <dd>{getSportLabel(sport as Sport) ?? sport}</dd>
           </div>
           <div>
             <dt className="text-[var(--text-muted)] text-xs">Date</dt>

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Table, Badge, Input, Select, Button } from '../../components/ui'
+import Pagination from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import api from '../../lib/api'
 import type { AuditLog } from '../../types'
 import { formatDateTime } from '../../lib/utils'
+import { auditLabel } from '../../lib/auditLabels'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -26,21 +28,9 @@ const KEY_LABELS: Record<string, string> = {
   undone_action_id: 'Action undone',
 }
 
-// Acronyms that should stay uppercase after title-casing an action/entity slug.
-const ACRONYMS = ['Pdf', 'Csv', 'Xlsx', 'Ot']
-
-function titleCase(slug: string): string {
-  return slug
-    .split('_')
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
-    .replace(new RegExp(`\\b(${ACRONYMS.join('|')})\\b`, 'g'), (m) => m.toUpperCase())
-}
-
 function humanizeKey(key: string): string {
   if (KEY_LABELS[key]) return KEY_LABELS[key]
-  return titleCase(key.replace(/_id$/, ''))
+  return auditLabel(key.replace(/_id$/, ''))
 }
 
 /** Every distinct entity_type any writeAuditLog() call site uses today. */
@@ -130,11 +120,11 @@ const ACTIONS = [
 
 const ENTITY_TYPE_OPTIONS = [
   { value: '', label: 'All entity types' },
-  ...ENTITY_TYPES.map((t) => ({ value: t, label: titleCase(t) })),
+  ...ENTITY_TYPES.map((t) => ({ value: t, label: auditLabel(t) })),
 ]
 const ACTION_OPTIONS = [
   { value: '', label: 'All actions' },
-  ...ACTIONS.map((a) => ({ value: a, label: titleCase(a) })),
+  ...ACTIONS.map((a) => ({ value: a, label: auditLabel(a) })),
 ]
 
 /** A resolved name when we have one for this id, else null. */
@@ -175,7 +165,7 @@ function formatEntityId(
         ? d.title
         : null
   if (detailName) return detailName
-  return `${titleCase(entityType)} (unavailable)`
+  return `${auditLabel(entityType)} (unavailable)`
 }
 
 type StatChange = { from: number; to: number }
@@ -351,7 +341,7 @@ export default function SuperAdminAuditLogs() {
           ),
           entity: (
             <div className="flex flex-col gap-0.5 items-start">
-              <Badge size="sm">{titleCase(log.entity_type)}</Badge>
+              <Badge size="sm">{auditLabel(log.entity_type)}</Badge>
               <span
                 className="text-xs text-[var(--text-secondary)]"
                 title={log.entity_id ?? undefined}
@@ -372,27 +362,13 @@ export default function SuperAdminAuditLogs() {
         emptyMessage={filtersActive ? 'No audit logs match these filters' : 'No audit logs found'}
       />
 
-      {total > PAGE_SIZE && (
-        <div className="flex justify-center gap-2">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-4 py-2 rounded text-sm disabled:opacity-50"
-          >
-            ← Prev
-          </button>
-          <span className="px-4 py-2 text-sm text-[var(--text-muted)]">
-            Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}
-          </span>
-          <button
-            disabled={(page + 1) * PAGE_SIZE >= total}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-4 py-2 rounded text-sm disabled:opacity-50"
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page + 1}
+        pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPage={(p) => setPage(p - 1)}
+      />
     </div>
   )
 }

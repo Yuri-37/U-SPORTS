@@ -113,7 +113,7 @@ export default function GuestAthleteProfile() {
             <SportTag sport={athlete.sport} />
           </p>
           <div className="flex gap-2 mt-2">
-            <Badge size="sm">{athlete.position}</Badge>
+            {athlete.position?.trim() && <Badge size="sm">{athlete.position.trim()}</Badge>}
             {athlete.jersey_number && <Badge size="sm">#{athlete.jersey_number}</Badge>}
             <Badge size="sm">{athlete.year_level}</Badge>
           </div>

@@ -47,9 +47,9 @@ type ImportPreviewRow = {
 
 const SPORT_FILTER_OPTIONS: { value: Sport | ''; label: string }[] = [
   { value: '', label: 'All sports' },
-  { value: 'basketball', label: 'Basketball' },
-  { value: 'volleyball', label: 'Volleyball' },
-  { value: 'table-tennis', label: 'Table tennis' },
+  { value: 'basketball', label: getSportLabel('basketball') },
+  { value: 'volleyball', label: getSportLabel('volleyball') },
+  { value: 'table-tennis', label: getSportLabel('table-tennis') },
 ]
 
 function describeApiLoadError(err: unknown): string {

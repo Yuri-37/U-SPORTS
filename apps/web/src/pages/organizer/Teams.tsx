@@ -751,7 +751,7 @@ export default function OrganizerTeams() {
         // the organizer sees the updated Active/Bench lists, instead of closing
         // as if nothing but the sport field changed.
         setRosterSuccess(
-          `${lineupNormalized} player${lineupNormalized === 1 ? ' was' : 's were'} moved to the bench — ${editForm.sport} allows fewer active players.`,
+          `${lineupNormalized} player${lineupNormalized === 1 ? ' was' : 's were'} moved to the bench — ${editForm.sport} allows fewer starting players.`,
         )
         await refreshEditTeam()
       } else {
@@ -1077,7 +1077,7 @@ export default function OrganizerTeams() {
 
     if (toPromote.length > freeSlots.length) {
       setEditError(
-        `Only ${freeSlots.length} active slot(s) open — bench someone first or select fewer players.`,
+        `Only ${freeSlots.length} starting slot(s) open — bench someone first or select fewer players.`,
       )
 
       return
@@ -1417,11 +1417,11 @@ export default function OrganizerTeams() {
                 options={[
                   { value: '', label: 'All sports' },
 
-                  { value: 'basketball', label: 'Basketball' },
+                  { value: 'basketball', label: getSportLabel('basketball') },
 
-                  { value: 'volleyball', label: 'Volleyball' },
+                  { value: 'volleyball', label: getSportLabel('volleyball') },
 
-                  { value: 'table-tennis', label: 'Table tennis' },
+                  { value: 'table-tennis', label: getSportLabel('table-tennis') },
                 ]}
               />
             </div>
@@ -2163,7 +2163,7 @@ export default function OrganizerTeams() {
                             loading={rosterBulkBusy}
                             onClick={() => void bulkActivateSelected()}
                           >
-                            Activate
+                            Start
                           </Button>
                           <Button
                             type="button"
@@ -2196,11 +2196,11 @@ export default function OrganizerTeams() {
                       {/* Active slots */}
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
-                          Active
+                          Starting
                         </p>
                         {activeMembers.length === 0 ? (
                           <p className="text-xs text-[var(--text-muted)]">
-                            No active players yet — promote someone from the bench.
+                            No starting players yet — promote someone from the bench.
                           </p>
                         ) : null}
                         <ul className="space-y-1.5">
@@ -2366,12 +2366,12 @@ export default function OrganizerTeams() {
                                   disabled={nextFreeSlot === null}
                                   title={
                                     nextFreeSlot === null
-                                      ? `All ${maxActive} active slots are filled`
-                                      : `Set as active (slot ${nextFreeSlot})`
+                                      ? `All ${maxActive} starting slots are filled`
+                                      : `Set as starter (slot ${nextFreeSlot})`
                                   }
                                   onClick={() => void handleSetSlot(m.id, nextFreeSlot)}
                                 >
-                                  → Active
+                                  → Starting
                                 </Button>
                                 <Button
                                   type="button"

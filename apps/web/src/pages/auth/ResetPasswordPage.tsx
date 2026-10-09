@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
 import { passwordZ } from '../../lib/validation/forms'
+import UsportsMark from '../../components/brand/UsportsMark'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -136,15 +137,20 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          {institution?.logo_url ? (
-            <img
-              src={institution.logo_url}
-              alt=""
-              className="max-h-16 w-auto max-w-[12rem] mx-auto mb-3 object-contain object-center"
-            />
-          ) : null}
-          <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
-          <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
+          <div className="flex items-center justify-center gap-2">
+            <UsportsMark size={28} />
+            <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            {institution?.logo_url ? (
+              <img
+                src={institution.logo_url}
+                alt=""
+                className="h-6 w-auto max-w-[2rem] object-contain object-center"
+              />
+            ) : null}
+            <p className="text-[var(--text-muted)] text-sm">{institution?.name}</p>
+          </div>
         </div>
 
         {done ? (

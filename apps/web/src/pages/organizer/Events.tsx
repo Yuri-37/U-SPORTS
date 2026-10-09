@@ -144,7 +144,7 @@ export default function OrganizerEvents() {
         className="w-fit max-w-full"
         tabs={[
           { id: 'active', label: 'Active' },
-          { id: 'completed', label: 'Completed' },
+          { id: 'completed', label: organizerEventStatusLabel('completed') },
           { id: 'cancelled', label: 'Cancelled' },
           { id: 'all', label: 'All' },
         ]}
@@ -169,9 +169,9 @@ export default function OrganizerEvents() {
             onChange={(e) => setSportFilter(e.target.value)}
             options={[
               { value: '', label: 'All sports' },
-              { value: 'basketball', label: 'Basketball' },
-              { value: 'volleyball', label: 'Volleyball' },
-              { value: 'table-tennis', label: 'Table tennis' },
+              { value: 'basketball', label: getSportLabel('basketball') },
+              { value: 'volleyball', label: getSportLabel('volleyball') },
+              { value: 'table-tennis', label: getSportLabel('table-tennis') },
             ]}
           />
         </div>
@@ -203,7 +203,7 @@ export default function OrganizerEvents() {
             description={
               listSearch.trim() || sportFilter
                 ? 'Nothing matches your search and filters. Clear them, or try another tab.'
-                : 'Try Active, Completed, Cancelled, or All — your events may be under another filter.'
+                : 'Try Active, Finished, Cancelled, or All — your events may be under another filter.'
             }
             action={
               listSearch.trim() || sportFilter ? (

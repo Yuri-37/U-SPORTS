@@ -617,7 +617,7 @@ export default function GuestHub() {
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <SportIcon sport={ev.sport} className="w-6 h-6" />
                     <Badge variant="success" size="sm">
-                      Completed
+                      {eventPublicLifecycleLabel('completed')}
                     </Badge>
                   </div>
                   <h3 className="font-semibold text-base leading-snug mb-5">{ev.name}</h3>

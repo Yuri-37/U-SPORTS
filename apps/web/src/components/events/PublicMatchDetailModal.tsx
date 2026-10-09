@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Tv2 } from 'lucide-react'
 import { Modal, Badge, Skeleton, Button } from '../ui'
 import api from '../../lib/api'
-import { formatDateTime, formatEnumLabel } from '../../lib/utils'
+import { formatDateTime, formatEnumLabel, getSportLabel } from '../../lib/utils'
 import {
   pickScoresForMatch,
   periodScoreBreakdown,
@@ -205,7 +205,7 @@ export default function PublicMatchDetailModal({ open, onClose, matchId, sport }
                         : sport === 'volleyball'
                           ? 'Volleyball · Rally points per set'
                           : sport === 'table-tennis'
-                            ? 'Table tennis · Points per game'
+                            ? `${getSportLabel('table-tennis')} · Points per game`
                             : 'Score by period'}
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-[var(--border-subtle)]">

@@ -1,4 +1,5 @@
-import type { MatchScore } from '../types'
+import type { MatchScore, Sport } from '../types'
+import { getSportLabel } from './utils'
 
 const nz = (v: unknown) => Number(v) || 0
 
@@ -47,7 +48,7 @@ export function liveScorePresentation(
       left: bbTotal(sa),
       right: bbTotal(sb),
       phase: p <= 4 ? `Quarter ${p}` : `Overtime${p > 5 ? ` ${p - 4}` : ''}`,
-      subtitle: `${getSportPhrase(sport)} · Game total`,
+      subtitle: `${getSportLabel(sport as Sport) ?? sport} · Game total`,
     }
   }
   if (sport === 'volleyball') {
@@ -57,7 +58,7 @@ export function liveScorePresentation(
       left: Number(sa?.[k] ?? 0),
       right: Number(sb?.[k] ?? 0),
       phase: `Set ${p} (rally points)`,
-      subtitle: `${Number(sa?.sets_won ?? 0)}–${Number(sb?.sets_won ?? 0)} sets won · ${getSportPhrase(sport)}`,
+      subtitle: `${Number(sa?.sets_won ?? 0)}–${Number(sb?.sets_won ?? 0)} sets won · ${getSportLabel(sport as Sport) ?? sport}`,
     }
   }
   if (sport === 'table-tennis') {
@@ -67,17 +68,10 @@ export function liveScorePresentation(
       left: Number(sa?.[k] ?? 0),
       right: Number(sb?.[k] ?? 0),
       phase: `Game ${p} (points)`,
-      subtitle: `${Number(sa?.games_won ?? 0)}–${Number(sb?.games_won ?? 0)} games won · ${getSportPhrase(sport)}`,
+      subtitle: `${Number(sa?.games_won ?? 0)}–${Number(sb?.games_won ?? 0)} games won · ${getSportLabel(sport as Sport) ?? sport}`,
     }
   }
   return { left: 0, right: 0, phase: '', subtitle: sport }
-}
-
-function getSportPhrase(sport: string) {
-  if (sport === 'basketball') return 'Basketball'
-  if (sport === 'volleyball') return 'Volleyball'
-  if (sport === 'table-tennis') return 'Table tennis'
-  return sport
 }
 
 export function pickScoresForMatch(
