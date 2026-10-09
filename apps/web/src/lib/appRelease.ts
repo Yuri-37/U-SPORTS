@@ -9,7 +9,7 @@
 export const APP_RELEASE = {
   version: '1.10.9',
   releasedAt: '2026-10-10',
-  sizeMb: 57,
+  sizeMb: 39,
   /** Flutter's default minSdk (24) for this project. */
   minAndroid: 'Android 7.0 or newer',
   downloadUrl: 'https://github.com/Yuri-37/U-SPORTS/releases/latest/download/U-Sports.apk',
