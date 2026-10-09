@@ -34,6 +34,7 @@ import participantsRouter from './routes/participants'
 import notificationsRouter from './routes/notifications'
 import profileRouter from './routes/profile'
 import seasonSetupRouter from './routes/season-setup'
+import appRouter from './routes/app'
 import { bootstrapDefaultAdmin } from './utils/bootstrapAdmin'
 
 const app = express()
@@ -200,6 +201,7 @@ app.use('/api/participants', participantsRouter)
 app.use('/api/notifications', notificationsRouter)
 app.use('/api/profile', profileRouter)
 app.use('/api/season-setup', seasonSetupRouter)
+app.use('/api/app', appRouter)
 
 // Friendly root — API has no HTML; avoids "is the server broken?" confusion
 app.get('/', (_req, res) => {

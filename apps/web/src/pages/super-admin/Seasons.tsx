@@ -120,6 +120,8 @@ export default function SuperAdminSeasons() {
     name: string
     nextStatus: string
     unfinishedMatches?: number
+    runningEvents?: number
+    liveMatches?: number
   } | null>(null)
   const [transitionBusy, setTransitionBusy] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
@@ -253,8 +255,17 @@ export default function SuperAdminSeasons() {
   const openCompleteConfirm = async (id: string, name: string) => {
     // Check for unfinished matches before showing the confirm dialog
     try {
-      const res = await api.get<{ count: number }>(`/admin/seasons/${id}/unfinished-matches`)
-      setTransitionConfirm({ id, name, nextStatus: 'completed', unfinishedMatches: res.data.count })
+      const res = await api.get<{ count: number; runningEvents?: number; liveMatches?: number }>(
+        `/admin/seasons/${id}/unfinished-matches`,
+      )
+      setTransitionConfirm({
+        id,
+        name,
+        nextStatus: 'completed',
+        unfinishedMatches: res.data.count,
+        runningEvents: res.data.runningEvents ?? 0,
+        liveMatches: res.data.liveMatches ?? 0,
+      })
     } catch {
       setTransitionConfirm({ id, name, nextStatus: 'completed', unfinishedMatches: 0 })
     }
@@ -266,6 +277,11 @@ export default function SuperAdminSeasons() {
     try {
       await api.patch(`/admin/seasons/${transitionConfirm.id}/status`, {
         status: transitionConfirm.nextStatus,
+        // The dialog has already told the admin that running events are finished
+        // along with the season; this is their yes.
+        ...(transitionConfirm.nextStatus === 'completed' && (transitionConfirm.runningEvents ?? 0) > 0
+          ? { finish_events: true }
+          : {}),
       })
       toast.success('Season status updated')
       setTransitionConfirm(null)
@@ -304,7 +320,7 @@ export default function SuperAdminSeasons() {
 
   const transitionDescription = (next: string) => {
     if (next === 'active')
-      return 'This sets the season to active. Depending on your setup, other seasons may be adjusted automatically. Continue?'
+      return 'This sets the season to active. Other active seasons stay active, so more than one season can run at the same time. Continue?'
     if (next === 'completed')
       return 'Mark this season as completed? This action closes the season — events and rankings will be locked.'
     if (next === 'archived')
@@ -441,6 +457,26 @@ export default function SuperAdminSeasons() {
         {transitionConfirm && (
           <div className="space-y-4">
             {transitionConfirm.nextStatus === 'completed' &&
+              (transitionConfirm.runningEvents ?? 0) > 0 && (
+                <Alert type="danger">
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+                    {transitionConfirm.runningEvents} running{' '}
+                    {transitionConfirm.runningEvents === 1 ? 'event' : 'events'}
+                  </span>
+                  <span className="block mt-1 text-sm">
+                    Completing this season also finishes{' '}
+                    {transitionConfirm.runningEvents === 1 ? 'that event' : 'those events'} and
+                    cancels {(transitionConfirm.liveMatches ?? 0) > 0
+                      ? `their ${transitionConfirm.liveMatches} live match${transitionConfirm.liveMatches === 1 ? '' : 'es'} and `
+                      : 'their '}
+                    unplayed matches. If a game is still being scored, keep the season active
+                    until it is done.
+                  </span>
+                </Alert>
+              )}
+            {transitionConfirm.nextStatus === 'completed' &&
+              (transitionConfirm.runningEvents ?? 0) === 0 &&
               (transitionConfirm.unfinishedMatches ?? 0) > 0 && (
                 <Alert type="danger">
                   <span className="inline-flex items-center gap-1.5 font-semibold">

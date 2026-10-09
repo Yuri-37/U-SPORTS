@@ -25,6 +25,7 @@ import {
 import { insertNotificationsForProfiles, profileIdsForOrganizerIds } from '../utils/athleteNotifications'
 import { describeCaughtError } from '../utils/describeCaughtError'
 import { setAccountLocked } from '../utils/accountLock'
+import { closeOpenMatches } from '../utils/closeOpenMatches'
 
 const router = createRouter()
 
@@ -986,13 +987,53 @@ router.patch(
   requireAuth,
   requireRole('Admin'),
   async (req: AuthRequest, res) => {
-    const { status } = z
-      .object({ status: z.enum(['draft', 'active', 'completed', 'archived']) })
+    const { status, finish_events } = z
+      .object({
+        status: z.enum(['draft', 'active', 'completed', 'archived']),
+        // The admin's explicit yes to "also finish this season's running events".
+        finish_events: z.boolean().optional(),
+      })
       .parse(req.body)
 
-    // Only one season can be active
-    if (status === 'active') {
-      await supabase.from('seasons').update({ status: 'completed' }).eq('status', 'active')
+    // More than one season may be active at once (for example the academic year
+    // and a short event week running side by side). Activating one used to
+    // complete every other active season silently, which left that season's
+    // events running inside a "completed" season. Nothing is auto-completed now.
+
+    let finishedEvents = 0
+    let closedMatches = 0
+    if (status === 'completed') {
+      const { data: running } = await supabase
+        .from('events')
+        .select('id, name')
+        .eq('season_id', req.params.id)
+        .eq('status', 'in_progress')
+      const runningEvents = running ?? []
+      if (runningEvents.length > 0) {
+        if (finish_events !== true) {
+          const names = runningEvents.slice(0, 3).map((e) => e.name).join(', ')
+          const more = runningEvents.length > 3 ? ` and ${runningEvents.length - 3} more` : ''
+          return res.status(409).json({
+            error: `This season still has ${runningEvents.length} running event${runningEvents.length === 1 ? '' : 's'} (${names}${more}). Finish them first, or confirm to finish them together with the season.`,
+            runningEvents: runningEvents.length,
+          })
+        }
+        // Confirmed: settle each event together with the season, so nothing is
+        // left running (or live) inside a completed season.
+        for (const ev of runningEvents) {
+          const closed = await closeOpenMatches(ev.id as string)
+          closedMatches += closed.length
+          await supabase.from('events').update({ status: 'completed' }).eq('id', ev.id)
+          await supabase.from('audit_logs').insert({
+            actor_id: req.user!.id,
+            action: 'event_status_changed',
+            entity_type: 'event',
+            entity_id: ev.id,
+            details: { from: 'in_progress', to: 'completed', via: 'season_completed', matches_closed: closed.length },
+          })
+        }
+        finishedEvents = runningEvents.length
+      }
     }
 
     const { data, error } = await supabase
@@ -1008,7 +1049,7 @@ router.patch(
       action: `season_${status}`,
       entity_type: 'season',
       entity_id: req.params.id,
-      details: {},
+      details: finishedEvents > 0 ? { finished_events: finishedEvents, matches_closed: closedMatches } : {},
     })
 
     res.json(data)
@@ -1023,17 +1064,23 @@ router.get(
   async (req: AuthRequest, res) => {
     const { data: events } = await supabase
       .from('events')
-      .select('id')
+      .select('id, status')
       .eq('season_id', req.params.id)
-    if (!events || events.length === 0) return res.json({ count: 0 })
+    if (!events || events.length === 0) return res.json({ count: 0, runningEvents: 0, liveMatches: 0 })
     const eventIds = events.map((e) => e.id)
+    const runningEvents = events.filter((e) => e.status === 'in_progress').length
     const { count, error } = await supabase
       .from('matches')
       .select('id', { count: 'exact', head: true })
       .in('event_id', eventIds)
       .in('status', ['scheduled', 'live'])
     if (error) return res.status(500).json({ error: error.message })
-    res.json({ count: count ?? 0 })
+    const { count: liveCount } = await supabase
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .in('event_id', eventIds)
+      .eq('status', 'live')
+    res.json({ count: count ?? 0, runningEvents, liveMatches: liveCount ?? 0 })
   },
 )
 

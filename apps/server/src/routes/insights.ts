@@ -37,6 +37,7 @@ router.get('/', requireAuth, requireRole('Organizer', 'Admin', 'Coach'), async (
       .from('seasons')
       .select('id')
       .eq('status', 'active')
+      .order('start_date', { ascending: false }) // several seasons can be active: the newest is 'current'
       .limit(1)
       .maybeSingle()
     seasonId = active?.id

@@ -104,6 +104,7 @@ router.get(
         .from('seasons')
         .select('id, name')
         .eq('status', 'active')
+        .order('start_date', { ascending: false }) // several seasons can be active: the newest is 'current'
         .limit(1)
         .maybeSingle()
       if (!active?.id) return res.status(400).json({ error: 'No active season configured.' })
@@ -364,6 +365,7 @@ router.get(
         .from('seasons')
         .select('id, name')
         .eq('status', 'active')
+        .order('start_date', { ascending: false }) // several seasons can be active: the newest is 'current'
         .limit(1)
         .maybeSingle()
       if (!active?.id) return res.status(400).json({ error: 'No active season configured.' })
