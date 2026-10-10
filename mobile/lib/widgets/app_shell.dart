@@ -76,11 +76,26 @@ class AppShell extends ConsumerWidget {
                       color: LayoutTokens.cardBackground(context),
                       border: Border(right: BorderSide(color: LayoutTokens.borderSubtle(context))),
                     ),
-                    child: SafeArea(
+                    child: SizedBox(
+                      // Rail width plus the left inset the SafeArea adds.
+                      width: 56 + MediaQuery.paddingOf(context).left,
+                      child: Column(
+                        children: [
+                          // The rail would otherwise paint white behind the clock
+                          // and status icons; keep that strip the header's colour.
+                          ColoredBox(
+                            color: AppTheme.heroGradient().first,
+                            child: SizedBox(height: MediaQuery.paddingOf(context).top, width: double.infinity),
+                          ),
+                          Expanded(
+                            child: SafeArea(
+                      top: false,
                       right: false,
                       child: NavigationRail(
                         backgroundColor: Colors.transparent,
-                        minWidth: 64,
+                        minWidth: 56,
+                        groupAlignment: 0,
+                        useIndicator: true,
                         selectedIndex: selected,
                         onDestinationSelected: (i) => _onTap(context, i, role),
                         labelType: NavigationRailLabelType.none,
@@ -107,6 +122,10 @@ class AppShell extends ConsumerWidget {
                             icon: Icon(profileIcon),
                             selectedIcon: Icon(profileIconSelected),
                             label: Text(profileLabel),
+                          ),
+                        ],
+                      ),
+                    ),
                           ),
                         ],
                       ),
