@@ -12,6 +12,7 @@ import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/match_roster_stats.dart';
 import '../widgets/tournament_bracket_view.dart';
+import '../widgets/ui/animated_score.dart';
 import '../widgets/ui/brand_page.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
@@ -231,7 +232,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                                   children: [
                                     Text(nameA, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 10),
-                                    Text('$totalA',
+                                    AnimatedScore(
+                                        value: totalA,
                                         style: AppTheme.display(
                                             size: 44,
                                             color: isCompleted && totalA > totalB ? LayoutTokens.success(context) : LayoutTokens.primaryText(context)),
@@ -248,7 +250,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                                   children: [
                                     Text(nameB, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 10),
-                                    Text('$totalB',
+                                    AnimatedScore(
+                                        value: totalB,
                                         style: AppTheme.display(
                                             size: 44,
                                             color: isCompleted && totalB > totalA ? LayoutTokens.success(context) : LayoutTokens.primaryText(context)),

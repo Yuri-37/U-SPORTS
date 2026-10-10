@@ -9,6 +9,7 @@ import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
+import 'ui/animated_score.dart';
 
 /// Live hub detail sheet — watches [hubLiveProvider] so scores update as super admin scores.
 void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
@@ -161,12 +162,12 @@ void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
                                     ],
                                   ),
                                 ),
-                                Text('${pres.left}', style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
+                                AnimatedScore(value: pres.left, style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 8),
                                   child: Text('—', style: TextStyle(color: LayoutTokens.mutedText(ctx))),
                                 ),
-                                Text('${pres.right}', style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
+                                AnimatedScore(value: pres.right, style: AppTheme.display(size: 32, color: LayoutTokens.primaryText(ctx))),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,

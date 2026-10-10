@@ -7,6 +7,7 @@ import '../theme/layout_tokens.dart';
 import '../utils/live_match_presentation.dart';
 import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
+import 'ui/animated_score.dart';
 
 class LiveMatchCard extends StatelessWidget {
   const LiveMatchCard({
@@ -102,12 +103,12 @@ class LiveMatchCard extends StatelessWidget {
                     children: [
                       Expanded(child: Text(nameA, maxLines: 2, overflow: TextOverflow.ellipsis, style: teamStyle)),
                       const SizedBox(width: 8),
-                      Text('${pres.left}', style: scoreStyle),
+                      AnimatedScore(value: pres.left, style: scoreStyle),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: Text('VS', style: AppTheme.overline(muted).copyWith(letterSpacing: 1)),
                       ),
-                      Text('${pres.right}', style: scoreStyle),
+                      AnimatedScore(value: pres.right, style: scoreStyle),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(nameB, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: teamStyle),
