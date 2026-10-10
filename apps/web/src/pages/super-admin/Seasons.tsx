@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Play, Check, Archive, Trash2, Pencil, AlertTriangle } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import RowActions from '../../components/ui/RowActions'
 import PageHeader from '../../components/layout/PageHeader'
 import { Button, Card, Modal, Input, Badge, Alert, Skeleton } from '../../components/ui'
 import { Stepper } from '../../components/ui/Stepper'
@@ -414,22 +415,26 @@ export default function SuperAdminSeasons() {
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant={STATUS_BADGE[s.status]}>{formatEnumLabel(s.status)}</Badge>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon={<Pencil className="w-3 h-3" />}
-                    onClick={() => openEdit(s)}
-                  >
-                    Edit
-                  </Button>
+                <RowActions
+                  label={s.name}
+                  primary={[{ label: 'Edit', icon: Pencil, onSelect: () => openEdit(s) }]}
+                  more={[
+                    {
+                      label: 'Delete',
+                      icon: Trash2,
+                      destructive: true,
+                      onSelect: () => {
+                        setDeleteError('')
+                        setDeleteConfirm({ id: s.id, name: s.name })
+                      },
+                    },
+                  ]}
+                >
                   {s.status === 'draft' && (
                     <Button
                       size="sm"
                       icon={<Play className="w-3 h-3" />}
-                      onClick={() =>
-                        void openActivateConfirm(s.id, s.name)
-                      }
+                      onClick={() => void openActivateConfirm(s.id, s.name)}
                     >
                       Activate
                     </Button>
@@ -456,17 +461,7 @@ export default function SuperAdminSeasons() {
                       Archive
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon={<Trash2 className="w-3 h-3" />}
-                    onClick={() => {
-                      setDeleteError('')
-                      setDeleteConfirm({ id: s.id, name: s.name })
-                    }}
-                    className="text-[var(--danger)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                  />
-                </div>
+                </RowActions>
               </div>
             </Card>
           ))}

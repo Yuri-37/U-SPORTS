@@ -32,6 +32,7 @@ import {
   Table,
 } from '../../components/ui'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import RowActions from '../../components/ui/RowActions'
 import PageHeader from '../../components/layout/PageHeader'
 
 import axios from 'axios'
@@ -1494,63 +1495,34 @@ export default function OrganizerTeams() {
                         </div>
 
                         <div className="flex flex-col items-end gap-1 shrink-0">
-                          <div className="flex items-center gap-0.5">
-                            <Button
-                              type="button"
-
-                              size="sm"
-
-                              variant="ghost"
-
-                              title="View public team page"
-
-                              aria-label="View public team page"
-
-                              icon={<Eye className="w-3.5 h-3.5" />}
-
-                              onClick={() => window.open(`/guest/teams/${team.id}`, '_blank')}
-                            />
-
-                            <Button
-                              type="button"
-
-                              size="sm"
-
-                              variant="ghost"
-
-                              title="Edit team"
-
-                              aria-label="Edit team"
-
-                              disabled={!canCfg}
-
-                              icon={<Pencil className="w-3.5 h-3.5" />}
-
-                              onClick={() => void openEdit(team)}
-                            />
-
-                            <Button
-                              type="button"
-
-                              size="sm"
-
-                              variant="ghost"
-
-                              title="Delete team"
-
-                              aria-label="Delete team"
-
-                              disabled={!canCfg}
-
-                              icon={<Trash2 className="w-3.5 h-3.5" />}
-
-                              onClick={() => {
-                                setDeleteError('')
-
-                                setDeleteTarget(team)
-                              }}
-                            />
-                          </div>
+                          <RowActions
+                            label={team.name}
+                            primary={[
+                              {
+                                label: 'Edit',
+                                icon: Pencil,
+                                disabled: !canCfg,
+                                onSelect: () => void openEdit(team),
+                              },
+                            ]}
+                            more={[
+                              {
+                                label: 'View public page',
+                                icon: Eye,
+                                onSelect: () => window.open(`/guest/teams/${team.id}`, '_blank'),
+                              },
+                              {
+                                label: 'Delete',
+                                icon: Trash2,
+                                destructive: true,
+                                disabled: !canCfg,
+                                onSelect: () => {
+                                  setDeleteError('')
+                                  setDeleteTarget(team)
+                                },
+                              },
+                            ]}
+                          />
 
                           {canAssignCoach ? (
                             <Button

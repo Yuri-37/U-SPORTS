@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Bell, AlertTriangle, Calendar, Info, Trash2, Pencil, Megaphone } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import RowActions from '../../components/ui/RowActions'
 import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
 import PageHeader from '../../components/layout/PageHeader'
 import {
@@ -332,27 +333,22 @@ export default function OrganizerAnnouncements() {
                     {formatDateTime(a.published_at)} · {audienceLabel(a)}
                   </p>
                 </div>
-                <div className="flex items-start gap-3 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(a)}
-                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                    aria-label="Edit announcement"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteTitle(a.title)
-                      setDeleteConfirmId(a.id)
-                    }}
-                    className="text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
-                    aria-label="Delete announcement"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <RowActions
+                  className="flex-shrink-0"
+                  label={a.title}
+                  primary={[{ label: 'Edit', icon: Pencil, onSelect: () => openEdit(a) }]}
+                  more={[
+                    {
+                      label: 'Delete',
+                      icon: Trash2,
+                      destructive: true,
+                      onSelect: () => {
+                        setDeleteTitle(a.title)
+                        setDeleteConfirmId(a.id)
+                      },
+                    },
+                  ]}
+                />
               </Card>
             )
           })}

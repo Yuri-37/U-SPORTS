@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, ToggleLeft, ToggleRight, Mail, Lock, Pencil, Copy, Check } from 'lucide-react'
+import { Plus, ToggleLeft, ToggleRight, Mail, Lock, Pencil, Copy, Check, KeyRound } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import AccountCredentialsModal from '../../components/accounts/AccountCredentialsModal'
 import {
@@ -21,6 +21,7 @@ import type { Organizer, Profile } from '../../types'
 import { getSportLabel } from '../../lib/utils'
 import { SportTag } from '../../components/ui/SportIcon'
 import SearchInput, { matchesSearch } from '../../components/ui/SearchInput'
+import RowActions from '../../components/ui/RowActions'
 import {
   createOrganizerFormSchema,
   staffEmailZ,
@@ -598,22 +599,21 @@ export default function SuperAdminOrganizers() {
             ),
             actions:
               a.id === currentUserId ? (
-                <span className="text-xs text-[var(--text-muted)]">You</span>
+                <div className="flex items-center justify-end pr-3">
+                  <span className="text-xs text-[var(--text-muted)]">You</span>
+                </div>
               ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={
-                    a.deactivated_at ? (
-                      <ToggleLeft className="w-4 h-4" />
-                    ) : (
-                      <ToggleRight className="w-4 h-4" />
-                    )
-                  }
-                  onClick={() => setAdminLockConfirm(a)}
-                >
-                  {a.deactivated_at ? 'Activate' : 'Deactivate'}
-                </Button>
+                <RowActions
+                  label={a.full_name}
+                  primary={[
+                    {
+                      label: a.deactivated_at ? 'Activate' : 'Deactivate',
+                      icon: a.deactivated_at ? ToggleLeft : ToggleRight,
+                      destructive: !a.deactivated_at,
+                      onSelect: () => setAdminLockConfirm(a),
+                    },
+                  ]}
+                />
               ),
           }))}
           emptyMessage={
@@ -711,38 +711,19 @@ export default function SuperAdminOrganizers() {
               </Badge>
             ),
             actions: (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={<Pencil className="w-3.5 h-3.5" />}
-                  onClick={() => openEdit(o)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={
-                    o.is_active ? (
-                      <ToggleRight className="w-4 h-4" />
-                    ) : (
-                      <ToggleLeft className="w-4 h-4" />
-                    )
-                  }
-                  onClick={() => setToggleConfirm(o)}
-                >
-                  {o.is_active ? 'Deactivate' : 'Activate'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={<Lock className="w-3.5 h-3.5" />}
-                  onClick={() => setResetPasswordConfirm(o)}
-                >
-                  Reset password
-                </Button>
-              </div>
+              <RowActions
+                label={o.profile?.full_name ?? 'this staff member'}
+                primary={[{ label: 'Edit', icon: Pencil, onSelect: () => openEdit(o) }]}
+                more={[
+                  { label: 'Reset password', icon: KeyRound, onSelect: () => setResetPasswordConfirm(o) },
+                  {
+                    label: o.is_active ? 'Deactivate' : 'Activate',
+                    icon: o.is_active ? ToggleRight : ToggleLeft,
+                    destructive: o.is_active,
+                    onSelect: () => setToggleConfirm(o),
+                  },
+                ]}
+              />
             ),
           }))}
           emptyMessage={

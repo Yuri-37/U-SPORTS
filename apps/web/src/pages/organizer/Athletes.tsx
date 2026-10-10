@@ -1,7 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Download, RefreshCw, Search, Upload, AlertCircle, Copy, Check, UserPlus } from 'lucide-react'
+import {
+  Download,
+  RefreshCw,
+  Search,
+  Upload,
+  AlertCircle,
+  Copy,
+  Check,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  Pencil,
+  KeyRound,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+} from 'lucide-react'
 import { Button, Table, Badge, Modal, Alert, Input, Select, TabBar } from '../../components/ui'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import RowActions from '../../components/ui/RowActions'
 import PageHeader from '../../components/layout/PageHeader'
 import AccountCredentialsModal from '../../components/accounts/AccountCredentialsModal'
 import { toast } from '../../stores/toastStore'
@@ -733,60 +750,52 @@ export default function OrganizerAthletes() {
             </Badge>
           ),
           actions: (
-            <div className="flex gap-1 flex-wrap">
-              <Button size="sm" variant="ghost" onClick={() => openEditAthlete(a)}>
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  setSeasonToggleConfirm({
-                    id: a.id,
-                    name: a.profile?.full_name ?? 'this athlete',
-                    nextInactive: a.season_status === 'active',
-                  })
-                }
-              >
-                {a.season_status === 'active' ? 'Set inactive' : 'Set active'}
-              </Button>
-              {canLockAccounts && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={a.profile?.deactivated_at ? undefined : 'text-[var(--danger)]'}
-                  onClick={() =>
-                    setAccountLockConfirm({
+            <RowActions
+              label={a.profile?.full_name ?? 'this athlete'}
+              primary={[{ label: 'Edit', icon: Pencil, onSelect: () => openEditAthlete(a) }]}
+              more={[
+                {
+                  label: a.season_status === 'active' ? 'Set inactive' : 'Set active',
+                  icon: a.season_status === 'active' ? UserMinus : UserCheck,
+                  onSelect: () =>
+                    setSeasonToggleConfirm({
                       id: a.id,
                       name: a.profile?.full_name ?? 'this athlete',
-                      deactivate: !a.profile?.deactivated_at,
-                    })
-                  }
-                >
-                  {a.profile?.deactivated_at ? 'Activate account' : 'Deactivate account'}
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  setResetPasswordConfirm({ id: a.id, name: a.profile?.full_name ?? 'this athlete' })
-                }
-              >
-                Reset password
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-[var(--danger)]"
-                onClick={() => {
-                  setDeleteTarget(a)
-                  setDeleteError('')
-                }}
-              >
-                Delete
-              </Button>
-            </div>
+                      nextInactive: a.season_status === 'active',
+                    }),
+                },
+                {
+                  label: 'Reset password',
+                  icon: KeyRound,
+                  onSelect: () =>
+                    setResetPasswordConfirm({ id: a.id, name: a.profile?.full_name ?? 'this athlete' }),
+                },
+                ...(canLockAccounts
+                  ? [
+                      {
+                        label: a.profile?.deactivated_at ? 'Activate account' : 'Deactivate account',
+                        icon: a.profile?.deactivated_at ? ToggleLeft : ToggleRight,
+                        destructive: !a.profile?.deactivated_at,
+                        onSelect: () =>
+                          setAccountLockConfirm({
+                            id: a.id,
+                            name: a.profile?.full_name ?? 'this athlete',
+                            deactivate: !a.profile?.deactivated_at,
+                          }),
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  destructive: true,
+                  onSelect: () => {
+                    setDeleteTarget(a)
+                    setDeleteError('')
+                  },
+                },
+              ]}
+            />
           ),
         }))}
         emptyMessage={
