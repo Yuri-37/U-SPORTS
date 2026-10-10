@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/layout_tokens.dart';
+import 'ui/brand_page.dart' show isCompactHeight;
 
 /// Persistent bottom nav shell for the four tab branches (Home, Rankings,
 /// Events, Profile). Each branch keeps its own Navigator/state via
@@ -70,7 +71,12 @@ class AppShell extends ConsumerWidget {
           child: NavigationBar(
             selectedIndex: _displayFor(navigationShell.currentIndex),
             onDestinationSelected: (i) => _onTap(context, i, role),
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            // Sideways, the labels are dropped and the bar shortened so it does
+            // not eat a quarter of the screen.
+            height: isCompactHeight(context) ? 56 : null,
+            labelBehavior: isCompactHeight(context)
+                ? NavigationDestinationLabelBehavior.alwaysHide
+                : NavigationDestinationLabelBehavior.alwaysShow,
             destinations: [
               const NavigationDestination(
                 icon: Icon(Icons.home_outlined),

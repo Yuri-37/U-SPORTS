@@ -12,12 +12,18 @@ class TournamentBracketView extends StatelessWidget {
     required this.matches,
     required this.participantLabels,
     this.onMatchTap,
+    this.zoomable = true,
   });
 
   final List<Map<String, dynamic>> brackets;
   final List<Map<String, dynamic>> matches;
   final Map<String, String> participantLabels;
   final void Function(Map<String, dynamic> match)? onMatchTap;
+
+  /// Pinch-to-zoom and free panning. Turn it off when the bracket sits in a
+  /// normal vertical scroll (a phone held sideways), so a vertical drag
+  /// scrolls the page instead of being taken by the zoom surface.
+  final bool zoomable;
 
   static const double _cellWidth = 168;
 
@@ -183,10 +189,8 @@ class TournamentBracketView extends StatelessWidget {
           border: Border.all(color: const Color(0x22FFFFFF)),
         ),
         clipBehavior: Clip.antiAlias,
-        child: InteractiveViewer(
-          boundaryMargin: const EdgeInsets.all(120),
-          minScale: 0.35,
-          maxScale: 2.5,
+        child: _maybeZoomable(
+          zoomable,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.all(20),
@@ -241,6 +245,15 @@ class TournamentBracketView extends StatelessWidget {
     );
   }
 }
+
+Widget _maybeZoomable(bool zoomable, {required Widget child}) => zoomable
+    ? InteractiveViewer(
+        boundaryMargin: const EdgeInsets.all(120),
+        minScale: 0.35,
+        maxScale: 2.5,
+        child: child,
+      )
+    : child;
 
 /// Classic elimination connector lines between two rounds (single-elim with pair merges).
 class _RoundBridge extends StatelessWidget {

@@ -46,6 +46,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? ins!.name
         : (abbr?.isNotEmpty == true ? abbr! : 'Intramural sports');
 
+    final stats = FrostedCard(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isCompactHeight(context) ? 10 : 16),
+      child: FrostedStats(
+        stats: [
+          (label: 'Playing now', value: '$live'),
+          (label: 'Open events', value: '$open'),
+        ],
+      ),
+    );
+
+    // Sideways there is no room to stack the crest, name and figures: put the
+    // school on the left and the figures beside it.
+    if (isCompactHeight(context)) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                if (logo != null && logo.isNotEmpty) ...[
+                  InstitutionLogo(url: logo, height: 44, fallback: const SizedBox(height: 44)),
+                  const SizedBox(width: 14),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        schoolName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.display(size: 20, color: Colors.white, height: 1.15),
+                      ),
+                      if (tagline != null && tagline.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            tagline,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontStyle: FontStyle.italic,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(child: stats),
+        ],
+      );
+    }
+
     return Column(
       children: [
         const HeroPill(text: 'Live platform'),
@@ -81,15 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         const SizedBox(height: 26),
-        FrostedCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          child: FrostedStats(
-            stats: [
-              (label: 'Playing now', value: '$live'),
-              (label: 'Open events', value: '$open'),
-            ],
-          ),
-        ),
+        stats,
       ],
     );
   }

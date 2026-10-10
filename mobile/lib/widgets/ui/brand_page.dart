@@ -20,6 +20,12 @@ import '../../theme/layout_tokens.dart';
 
 const double _sheetRadius = 28;
 
+/// A phone held sideways has well under 480 logical pixels of height. The hero,
+/// the tab bar and the bottom navigation together would then fill most of the
+/// screen, so every page tightens them. (Tablets and portrait phones are
+/// taller than this and are not affected.)
+bool isCompactHeight(BuildContext context) => MediaQuery.sizeOf(context).height < 480;
+
 class BrandPage extends StatelessWidget {
   const BrandPage.scroll({
     super.key,
@@ -180,6 +186,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     // Everything in the hero is white: force icon buttons (M3 would otherwise
     // tint them from the color scheme) and default text accordingly.
+    final compact = isCompactHeight(context);
     final heroTheme = Theme.of(context).copyWith(
       iconTheme: const IconThemeData(color: Colors.white),
       iconButtonTheme: IconButtonThemeData(
@@ -204,15 +211,15 @@ class _Hero extends StatelessWidget {
             child: DefaultTextStyle.merge(
               style: const TextStyle(color: Colors.white),
               child: Padding(
-                padding: EdgeInsets.fromLTRB(0, 4, 0, bottomPadding),
+                padding: EdgeInsets.fromLTRB(0, compact ? 0 : 4, 0, compact ? (bottomPadding - 12).clamp(8.0, 100.0) : bottomPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _titleRow(context),
+                    _titleRow(context, compact),
                     if (hero != null)
-                      Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 0), child: hero),
+                      Padding(padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0), child: hero),
                     if (bottom != null)
-                      Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0), child: bottom),
+                      Padding(padding: EdgeInsets.fromLTRB(16, compact ? 6 : 14, 16, 0), child: bottom),
                   ],
                 ),
               ),
@@ -223,7 +230,7 @@ class _Hero extends StatelessWidget {
     );
   }
 
-  Widget _titleRow(BuildContext context) {
+  Widget _titleRow(BuildContext context, bool compact) {
     final titleContent = titleWidget ??
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +264,7 @@ class _Hero extends StatelessWidget {
         );
 
     return SizedBox(
-      height: 56,
+      height: compact ? 48 : 56,
       child: Row(
         children: [
           if (showBack)

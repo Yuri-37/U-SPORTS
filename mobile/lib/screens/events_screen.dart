@@ -45,6 +45,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final compact = isCompactHeight(context);
     return DoubleBackToExit(
       child: BrandPage.fixed(
         showBack: false,
@@ -55,7 +56,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+              padding: EdgeInsets.fromLTRB(16, compact ? 8 : 18, 16, 0),
               child: TextField(
                 decoration: const InputDecoration(
                   hintText: 'Search name or description',
@@ -64,7 +65,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
                 onChanged: (v) => setState(() => _search = v),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: compact ? 6 : 12),
             SizedBox(
               height: 42,
               child: ShaderMask(

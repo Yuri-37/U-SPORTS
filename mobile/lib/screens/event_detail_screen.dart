@@ -423,23 +423,43 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                               physics: const AlwaysScrollableScrollPhysics(),
                               children: const [SheetMessage(text: 'No bracket generated yet.')],
                             )
-                          : InteractiveViewer(
-                              boundaryMargin: const EdgeInsets.all(48),
-                              minScale: 0.4,
-                              maxScale: 2.5,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: TournamentBracketView(
-                                  brackets: brackets,
-                                  matches: matches,
-                                  participantLabels: _labels,
-                                  onMatchTap: (m) {
-                                    final id = m['id'] as String?;
-                                    if (id != null) _showMatchSheet(context, id);
-                                  },
+                          : isCompactHeight(context)
+                              // Sideways the bracket is taller than the room
+                              // under the header: let it scroll like a page
+                              // instead of clipping inside a zoom surface.
+                              ? ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.all(12),
+                                  children: [
+                                    TournamentBracketView(
+                                      brackets: brackets,
+                                      matches: matches,
+                                      participantLabels: _labels,
+                                      zoomable: false,
+                                      onMatchTap: (m) {
+                                        final id = m['id'] as String?;
+                                        if (id != null) _showMatchSheet(context, id);
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : InteractiveViewer(
+                                  boundaryMargin: const EdgeInsets.all(48),
+                                  minScale: 0.4,
+                                  maxScale: 2.5,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: TournamentBracketView(
+                                      brackets: brackets,
+                                      matches: matches,
+                                      participantLabels: _labels,
+                                      onMatchTap: (m) {
+                                        final id = m['id'] as String?;
+                                        if (id != null) _showMatchSheet(context, id);
+                                      },
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
                     ),
                     RefreshIndicator(
                       onRefresh: () async {
