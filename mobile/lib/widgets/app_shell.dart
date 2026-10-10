@@ -11,6 +11,9 @@ import 'ui/brand_page.dart' show isCompactHeight;
 /// Events, Profile). Each branch keeps its own Navigator/state via
 /// [StatefulShellRoute.indexedStack] so switching tabs no longer rebuilds
 /// the destination screen or refetches its data.
+///
+/// Held sideways there is no height for a bottom bar, so the four tabs become
+/// a slim arc of round buttons floating at the left edge instead.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -66,82 +69,7 @@ class AppShell extends ConsumerWidget {
         navigationShell.goBranch(0);
       },
       child: compact
-          // A phone held sideways has no height to spare: the navigation moves
-          // to the left edge, so the page keeps the full height.
-          ? Scaffold(
-              body: Row(
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: LayoutTokens.cardBackground(context),
-                      border: Border(right: BorderSide(color: LayoutTokens.borderSubtle(context))),
-                    ),
-                    child: SizedBox(
-                      // Rail width plus the left inset the SafeArea adds.
-                      width: 56 + MediaQuery.paddingOf(context).left,
-                      child: Column(
-                        children: [
-                          // The rail would otherwise paint white behind the clock
-                          // and status icons; keep that strip the header's colour.
-                          ColoredBox(
-                            color: AppTheme.heroGradient().first,
-                            child: SizedBox(height: MediaQuery.paddingOf(context).top, width: double.infinity),
-                          ),
-                          Expanded(
-                            child: SafeArea(
-                      top: false,
-                      right: false,
-                      child: NavigationRail(
-                        backgroundColor: Colors.transparent,
-                        minWidth: 56,
-                        groupAlignment: 0,
-                        useIndicator: true,
-                        selectedIndex: selected,
-                        onDestinationSelected: (i) => _onTap(context, i, role),
-                        labelType: NavigationRailLabelType.none,
-                        indicatorColor: AppTheme.brandInk(context).withValues(alpha: 0.12),
-                        selectedIconTheme: IconThemeData(color: AppTheme.brandInk(context)),
-                        unselectedIconTheme: IconThemeData(color: LayoutTokens.mutedText(context)),
-                        destinations: [
-                          const NavigationRailDestination(
-                            icon: Icon(Icons.home_outlined),
-                            selectedIcon: Icon(Icons.home_rounded),
-                            label: Text('Home'),
-                          ),
-                          const NavigationRailDestination(
-                            icon: Icon(Icons.emoji_events_outlined),
-                            selectedIcon: Icon(Icons.emoji_events_rounded),
-                            label: Text('Rankings'),
-                          ),
-                          const NavigationRailDestination(
-                            icon: Icon(Icons.calendar_today_outlined),
-                            selectedIcon: Icon(Icons.calendar_today_rounded),
-                            label: Text('Events'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(profileIcon),
-                            selectedIcon: Icon(profileIconSelected),
-                            label: Text(profileLabel),
-                          ),
-                        ],
-                      ),
-                    ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // The rail already sits in the left inset.
-                  Expanded(
-                    child: MediaQuery.removePadding(
-                      context: context,
-                      removeLeft: true,
-                      child: navigationShell,
-                    ),
-                  ),
-                ],
-              ),
-            )
+          ? _sidewaysShell(context, role, selected, profileLabel, profileIcon, profileIconSelected)
           : Scaffold(
               body: navigationShell,
               // A hairline and soft lift separate the bar from the sheet above it.
@@ -185,6 +113,153 @@ class AppShell extends ConsumerWidget {
                 ),
               ),
             ),
+    );
+  }
+
+  /// The page fills the whole screen; the round buttons float over a gutter at
+  /// its left edge. The gutter is reserved by widening the left inset the
+  /// pages already respect, so nothing slides underneath the buttons.
+  Widget _sidewaysShell(
+    BuildContext context,
+    String role,
+    int selected,
+    String profileLabel,
+    IconData profileIcon,
+    IconData profileIconSelected,
+  ) {
+    final mq = MediaQuery.of(context);
+    final items = [
+      const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
+      const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
+      const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
+      _NavItem(profileLabel, profileIcon, profileIconSelected),
+    ];
+    return Scaffold(
+      body: Stack(
+        children: [
+          MediaQuery(
+            data: mq.copyWith(
+              padding: mq.padding.copyWith(left: mq.padding.left + _ArcNav.gutter),
+            ),
+            child: navigationShell,
+          ),
+          Positioned(
+            left: mq.padding.left,
+            top: 0,
+            bottom: 0,
+            width: _ArcNav.width,
+            child: SafeArea(
+              left: false,
+              right: false,
+              child: Center(
+                child: _ArcNav(
+                  items: items,
+                  selected: selected,
+                  onSelect: (i) => _onTap(context, i, role),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  const _NavItem(this.label, this.icon, this.selectedIcon);
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+}
+
+/// Round buttons laid out on a gentle arc bulging toward the page, so the
+/// column reads as one curved strip rather than a rigid bar.
+class _ArcNav extends StatelessWidget {
+  const _ArcNav({required this.items, required this.selected, required this.onSelect});
+
+  final List<_NavItem> items;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  static const double _dot = 46;
+  static const double _gap = 10;
+  static const double _bulge = 9;
+  static const double _edge = 6;
+
+  /// Width of the strip itself.
+  static const double width = _edge + _dot + _bulge + _edge;
+
+  /// Room reserved in the page, a little more than the strip so the content
+  /// never touches the curve.
+  static const double gutter = width + 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final mid = (items.length - 1) / 2;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < items.length; i++)
+          Padding(
+            padding: EdgeInsets.only(
+              top: i == 0 ? 0 : _gap,
+              // 0 at both ends, full bulge in the middle.
+              left: _edge + _bulge * (1 - _squared((i - mid) / (mid == 0 ? 1 : mid))),
+            ),
+            child: _ArcButton(
+              item: items[i],
+              selected: i == selected,
+              onTap: () => onSelect(i),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static double _squared(double v) => v * v;
+}
+
+class _ArcButton extends StatelessWidget {
+  const _ArcButton({required this.item, required this.selected, required this.onTap});
+
+  final _NavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = selected ? AppTheme.schoolPrimary : LayoutTokens.cardBackground(context);
+    final ring = selected ? Colors.white.withValues(alpha: 0.9) : LayoutTokens.borderSubtle(context);
+    return Tooltip(
+      message: item.label,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: item.label,
+        child: Material(
+          color: fill,
+          elevation: selected ? 5 : 2,
+          shadowColor: Colors.black.withValues(alpha: 0.35),
+          shape: CircleBorder(side: BorderSide(color: ring, width: selected ? 2 : 1)),
+          animationDuration: const Duration(milliseconds: 160),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: _ArcNav._dot,
+              height: _ArcNav._dot,
+              child: Icon(
+                selected ? item.selectedIcon : item.icon,
+                size: 22,
+                color: selected ? Colors.white : LayoutTokens.mutedText(context),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
