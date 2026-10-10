@@ -180,7 +180,8 @@ const deleteAccountSchema = z.object({
  * the current password so a borrowed phone cannot do it.
  *
  * Staff accounts own records others rely on (announcements, audit trail,
- * events), so they are removed by the Super Admin rather than from here.
+ * events), so the Super Admin deactivates them rather than them erasing
+ * themselves from here.
  */
 router.post('/delete-account', requireAuth, async (req: AuthRequest, res) => {
   const parsed = deleteAccountSchema.safeParse(req.body)
@@ -190,7 +191,7 @@ router.post('/delete-account', requireAuth, async (req: AuthRequest, res) => {
   if (req.user!.role !== 'Athlete') {
     return res.status(403).json({
       error:
-        'Staff accounts are removed by the Super Admin. Ask them to deactivate or delete your account.',
+        'Staff accounts are managed by the Super Admin. Ask them to deactivate your account.',
     })
   }
 

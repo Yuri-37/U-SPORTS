@@ -64,7 +64,7 @@ export default function YourDataSection({ canDelete }: { canDelete: boolean }) {
         You can get a copy of the personal data U-Sports holds about you.{' '}
         {canDelete
           ? 'You can also erase your account: your profile, roster memberships, statistics and notifications are removed.'
-          : 'Staff accounts are removed by the Super Admin — ask them if you want yours deleted.'}
+          : 'Staff accounts are managed by the Super Admin — ask them to deactivate yours.'}
       </p>
       {error && (
         <Alert type="danger" className="mb-4">

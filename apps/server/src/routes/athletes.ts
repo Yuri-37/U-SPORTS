@@ -636,7 +636,9 @@ router.patch(
   },
 )
 
-// Permanently remove an athlete. Deleting the auth user cascades through
+// Permanently remove an athlete. Organizers and the Super Admin only: coaches can
+// set a player inactive, but erasing a record (and its box scores) is not theirs.
+// Deleting the auth user cascades through
 // profiles -> athletes -> team_members, player_game_stats,
 // player_season_stats, leaderboard_visibility and verification_documents.
 // Migration 071 makes the remaining references (team captaincy, scoring
@@ -644,7 +646,7 @@ router.patch(
 router.delete(
   '/:id',
   requireAuth,
-  requireRole('Organizer', 'Admin', 'Coach'),
+  requireRole('Organizer', 'Admin'),
   async (req: AuthRequest, res) => {
     const { data: athlete, error: lookupError } = await supabase
       .from('athletes')

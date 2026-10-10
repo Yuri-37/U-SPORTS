@@ -13,7 +13,7 @@ import 'ui/brand_page.dart';
 /// Athlete-only "Delete my account" row (Data Privacy Act, right to erasure).
 ///
 /// Asks for the current password first so a borrowed phone cannot erase an
-/// account. Staff accounts are removed by the Super Admin, so this is only
+/// account. Staff accounts are managed by the Super Admin, so this is only
 /// shown in the athlete settings.
 class DeleteAccountTile extends ConsumerWidget {
   const DeleteAccountTile({super.key});

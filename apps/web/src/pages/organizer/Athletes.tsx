@@ -108,6 +108,9 @@ export default function OrganizerAthletes() {
   const isSuperAdmin = profile?.role === 'Admin'
   // Locking an account is for the Super Admin and organizers; coaches only manage rosters.
   const canLockAccounts = profile?.role === 'Admin' || profile?.role === 'Organizer'
+  // Erasing a record is for organizers and the Super Admin too; coaches can set a
+  // player inactive but not delete them (the server refuses it as well).
+  const canDeleteAthletes = canLockAccounts
   const { sportOptionsForForms } = useOrganizerSportScope()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
@@ -785,15 +788,19 @@ export default function OrganizerAthletes() {
                       },
                     ]
                   : []),
-                {
-                  label: 'Delete',
-                  icon: Trash2,
-                  destructive: true,
-                  onSelect: () => {
-                    setDeleteTarget(a)
-                    setDeleteError('')
-                  },
-                },
+                ...(canDeleteAthletes
+                  ? [
+                      {
+                        label: 'Delete',
+                        icon: Trash2,
+                        destructive: true,
+                        onSelect: () => {
+                          setDeleteTarget(a)
+                          setDeleteError('')
+                        },
+                      },
+                    ]
+                  : []),
               ]}
             />
           ),
