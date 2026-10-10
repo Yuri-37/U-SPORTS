@@ -22,6 +22,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
   late final TabController _tab = TabController(length: 2, vsync: this);
   String _sportFilter = '';
   String _search = '';
+  final TextEditingController _searchCtrl = TextEditingController();
   bool _appliedPastQuery = false;
 
   @override
@@ -40,72 +41,90 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
   @override
   void dispose() {
     _tab.dispose();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  /// Search box and sport chips. Upright they sit fixed above the list;
+  /// sideways they scroll with it, because there is no height to spare.
+  Widget _filters(BuildContext context) {
+    final compact = isCompactHeight(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, compact ? 8 : 18, 16, 0),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: const InputDecoration(
+              hintText: 'Search name or description',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (v) => setState(() => _search = v),
+          ),
+        ),
+        SizedBox(height: compact ? 6 : 12),
+        SizedBox(
+          height: 42,
+          child: ShaderMask(
+            shaderCallback: (rect) => const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Colors.black, Colors.black, Colors.transparent],
+              stops: [0.0, 0.9, 1.0],
+            ).createShader(rect),
+            blendMode: BlendMode.dstIn,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _sportChip(context, '', 'All sports'),
+                for (final s in ['basketball', 'volleyball', 'table-tennis'])
+                  _sportChip(context, s, sportLabel(s)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final compact = isCompactHeight(context);
+    Widget tabs({Widget? header}) => TabBarView(
+          controller: _tab,
+          children: [
+            _EventsList(
+              statuses: const ['registration', 'in_progress'],
+              sportFilter: _sportFilter,
+              search: _search,
+              header: header,
+            ),
+            _EventsList(
+              statuses: const ['completed', 'cancelled'],
+              sportFilter: _sportFilter,
+              search: _search,
+              header: header,
+            ),
+          ],
+        );
+
     return DoubleBackToExit(
       child: BrandPage.fixed(
         showBack: false,
         title: 'Events',
         actions: const [HubHeaderActions()],
         bottom: BrandTabBar(controller: _tab, tabs: const ['Upcoming & live', 'Past results']),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, compact ? 8 : 18, 16, 0),
-              child: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search name or description',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onChanged: (v) => setState(() => _search = v),
-              ),
-            ),
-            SizedBox(height: compact ? 6 : 12),
-            SizedBox(
-              height: 42,
-              child: ShaderMask(
-                shaderCallback: (rect) => const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Colors.black, Colors.black, Colors.transparent],
-                  stops: [0.0, 0.9, 1.0],
-                ).createShader(rect),
-                blendMode: BlendMode.dstIn,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _sportChip(context, '', 'All sports'),
-                    for (final s in ['basketball', 'volleyball', 'table-tennis'])
-                      _sportChip(context, s, sportLabel(s)),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tab,
+        body: compact
+            ? tabs(header: _filters(context))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _EventsList(
-                    statuses: const ['registration', 'in_progress'],
-                    sportFilter: _sportFilter,
-                    search: _search,
-                  ),
-                  _EventsList(
-                    statuses: const ['completed', 'cancelled'],
-                    sportFilter: _sportFilter,
-                    search: _search,
-                  ),
+                  _filters(context),
+                  Expanded(child: tabs()),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -130,11 +149,19 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
 }
 
 class _EventsList extends ConsumerWidget {
-  const _EventsList({required this.statuses, required this.sportFilter, required this.search});
+  const _EventsList({
+    required this.statuses,
+    required this.sportFilter,
+    required this.search,
+    this.header,
+  });
 
   final List<String> statuses;
   final String sportFilter;
   final String search;
+
+  /// Shown as the first scrolling row (the filters, when held sideways).
+  final Widget? header;
 
   static const _allEvents = {'status': null, 'sport': null, 'seasonId': null};
 
@@ -150,7 +177,7 @@ class _EventsList extends ConsumerWidget {
           onRefresh: refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            children: [SheetMessage(text: text)],
+            children: [if (header != null) header!, SheetMessage(text: text)],
           ),
         );
 
@@ -179,16 +206,25 @@ class _EventsList extends ConsumerWidget {
         return RefreshIndicator(
           onRefresh: refresh,
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            // With a header the rows carry their own side padding, so the
+            // header (which has its own) is not indented twice.
+            padding: header != null ? const EdgeInsets.only(bottom: 24) : const EdgeInsets.fromLTRB(16, 16, 16, 24),
             physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: list.length,
+            itemCount: list.length + (header != null ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (ctx, i) {
+              if (header != null) {
+                if (i == 0) return header!;
+                i -= 1;
+              }
               final ev = list[i];
-              return EventCard(
+              final card = EventCard(
                 event: ev,
                 onTap: () => context.push('/events/${ev['id']}'),
               );
+              return header != null
+                  ? Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: card)
+                  : card;
             },
           ),
         );

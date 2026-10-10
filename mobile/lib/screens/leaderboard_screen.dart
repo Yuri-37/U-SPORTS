@@ -25,6 +25,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
   String? _seasonId;
   String _seasonListQuery = '';
   String _athleteSearch = '';
+  final TextEditingController _athleteSearchCtrl = TextEditingController();
+  final TextEditingController _seasonQueryCtrl = TextEditingController();
   bool _qpSportApplied = false;
 
   @override
@@ -36,6 +38,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
   @override
   void dispose() {
     _tab.dispose();
+    _athleteSearchCtrl.dispose();
+    _seasonQueryCtrl.dispose();
     super.dispose();
   }
 
@@ -77,18 +81,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
         ? ref.watch(leaderboardTeamsProvider((sport: _sport, seasonId: _seasonId!)))
         : null;
 
-    return DoubleBackToExit(
-      child: BrandPage.fixed(
-        showBack: false,
-        title: 'Rankings & Leaderboards',
-        subtitle: 'Season statistics and rankings',
-        actions: const [HubHeaderActions()],
-        bottom: BrandTabBar(controller: _tab, tabs: const ['Player stats', 'Team rankings']),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+    // Held sideways there is no height for fixed filters above the lists, so
+    // they become the first rows of each tab and scroll away with it.
+    final compact = isCompactHeight(context);
+    Widget pane(Widget? header, Widget child) => header == null
+        ? child
+        : ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [header, child],
+          );
+
+    final Widget chips = Padding(
+              padding: EdgeInsets.fromLTRB(16, compact ? 8 : 20, 16, 0),
               child: SizedBox(
                 height: 46,
                 child: ListView(
@@ -114,8 +118,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                   }).toList(),
                 ),
               ),
-            ),
-            Padding(
+            );
+    final Widget seasonRow = Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: seasonsAsync.when(
                 loading: () => const LinearProgressIndicator(minHeight: 2),
@@ -141,6 +145,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                     children: [
                       Expanded(
                         child: TextField(
+                          controller: _seasonQueryCtrl,
                           decoration: const InputDecoration(
                             labelText: 'Find season',
                             hintText: 'Filter…',
@@ -180,17 +185,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                   );
                 },
               ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: TabBarView(
-                controller: _tab,
-                children: [
-                  Column(
-                    children: [
-                      Padding(
+            );
+    final Widget searchField = Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: TextField(
+                          controller: _athleteSearchCtrl,
                           decoration: const InputDecoration(
                             labelText: 'Search athletes',
                             hintText: 'Filter by name…',
@@ -199,14 +198,27 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                           ),
                           onChanged: (v) => setState(() => _athleteSearch = v),
                         ),
-                      ),
-                      Expanded(
-                        child: players?.when(
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (e, _) => SheetMessage(text: friendlyError(e)),
+                      );
+
+    final Widget? playersHeader = compact
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [chips, seasonRow, const SizedBox(height: 12), searchField],
+          )
+        : null;
+    final Widget? teamsHeader = compact
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [chips, seasonRow, const SizedBox(height: 12)],
+          )
+        : null;
+
+    final Widget playersPane = players?.when(
+                              loading: () => pane(playersHeader, const Center(child: CircularProgressIndicator())),
+                              error: (e, _) => pane(playersHeader, SheetMessage(text: friendlyError(e))),
                               data: (rows) {
                                 if (_seasonId == null) {
-                                  return const SheetMessage(text: 'No seasons available yet.');
+                                  return pane(playersHeader, const SheetMessage(text: 'No seasons available yet.'));
                                 }
                                 final q = _athleteSearch.trim().toLowerCase();
                                 final matching = q.isEmpty
@@ -219,14 +231,21 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
                                       }).toList();
                                 final filtered = sortByRank(matching, _sport);
                                 if (filtered.isEmpty) {
-                                  return SheetMessage(
-                                    text: q.isNotEmpty ? 'No athletes match your search.' : 'No stats yet for this season.',
+                                  return pane(
+                                    playersHeader,
+                                    SheetMessage(
+                                      text: q.isNotEmpty ? 'No athletes match your search.' : 'No stats yet for this season.',
+                                    ),
                                   );
                                 }
                                 return RefreshIndicator(onRefresh: _refresh, child: SingleChildScrollView(
 physics: const AlwaysScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                                  child: SheetGroup(
+                                  padding: EdgeInsets.zero,
+                                  child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (playersHeader != null) playersHeader,
+                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(
                                     dividers: false,
                                     children: [
                                       SingleChildScrollView(
@@ -279,43 +298,75 @@ physics: const AlwaysScrollableScrollPhysics(),
                                         ),
                                       ),
                                     ],
-                                  ),
+                                  )),
+                ],
+              ),
                                 ));
                               },
                             ) ??
-                            const SizedBox(),
-                      ),
-                    ],
-                  ),
-                  teams?.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (e, _) => SheetMessage(text: friendlyError(e)),
+        pane(playersHeader, const SizedBox());
+    final Widget teamsPane = teams?.when(
+                        loading: () => pane(teamsHeader, const Center(child: CircularProgressIndicator())),
+                        error: (e, _) => pane(teamsHeader, SheetMessage(text: friendlyError(e))),
                         data: (rows) {
                           if (_seasonId == null) {
-                            return const SheetMessage(text: 'No seasons available yet.');
+                            return pane(teamsHeader, const SheetMessage(text: 'No seasons available yet.'));
                           }
                           if (rows.isEmpty) {
-                            return const SheetMessage(text: 'No team rankings yet.');
+                            return pane(teamsHeader, const SheetMessage(text: 'No team rankings yet.'));
                           }
                           final standings = sortTeamStandings(rows);
                           return RefreshIndicator(onRefresh: _refresh, child: SingleChildScrollView(
 physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            child: SheetGroup(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (teamsHeader != null) teamsHeader,
+                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(
                               children: [
                                 for (var i = 0; i < standings.length; i++)
                                   _teamRow(context, i, standings[i]),
                               ],
-                            ),
+                            )),
+                ],
+              ),
                           ));
                         },
                       ) ??
-                      const SizedBox(),
+        pane(teamsHeader, const SizedBox());
+
+    return DoubleBackToExit(
+      child: BrandPage.fixed(
+        showBack: false,
+        title: 'Rankings & Leaderboards',
+        subtitle: 'Season statistics and rankings',
+        actions: const [HubHeaderActions()],
+        bottom: BrandTabBar(controller: _tab, tabs: const ['Player stats', 'Team rankings']),
+        body: compact
+            ? TabBarView(controller: _tab, children: [playersPane, teamsPane])
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  chips,
+                  seasonRow,
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tab,
+                      children: [
+                        Column(
+                          children: [
+                            searchField,
+                            Expanded(child: playersPane),
+                          ],
+                        ),
+                        teamsPane,
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import 'ui/brand_page.dart' show isCompactHeight;
 
@@ -48,64 +49,123 @@ class AppShell extends ConsumerWidget {
     // through to the OS and exit the app. Only let that happen from Home —
     // everywhere else, back should return to Home first, matching how the
     // bottom nav itself behaves.
+    final compact = isCompactHeight(context);
+    final selected = _displayFor(navigationShell.currentIndex);
+    final profileLabel = switch (role) {
+      'Coach' => 'My Teams',
+      'guest' => 'Sign in',
+      _ => 'Profile',
+    };
+    final profileIcon = role == 'Coach' ? Icons.groups_outlined : Icons.person_outline;
+    final profileIconSelected = role == 'Coach' ? Icons.groups_rounded : Icons.person_rounded;
+
     return PopScope(
       canPop: navigationShell.currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         navigationShell.goBranch(0);
       },
-      child: Scaffold(
-        body: navigationShell,
-        // A hairline and soft lift separate the bar from the sheet above it.
-        bottomNavigationBar: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: LayoutTokens.borderSubtle(context))),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 16,
-                offset: const Offset(0, -4),
+      child: compact
+          // A phone held sideways has no height to spare: the navigation moves
+          // to the left edge, so the page keeps the full height.
+          ? Scaffold(
+              body: Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: LayoutTokens.cardBackground(context),
+                      border: Border(right: BorderSide(color: LayoutTokens.borderSubtle(context))),
+                    ),
+                    child: SafeArea(
+                      right: false,
+                      child: NavigationRail(
+                        backgroundColor: Colors.transparent,
+                        minWidth: 64,
+                        selectedIndex: selected,
+                        onDestinationSelected: (i) => _onTap(context, i, role),
+                        labelType: NavigationRailLabelType.none,
+                        indicatorColor: AppTheme.brandInk(context).withValues(alpha: 0.12),
+                        selectedIconTheme: IconThemeData(color: AppTheme.brandInk(context)),
+                        unselectedIconTheme: IconThemeData(color: LayoutTokens.mutedText(context)),
+                        destinations: [
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.home_outlined),
+                            selectedIcon: Icon(Icons.home_rounded),
+                            label: Text('Home'),
+                          ),
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.emoji_events_outlined),
+                            selectedIcon: Icon(Icons.emoji_events_rounded),
+                            label: Text('Rankings'),
+                          ),
+                          const NavigationRailDestination(
+                            icon: Icon(Icons.calendar_today_outlined),
+                            selectedIcon: Icon(Icons.calendar_today_rounded),
+                            label: Text('Events'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(profileIcon),
+                            selectedIcon: Icon(profileIconSelected),
+                            label: Text(profileLabel),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // The rail already sits in the left inset.
+                  Expanded(
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeLeft: true,
+                      child: navigationShell,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: NavigationBar(
-            selectedIndex: _displayFor(navigationShell.currentIndex),
-            onDestinationSelected: (i) => _onTap(context, i, role),
-            // Sideways, the labels are dropped and the bar shortened so it does
-            // not eat a quarter of the screen.
-            height: isCompactHeight(context) ? 56 : null,
-            labelBehavior: isCompactHeight(context)
-                ? NavigationDestinationLabelBehavior.alwaysHide
-                : NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
+            )
+          : Scaffold(
+              body: navigationShell,
+              // A hairline and soft lift separate the bar from the sheet above it.
+              bottomNavigationBar: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: LayoutTokens.borderSubtle(context))),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: NavigationBar(
+                  selectedIndex: selected,
+                  onDestinationSelected: (i) => _onTap(context, i, role),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  destinations: [
+                    const NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home_rounded),
+                      label: 'Home',
+                    ),
+                    const NavigationDestination(
+                      icon: Icon(Icons.emoji_events_outlined),
+                      selectedIcon: Icon(Icons.emoji_events_rounded),
+                      label: 'Rankings',
+                    ),
+                    const NavigationDestination(
+                      icon: Icon(Icons.calendar_today_outlined),
+                      selectedIcon: Icon(Icons.calendar_today_rounded),
+                      label: 'Events',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(profileIcon),
+                      selectedIcon: Icon(profileIconSelected),
+                      label: profileLabel,
+                    ),
+                  ],
+                ),
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.emoji_events_outlined),
-                selectedIcon: Icon(Icons.emoji_events_rounded),
-                label: 'Rankings',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.calendar_today_outlined),
-                selectedIcon: Icon(Icons.calendar_today_rounded),
-                label: 'Events',
-              ),
-              NavigationDestination(
-                icon: Icon(role == 'Coach' ? Icons.groups_outlined : Icons.person_outline),
-                selectedIcon: Icon(role == 'Coach' ? Icons.groups_rounded : Icons.person_rounded),
-                label: switch (role) {
-                  'Coach' => 'My Teams',
-                  'guest' => 'Sign in',
-                  _ => 'Profile',
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

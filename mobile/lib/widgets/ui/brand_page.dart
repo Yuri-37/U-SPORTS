@@ -93,7 +93,13 @@ class BrandPage extends StatelessWidget {
           color: LayoutTokens.sheet(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(_sheetRadius)),
         ),
-        padding: sheetPadding,
+        // Sideways, the system bars sit at the left and right edges: keep the
+        // content out from under them.
+        padding: sheetPadding +
+            EdgeInsets.only(
+              left: MediaQuery.paddingOf(context).left,
+              right: MediaQuery.paddingOf(context).right,
+            ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children!,
@@ -143,7 +149,12 @@ class BrandPage extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(_sheetRadius)),
-                child: ColoredBox(color: LayoutTokens.sheet(context), child: body!),
+                child: ColoredBox(
+                  color: LayoutTokens.sheet(context),
+                  // Left/right only: sideways, the system bars sit at the
+                  // edges and must not cover the content.
+                  child: SafeArea(top: false, bottom: false, child: body!),
+                ),
               ),
             ),
           ],
@@ -215,11 +226,11 @@ class _Hero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _titleRow(context, compact),
+                    _titleRow(context, compact, inlineTabs: compact ? bottom : null),
                     if (hero != null)
                       Padding(padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0), child: hero),
-                    if (bottom != null)
-                      Padding(padding: EdgeInsets.fromLTRB(16, compact ? 6 : 14, 16, 0), child: bottom),
+                    if (bottom != null && !compact)
+                      Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0), child: bottom),
                   ],
                 ),
               ),
@@ -230,7 +241,7 @@ class _Hero extends StatelessWidget {
     );
   }
 
-  Widget _titleRow(BuildContext context, bool compact) {
+  Widget _titleRow(BuildContext context, bool compact, {Widget? inlineTabs}) {
     final titleContent = titleWidget ??
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +286,16 @@ class _Hero extends StatelessWidget {
             )
           else
             const SizedBox(width: 20),
-          Expanded(child: titleContent),
+          Expanded(flex: 2, child: titleContent),
+          // Sideways the tabs share the title's row instead of taking their own.
+          if (inlineTabs != null)
+            Flexible(
+              flex: 3,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: inlineTabs,
+              ),
+            ),
           ...actions,
           const SizedBox(width: 8),
         ],
