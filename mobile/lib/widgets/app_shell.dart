@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import '../theme/layout_tokens.dart';
 import 'ui/brand_page.dart' show isCompactHeight;
 
@@ -72,44 +73,25 @@ class AppShell extends ConsumerWidget {
           ? _sidewaysShell(context, role, selected, profileLabel, profileIcon, profileIconSelected)
           : Scaffold(
               body: navigationShell,
-              // A hairline and soft lift separate the bar from the sheet above it.
-              bottomNavigationBar: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: LayoutTokens.borderSubtle(context))),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, -4),
+              // A dark pill floating above the page, icons only; the page's own
+              // colour fills the strip around it so it reads as one surface.
+              bottomNavigationBar: ColoredBox(
+                color: LayoutTokens.sheet(context),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                    child: _PillNav(
+                      items: [
+                        const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
+                        const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
+                        const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
+                        _NavItem(profileLabel, profileIcon, profileIconSelected),
+                      ],
+                      selected: selected,
+                      onSelect: (i) => _onTap(context, i, role),
                     ),
-                  ],
-                ),
-                child: NavigationBar(
-                  selectedIndex: selected,
-                  onDestinationSelected: (i) => _onTap(context, i, role),
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  destinations: [
-                    const NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home_rounded),
-                      label: 'Home',
-                    ),
-                    const NavigationDestination(
-                      icon: Icon(Icons.emoji_events_outlined),
-                      selectedIcon: Icon(Icons.emoji_events_rounded),
-                      label: 'Rankings',
-                    ),
-                    const NavigationDestination(
-                      icon: Icon(Icons.calendar_today_outlined),
-                      selectedIcon: Icon(Icons.calendar_today_rounded),
-                      label: 'Events',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(profileIcon),
-                      selectedIcon: Icon(profileIconSelected),
-                      label: profileLabel,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -256,6 +238,87 @@ class _ArcButton extends StatelessWidget {
                 size: 22,
                 color: selected ? Colors.white : LayoutTokens.mutedText(context),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The portrait navigation: a dark capsule holding four round icon buttons; the
+/// page you are on is a white disc with a dark icon. Names show on long-press
+/// and are read aloud by screen readers.
+class _PillNav extends StatelessWidget {
+  const _PillNav({required this.items, required this.selected, required this.onSelect});
+
+  final List<_NavItem> items;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 66,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF262A33) : const Color(0xFF14171C),
+        borderRadius: BorderRadius.circular(33),
+        border: dark ? Border.all(color: Colors.white.withValues(alpha: 0.08)) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.5 : 0.28),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Expanded(
+              child: Center(
+                child: _PillButton(item: items[i], selected: i == selected, onTap: () => onSelect(i)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PillButton extends StatelessWidget {
+  const _PillButton({required this.item, required this.selected, required this.onTap});
+
+  final _NavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: item.label,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: item.label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: AppMotion.scoreChange,
+            curve: AppMotion.easeOutStrong,
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: selected ? Colors.white : Colors.transparent,
+            ),
+            child: Icon(
+              selected ? item.selectedIcon : item.icon,
+              size: 24,
+              color: selected ? const Color(0xFF14171C) : Colors.white.withValues(alpha: 0.78),
             ),
           ),
         ),
