@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useScrollReveal } from '../../hooks/useScrollReveal'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ArrowLeft, Search, Trophy } from 'lucide-react'
 import {
@@ -24,6 +25,7 @@ type EventsView = 'upcoming' | 'past'
 
 export default function GuestEvents() {
   const navigate = useNavigate()
+  const reveal = useScrollReveal()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const view: EventsView = searchParams.get('view') === 'past' ? 'past' : 'upcoming'
@@ -100,6 +102,7 @@ export default function GuestEvents() {
     const seasonName = (e as Event & { season?: { name?: string } }).season?.name
     return (
       <Card
+        ref={reveal.card}
         key={e.id}
         className="cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
         onClick={() => navigate(`/guest/events/${e.slug}`)}

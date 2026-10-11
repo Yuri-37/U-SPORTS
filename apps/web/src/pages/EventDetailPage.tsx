@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useScrollReveal } from '../hooks/useScrollReveal'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
 import { Tv2, ArrowLeft, ChevronRight } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, TabBar } from '../components/ui'
@@ -43,6 +44,7 @@ export default function EventDetailPage({
 }: EventDetailPageProps) {
   const { id: idOrSlug } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const reveal = useScrollReveal()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [id, setId] = useState<string | null>(null)
@@ -268,6 +270,7 @@ export default function EventDetailPage({
               m.status === 'scheduled' && (!m.participant_a_id || !m.participant_b_id)
             return (
               <Card
+                ref={reveal.row}
                 key={m.id}
                 className="flex flex-col sm:flex-row sm:items-stretch p-0 overflow-hidden"
               >

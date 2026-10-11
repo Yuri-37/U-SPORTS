@@ -73,6 +73,8 @@ interface CardProps {
    * link target or a feature tile. Clickable cards (`onClick`) get it already.
    */
   interactive?: boolean
+  /** For scroll reveal and similar; React 19 passes it as a normal prop. */
+  ref?: React.Ref<HTMLDivElement>
   /** Rarely needed — e.g. `data-tour` anchors for the guided tour system. */
   [dataAttr: `data-${string}`]: string | undefined
 }
@@ -83,6 +85,7 @@ export function Card({
   elevated,
   onClick,
   interactive,
+  ref,
   ...rest
 }: CardProps) {
   // Anything you can act on lifts on hover; a static panel in a dense
@@ -90,6 +93,7 @@ export function Card({
   const lifts = Boolean(onClick) || interactive
   return (
     <div
+      ref={ref}
       className={cn(
         'rounded-xl border border-[var(--border-subtle)] p-4 shadow-[var(--shadow-card)]',
         elevated ? 'bg-[var(--surface-elevated)]' : 'bg-[var(--surface-card)]',

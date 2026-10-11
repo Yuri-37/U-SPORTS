@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useScrollReveal } from '../../hooks/useScrollReveal'
 import { useSearchParams, useNavigate } from 'react-router'
 import { ArrowLeft, Search } from 'lucide-react'
 import { Card, TabBar, Button, Select, Input } from '../../components/ui'
@@ -17,6 +18,7 @@ function formatSeasonSelectLabel(s: Season): string {
 export default function GuestLeaderboards() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const reveal = useScrollReveal()
   const sport = searchParams.get('sport') ?? 'basketball'
   const seasonParam = searchParams.get('season')
 
@@ -213,7 +215,7 @@ export default function GuestLeaderboards() {
             icon={<Search className="w-4 h-4 text-[var(--text-muted)]" />}
             className="max-w-md"
           />
-          <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
+          <div ref={reveal.card} className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
             <table className="w-full text-sm">
               <thead className="bg-[var(--surface-elevated)]">
                 <tr>
@@ -300,6 +302,7 @@ export default function GuestLeaderboards() {
             sortTeamStandings(teamStandings.filter((ts) => !sport || ts.team?.sport === sport)).map(
               (ts, i) => (
                 <Card
+                  ref={reveal.row}
                   key={ts.id}
                   className="flex items-center gap-4 cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
                   onClick={() => ts.team?.id && navigate(`/guest/teams/${ts.team.id}`)}

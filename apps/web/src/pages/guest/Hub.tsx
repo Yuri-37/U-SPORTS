@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useScrollReveal } from '../../hooks/useScrollReveal'
 import { useNavigate } from 'react-router'
 import { Trophy, Tv2 } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, Modal } from '../../components/ui'
@@ -57,6 +58,7 @@ export default function GuestHub() {
   const { profile, session } = useAuthStore()
   const scopedProfile = sessionScopedProfile(session, profile)
   const navigate = useNavigate()
+  const reveal = useScrollReveal()
   const [liveMatches, setLiveMatches] = useState<LiveHubMatch[]>([])
   const [livePeriodByMatch, setLivePeriodByMatch] = useState<Record<string, number>>({})
   const [liveParticipantNames, setLiveParticipantNames] = useState<Record<string, string>>({})
@@ -327,11 +329,12 @@ export default function GuestHub() {
             dot="danger"
             action={{ label: 'All events →', onClick: () => navigate('/guest/events') }}
           />
-          <div className="grid sm:grid-cols-2 gap-6 stagger">
+          <div className="grid sm:grid-cols-2 gap-6">
             {liveMatches.map((m) => {
               const v = livePresentation(m)
               return (
                 <Card
+                  ref={reveal.card}
                   key={m.id}
                   className="hover:border-[var(--danger)]/50 transition-colors"
                   onClick={() => setSelectedLiveId(m.id)}
@@ -481,9 +484,10 @@ export default function GuestHub() {
             No upcoming or live events to show here right now.
           </p>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentEvents.map((e) => (
               <Card
+                ref={reveal.card}
                 key={e.id}
                 className="p-6"
                 onClick={() => navigate(`/guest/events/${e.slug}`)}
@@ -512,9 +516,10 @@ export default function GuestHub() {
           reads as a composition rather than three equal boxes. On mobile it
           collapses to a single column and the span is dropped.
         */}
-        <div className="grid gap-6 lg:grid-cols-3 lg:grid-rows-2 stagger">
+        <div className="grid gap-6 lg:grid-cols-3 lg:grid-rows-2">
           {SPORT_TILES.map((s, i) => (
             <Card
+              ref={reveal.card}
               key={s.sport}
               interactive
               onClick={() => navigate(`/guest/leaderboards?sport=${s.sport}`)}
@@ -583,7 +588,7 @@ export default function GuestHub() {
             }}
           />
           <div className="relative max-w-6xl mx-auto px-6 py-24 lg:py-32">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-12 lg:divide-x lg:divide-white/20">
+            <div ref={reveal.card} className="grid grid-cols-2 lg:grid-cols-4 gap-y-12 lg:divide-x lg:divide-white/20">
               <StatCell value={stats.athletes} label="Athletes" />
               <StatCell value={stats.teams} label="Teams" />
               <StatCell value={stats.events} label="Competitions" />
@@ -601,7 +606,7 @@ export default function GuestHub() {
             title="Recent champions"
             subtitle="Knockout finals from completed competitions. Open an event for its full bracket and match history."
           />
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 stagger">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {championSpotlights.slice(0, 6).map(({ event: ev, placements }, i) => {
               const champ = placements.find((p) => p.rank === 1)
               const runner = placements.find((p) => p.rank === 2)
@@ -648,6 +653,7 @@ export default function GuestHub() {
               // Featured card gets a 2px brand→accent gradient frame.
               return featured ? (
                 <div
+                  ref={reveal.card}
                   key={ev.id}
                   className="rounded-xl p-[2px] lg:mb-0"
                   style={{
@@ -658,7 +664,7 @@ export default function GuestHub() {
                   {body}
                 </div>
               ) : (
-                <div key={ev.id}>{body}</div>
+                <div ref={reveal.card} key={ev.id}>{body}</div>
               )
             })}
           </div>
@@ -675,7 +681,7 @@ export default function GuestHub() {
               'linear-gradient(to right, rgba(var(--school-primary-rgb), 0.12), transparent 45%, rgba(var(--school-primary-rgb), 0.12))',
           }}
         />
-        <div className="relative max-w-3xl mx-auto px-6 py-24 lg:py-32 text-center">
+        <div ref={reveal.card} className="relative max-w-3xl mx-auto px-6 py-24 lg:py-32 text-center">
           <h2 className="font-display text-4xl lg:text-[3.25rem] leading-[1.15]">
             Follow the season
           </h2>
