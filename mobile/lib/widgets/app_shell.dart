@@ -246,8 +246,9 @@ class _ArcButton extends StatelessWidget {
   }
 }
 
-/// The portrait navigation: a dark capsule holding four round icon buttons; the
-/// page you are on is a white disc with a dark icon. Names show on long-press
+/// The portrait navigation: a capsule in the app's navy (the same colour as the
+/// page headers) holding four round icon buttons; the page you are on is a white
+/// disc with a navy icon. Names show on long-press
 /// and are read aloud by screen readers.
 class _PillNav extends StatelessWidget {
   const _PillNav({required this.items, required this.selected, required this.onSelect});
@@ -263,12 +264,14 @@ class _PillNav extends StatelessWidget {
       height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 9),
       decoration: BoxDecoration(
-        color: dark ? const Color(0xFF262A33) : const Color(0xFF14171C),
+        // Light: the hero's navy. Dark: its deepest shade, so the capsule
+        // still stands off the near-black page, with a hairline edge.
+        color: dark ? AppTheme.heroGradient().last : AppTheme.schoolPrimary,
         borderRadius: BorderRadius.circular(33),
-        border: dark ? Border.all(color: Colors.white.withValues(alpha: 0.08)) : null,
+        border: dark ? Border.all(color: Colors.white.withValues(alpha: 0.14)) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.5 : 0.28),
+            color: (dark ? Colors.black : AppTheme.schoolPrimary).withValues(alpha: dark ? 0.5 : 0.32),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
@@ -318,7 +321,7 @@ class _PillButton extends StatelessWidget {
             child: Icon(
               selected ? item.selectedIcon : item.icon,
               size: 24,
-              color: selected ? const Color(0xFF14171C) : Colors.white.withValues(alpha: 0.78),
+              color: selected ? AppTheme.schoolPrimary : Colors.white.withValues(alpha: 0.78),
             ),
           ),
         ),
