@@ -68,6 +68,15 @@ class ApiClient {
     return jsonDecode(res.body);
   }
 
+  /// GET that returns the body as text, for endpoints that send a file (the
+  /// personal-data export) rather than something to decode.
+  Future<String> getText(String path) async {
+    final token = await _bearer();
+    final res = await _send(() => http.get(_uri(path), headers: _headers(token)), retry: true);
+    _throwIfError(res);
+    return utf8.decode(res.bodyBytes);
+  }
+
   Future<dynamic> postJson(String path, {Map<String, dynamic>? body}) async {
     final token = await _bearer();
     final res = await _send(

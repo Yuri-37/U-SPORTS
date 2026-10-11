@@ -8,6 +8,7 @@ import '../services/push_notifications_service.dart';
 import '../theme/layout_tokens.dart';
 import '../widgets/change_password_section.dart';
 import '../widgets/delete_account_tile.dart';
+import '../widgets/download_data_tile.dart';
 import '../widgets/ui/brand_page.dart';
 
 enum SettingsShell { guest, athlete, coach }
@@ -84,6 +85,8 @@ class SettingsScreen extends ConsumerWidget {
             const SectionHeader(title: 'Account', padding: EdgeInsets.fromLTRB(4, 24, 4, 12)),
             SheetGroup(
               children: [
+                // Same two rights the website's "Your data" card offers.
+                const DownloadDataTile(),
                 SheetTile(
                   leading: const IconTile(icon: Icons.privacy_tip_outlined),
                   title: 'Privacy notice',
