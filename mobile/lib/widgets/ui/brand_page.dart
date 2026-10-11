@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_theme.dart';
 import '../../theme/layout_tokens.dart';
+import 'reveal.dart';
 
 /// Shared page building blocks for the mobile app.
 ///
@@ -649,21 +650,39 @@ class SectionLink extends StatelessWidget {
 
 /// A white rounded surface on the sheet. Rows are separated by hairlines.
 class SheetGroup extends StatelessWidget {
-  const SheetGroup({super.key, required this.children, this.padding, this.dividers = true});
+  const SheetGroup({super.key, required this.children, this.padding, this.dividers = true, this.revealRows = false});
 
   final List<Widget> children;
   final EdgeInsets? padding;
   final bool dividers;
+
+  /// Rows fade and rise in one by one as they scroll into view (needs a
+  /// [RevealScope] above; otherwise they simply show).
+  final bool revealRows;
 
   @override
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
     final rows = <Widget>[];
     for (var i = 0; i < children.length; i++) {
-      if (i > 0 && dividers) {
-        rows.add(Divider(height: 1, indent: 16, endIndent: 16, color: LayoutTokens.borderSubtle(context)));
+      final divider = i > 0 && dividers
+          ? Divider(height: 1, indent: 16, endIndent: 16, color: LayoutTokens.borderSubtle(context))
+          : null;
+      if (revealRows) {
+        rows.add(Reveal(
+          kind: RevealKind.row,
+          child: divider == null
+              ? children[i]
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [divider, children[i]],
+                ),
+        ));
+      } else {
+        if (divider != null) rows.add(divider);
+        rows.add(children[i]);
       }
-      rows.add(children[i]);
     }
     return Container(
       decoration: BoxDecoration(

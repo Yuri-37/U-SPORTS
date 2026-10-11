@@ -15,6 +15,7 @@ import '../utils/error_helpers.dart';
 import '../utils/feedback.dart';
 import '../widgets/coach_roster_edit_sheet.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 
 /// Opens the courtside roster sheet for one player. Only reachable when
 /// [canManageTeamProvider] says this user coaches the team; the API re-checks
@@ -207,7 +208,7 @@ class TeamDetailScreen extends ConsumerWidget {
         final total = w + l;
         final pct = total > 0 ? ((w / total) * 100).round() : 0;
 
-        return BrandPage.scroll(
+        return RevealScope(child: BrandPage.scroll(
           onRefresh: () async {
             ref.invalidate(_teamStatsProvider(teamId));
             ref.invalidate(_teamMatchesProvider(teamId));
@@ -235,7 +236,7 @@ class TeamDetailScreen extends ConsumerWidget {
             if (team.roster.isEmpty)
               const SheetMessage(text: 'No roster yet.')
             else
-              SheetGroup(
+              SheetGroup(revealRows: true,
                 children: [
                   for (final p in team.roster) _rosterRow(context, ref, team, p, canEditRoster),
                 ],
@@ -259,13 +260,13 @@ class TeamDetailScreen extends ConsumerWidget {
               error: (e, _) => SheetMessage(text: friendlyError(e)),
               data: (matches) {
                 if (matches.isEmpty) return const SheetMessage(text: 'No matches yet.');
-                return SheetGroup(
+                return SheetGroup(revealRows: true,
                   children: [for (final m in matches) _matchRow(context, m, team.sport)],
                 );
               },
             ),
           ],
-        );
+        ));
       },
     );
   }

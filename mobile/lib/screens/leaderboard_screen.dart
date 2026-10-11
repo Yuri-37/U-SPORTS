@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../widgets/double_back_exit.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 import '../widgets/ui/hub_header_actions.dart';
 import '../utils/leaderboard_stats.dart';
 import '../utils/sport_helpers.dart';
@@ -245,7 +246,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (playersHeader != null) playersHeader,
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(
+                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: Reveal(child: SheetGroup(
                                     dividers: false,
                                     children: [
                                       SingleChildScrollView(
@@ -298,7 +299,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                                         ),
                                       ),
                                     ],
-                                  )),
+                                  ))),
                 ],
               ),
                                 ));
@@ -323,7 +324,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (teamsHeader != null) teamsHeader,
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(
+                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(revealRows: true,
                               children: [
                                 for (var i = 0; i < standings.length; i++)
                                   _teamRow(context, i, standings[i]),
@@ -337,7 +338,7 @@ physics: const AlwaysScrollableScrollPhysics(),
         pane(teamsHeader, const SizedBox());
 
     return DoubleBackToExit(
-      child: BrandPage.fixed(
+      child: RevealScope(child: BrandPage.fixed(
         showBack: false,
         title: 'Rankings & Leaderboards',
         subtitle: 'Season statistics and rankings',
@@ -367,7 +368,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                   ),
                 ],
               ),
-      ),
+      )),
     );
   }
 

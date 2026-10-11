@@ -9,6 +9,7 @@ import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 import '../widgets/ui/hub_header_actions.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -111,7 +112,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
         );
 
     return DoubleBackToExit(
-      child: BrandPage.fixed(
+      child: RevealScope(child: BrandPage.fixed(
         showBack: false,
         title: 'Events',
         actions: const [HubHeaderActions()],
@@ -125,7 +126,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> with SingleTickerPr
                   Expanded(child: tabs()),
                 ],
               ),
-      ),
+      )),
     );
   }
 
@@ -218,10 +219,10 @@ class _EventsList extends ConsumerWidget {
                 i -= 1;
               }
               final ev = list[i];
-              final card = EventCard(
+              final card = Reveal(id: ev['id'], child: EventCard(
                 event: ev,
                 onTap: () => context.push('/events/${ev['id']}'),
-              );
+              ));
               return header != null
                   ? Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: card)
                   : card;

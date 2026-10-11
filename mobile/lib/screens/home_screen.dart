@@ -24,6 +24,7 @@ import '../widgets/institution_brand.dart';
 import '../widgets/institution_logo.dart';
 import '../widgets/live_match_card.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 import '../widgets/ui/hub_header_actions.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -181,7 +182,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final role = ref.watch(profileProvider).valueOrNull?.role ?? 'guest';
 
     return DoubleBackToExit(
-      child: BrandPage.scroll(
+      child: RevealScope(child: BrandPage.scroll(
         showBack: false,
         titleWidget: const InstitutionBrandTitle(compact: true),
         actions: const [HubHeaderActions()],
@@ -245,7 +246,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     title: 'Recent champions',
                     leading: Icon(Icons.emoji_events_rounded, size: 20, color: LayoutTokens.warning(context)),
                   ),
-                  SheetGroup(
+                  SheetGroup(revealRows: true,
                     children: spots.take(4).map((s) {
                       final lines = s.placements.map((p) {
                         final name = s.labels[p.participantId] ?? 'Participant';
@@ -290,12 +291,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ...shown.map((m) {
                     final mid = m['id'] as String;
                     final period = snap.periodByMatch[mid] ?? 1;
-                    return LiveMatchCard(
+                    return Reveal(id: mid, child: LiveMatchCard(
                       match: m,
                       labels: snap.participantLabels,
                       period: period,
                       onWatch: () => showHubLiveMatchSheet(context, matchId: mid),
-                    );
+                    ));
                   }),
                 ],
               );
@@ -326,14 +327,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return Column(
                 children: [
                   for (final e in shown)
-                    Padding(
+                    Reveal(id: e['id'], child: Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: EventCard(
                         hubCompact: true,
                         event: e,
                         onTap: () => context.push('/events/${e['id']}'),
                       ),
-                    ),
+                    )),
                 ],
               );
             },
@@ -346,11 +347,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SectionHeader(title: 'Browse by sport'),
           Row(
             children: [
-              Expanded(child: _browseSportCard(context, 'basketball')),
+              Expanded(child: Reveal(child: _browseSportCard(context, 'basketball'))),
               const SizedBox(width: 10),
-              Expanded(child: _browseSportCard(context, 'volleyball')),
+              Expanded(child: Reveal(child: _browseSportCard(context, 'volleyball'))),
               const SizedBox(width: 10),
-              Expanded(child: _browseSportCard(context, 'table-tennis')),
+              Expanded(child: Reveal(child: _browseSportCard(context, 'table-tennis'))),
             ],
           ),
           institutionAsync.when(
@@ -360,7 +361,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 24),
         ],
-      ),
+      )),
     );
   }
 

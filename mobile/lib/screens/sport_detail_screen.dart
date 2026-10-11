@@ -11,6 +11,7 @@ import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 
 /// Drill-down page for a single sport, reached from Home's "Browse by Sport"
 /// cards. A real pushed route (back arrow, no tab-switch ambiguity) combining
@@ -61,7 +62,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
         : null;
     final eventsAsync = ref.watch(eventListProvider(_eventFilters));
 
-    return BrandPage.fixed(
+    return RevealScope(child: BrandPage.fixed(
       titleWidget: Row(
         children: [
           Icon(sportIcon(widget.sport), size: 22, color: Colors.white),
@@ -82,7 +83,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
           _eventsTab(context, eventsAsync),
         ],
       ),
-    );
+    ));
   }
 
   Widget _standingsTab(
@@ -140,7 +141,7 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
 physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                         children: [
-                          SheetGroup(
+                          SheetGroup(revealRows: true,
                             children: [
                               for (var i = 0; i < standings.length; i++) _teamRow(context, i, standings[i]),
                             ],
@@ -160,7 +161,7 @@ physics: const AlwaysScrollableScrollPhysics(),
 physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                         children: [
-                          SheetGroup(
+                          Reveal(child: SheetGroup(
                             dividers: false,
                             children: [
                               SingleChildScrollView(
@@ -210,7 +211,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                                 ),
                               ),
                             ],
-                          ),
+                          )),
                         ],
                       ));
                     },
@@ -261,7 +262,7 @@ physics: const AlwaysScrollableScrollPhysics(),
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (ctx, i) {
             final ev = sorted[i];
-            return EventCard(event: ev, onTap: () => context.push('/events/${ev['id']}'));
+            return Reveal(id: ev['id'], child: EventCard(event: ev, onTap: () => context.push('/events/${ev['id']}')));
           },
         ));
       },

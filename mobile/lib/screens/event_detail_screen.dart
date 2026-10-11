@@ -14,6 +14,7 @@ import '../widgets/match_roster_stats.dart';
 import '../widgets/tournament_bracket_view.dart';
 import '../widgets/ui/animated_score.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/reveal.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.eventId, this.initialTab = 0});
@@ -357,7 +358,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
         });
         final standings = deriveFullEventStandings(brackets);
 
-        return BrandPage.fixed(
+        return RevealScope(child: BrandPage.fixed(
           title: name,
           subtitle: '${sportLabel(sport)} · ${formatEnumLabel(event['format'] as String? ?? '')}',
           showBack: true,
@@ -474,7 +475,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                               children: [
-                                SheetGroup(
+                                SheetGroup(revealRows: true,
                                   children: [
                                     for (final m in matches) _matchRow(context, m, brackets, sport),
                                   ],
@@ -487,7 +488,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
               ),
             ],
           ),
-        );
+        ));
       },
     );
   }
