@@ -102,7 +102,7 @@ class AppShell extends ConsumerWidget {
             child: SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: _PillNav(
                   items: [
                     const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
@@ -269,11 +269,10 @@ class _ArcButton extends StatelessWidget {
   }
 }
 
-/// The portrait navigation: four separate round buttons floating in a row, like
-/// the sideways arc. The page you are on is a filled navy disc with a soft glow;
-/// the others are plain discs with a shadow. Every tap pops the button with a
-/// small spring and sends out a ring. Names show on long-press and are read
-/// aloud by screen readers.
+/// The portrait navigation: a rounded bar with a raised round button for the
+/// page you are on, sitting in a notch cut into the bar. Tapping another tab
+/// slides the button (and its notch) across with a spring, leaning into the move
+/// and swinging back upright as it lands. Labels sit under the icons.
 class _PillNav extends StatelessWidget {
   const _PillNav({required this.items, required this.selected, required this.onSelect});
 
@@ -281,147 +280,212 @@ class _PillNav extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelect;
 
-  /// Room the buttons take at the bottom of the screen (their height, the
-  /// padding around them and a gap), beyond the system inset.
-  static const double clearance = _OrbButton.size + 12 + 10 + 8 + 8;
+  static const double barHeight = 68;
+
+  /// How far the raised button rises above the top of the bar.
+  static const double lift = 24;
+  static const double bubble = 54;
+  static const double height = lift + barHeight;
+
+  /// Room the bar takes at the bottom of the screen (its height, the padding
+  /// around it and a gap), beyond the system inset.
+  static const double clearance = height + 10 + 6;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: _OrbButton.size + 12,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          for (var i = 0; i < items.length; i++)
-            _OrbButton(item: items[i], selected: i == selected, onTap: () => onSelect(i)),
-        ],
-      ),
-    );
-  }
-}
-
-class _OrbButton extends StatefulWidget {
-  const _OrbButton({required this.item, required this.selected, required this.onTap});
-
-  static const double size = 56;
-
-  final _NavItem item;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_OrbButton> createState() => _OrbButtonState();
-}
-
-class _OrbButtonState extends State<_OrbButton> with SingleTickerProviderStateMixin {
-  /// One shot per tap or selection: drives the spring pop and the ring.
-  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-
-  @override
-  void didUpdateWidget(covariant _OrbButton old) {
-    super.didUpdateWidget(old);
-    if (widget.selected && !old.selected) _play();
-  }
-
-  void _play() {
-    if (MediaQuery.disableAnimationsOf(context)) return;
-    _pulse.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final reduce = MediaQuery.disableAnimationsOf(context);
-    final selected = widget.selected;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final navy = AppTheme.schoolPrimary;
-    final fill = selected ? navy : LayoutTokens.cardBackground(context);
-    final ring = selected ? Colors.white.withValues(alpha: 0.9) : LayoutTokens.borderSubtle(context);
-    final glow = <BoxShadow>[
-      if (selected) ...[
-        // A side glow in the school colour, plus a tight shadow under it.
-        BoxShadow(color: navy.withValues(alpha: dark ? 0.75 : 0.55), blurRadius: 22, spreadRadius: 1, offset: const Offset(0, 5)),
-        BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 8, offset: const Offset(0, 3)),
-      ] else
-        BoxShadow(color: Colors.black.withValues(alpha: dark ? 0.5 : 0.14), blurRadius: 14, offset: const Offset(0, 4)),
-    ];
+    final barColor = LayoutTokens.cardBackground(context);
 
-    final orb = AnimatedContainer(
-      duration: reduce ? Duration.zero : const Duration(milliseconds: 260),
-      curve: AppMotion.easeOutStrong,
-      width: _OrbButton.size,
-      height: _OrbButton.size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: fill,
-        border: Border.all(color: ring, width: selected ? 2 : 1),
-        boxShadow: glow,
-      ),
-      child: Icon(
-        selected ? widget.item.selectedIcon : widget.item.icon,
-        size: 25,
-        color: selected ? Colors.white : LayoutTokens.mutedText(context),
-      ),
-    );
-
-    return Tooltip(
-      message: widget.item.label,
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: widget.item.label,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _play();
-            widget.onTap();
-          },
-          child: AnimatedBuilder(
-            animation: _pulse,
-            child: orb,
-            builder: (context, child) {
-              final t = _pulse.value;
-              final running = _pulse.isAnimating;
-              // Squash, then spring up past full size and settle: back-out curve.
-              final pop = running ? 0.82 + 0.18 * Curves.easeOutBack.transform(t.clamp(0.0, 1.0)) : 1.0;
-              final lift = selected ? 1.08 : 1.0;
-              return SizedBox(
-                width: _OrbButton.size + 8,
-                height: _OrbButton.size + 8,
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    if (running)
-                      Transform.scale(
-                        scale: 1 + 0.9 * Curves.easeOut.transform(t),
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final slot = box.maxWidth / items.length;
+          return TweenAnimationBuilder<double>(
+            // Starts at the current tab; every later change slides from where it is.
+            tween: Tween<double>(end: selected.toDouble()),
+            duration: reduce ? Duration.zero : const Duration(milliseconds: 560),
+            curve: AppMotion.spring,
+            builder: (context, pos, _) {
+              final cx = slot * (pos + 0.5);
+              // Leans into the move, then swings back as the spring settles.
+              final tilt = reduce ? 0.0 : ((selected - pos) * 0.5).clamp(-0.45, 0.45);
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _NotchedBarPainter(
+                        cx: cx,
+                        color: barColor,
+                        edge: dark ? LayoutTokens.borderSubtle(context) : null,
+                        shadow: Colors.black.withValues(alpha: dark ? 0.6 : 0.18),
+                      ),
+                    ),
+                  ),
+                  for (var i = 0; i < items.length; i++)
+                    Positioned(
+                      left: slot * i,
+                      width: slot,
+                      top: lift,
+                      height: barHeight,
+                      child: _NavSlot(
+                        item: items[i],
+                        selected: i == selected,
+                        // 0 when the raised button is over this tab, 1 when it is a slot away.
+                        away: (pos - i).abs().clamp(0.0, 1.0),
+                        onTap: () => onSelect(i),
+                      ),
+                    ),
+                  Positioned(
+                    left: cx - bubble / 2,
+                    top: lift + 4 - bubble / 2,
+                    width: bubble,
+                    height: bubble,
+                    child: IgnorePointer(
+                      child: Transform.rotate(
+                        angle: tilt,
                         child: Container(
-                          width: _OrbButton.size,
-                          height: _OrbButton.size,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: navy.withValues(alpha: 0.55 * (1 - t)), width: 3),
+                            color: navy,
+                            boxShadow: [
+                              BoxShadow(
+                                color: navy.withValues(alpha: dark ? 0.7 : 0.45),
+                                blurRadius: 16,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: reduce ? Duration.zero : const Duration(milliseconds: 220),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child)),
+                            child: Icon(
+                              items[selected].selectedIcon,
+                              key: ValueKey<int>(selected),
+                              size: 26,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    AnimatedScale(
-                      scale: lift,
-                      duration: reduce ? Duration.zero : const Duration(milliseconds: 350),
-                      curve: Curves.easeOutBack,
-                      child: Transform.scale(scale: pop, child: child),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// One tab in the bar: its icon (which fades out as the raised button arrives
+/// over it) and its label. Names are read aloud by screen readers and show on
+/// long-press.
+class _NavSlot extends StatelessWidget {
+  const _NavSlot({required this.item, required this.selected, required this.away, required this.onTap});
+
+  final _NavItem item;
+  final bool selected;
+  final double away;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Color.lerp(AppTheme.brandInk(context), LayoutTokens.mutedText(context), away)!;
+    return Tooltip(
+      message: item.label,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: item.label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Opacity(
+                opacity: away,
+                child: Icon(item.icon, size: 24, color: LayoutTokens.secondaryText(context)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.1,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: label,
+                ),
+              ),
+              const SizedBox(height: 9),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+/// The bar, with a round notch cut out of its top edge under the raised button.
+class _NotchedBarPainter extends CustomPainter {
+  const _NotchedBarPainter({required this.cx, required this.color, required this.edge, required this.shadow});
+
+  final double cx;
+  final Color color;
+  final Color? edge;
+  final Color shadow;
+
+  static const double _radius = 24;
+  static const double _halfWidth = 46;
+  static const double _depth = 38;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const top = _PillNav.lift;
+    final w = size.width;
+    final h = size.height;
+    // Keep the notch inside the bar's rounded ends, even on the spring's overshoot.
+    final c = cx.clamp(_radius + _halfWidth * 0.5, w - _radius - _halfWidth * 0.5);
+
+    final path = Path()
+      ..moveTo(0, top + _radius)
+      ..arcToPoint(const Offset(_radius, top), radius: const Radius.circular(_radius))
+      ..lineTo(c - _halfWidth, top)
+      ..cubicTo(c - _halfWidth * 0.65, top, c - _halfWidth * 0.75, top + _depth, c, top + _depth)
+      ..cubicTo(c + _halfWidth * 0.75, top + _depth, c + _halfWidth * 0.65, top, c + _halfWidth, top)
+      ..lineTo(w - _radius, top)
+      ..arcToPoint(Offset(w, top + _radius), radius: const Radius.circular(_radius))
+      ..lineTo(w, h - _radius)
+      ..arcToPoint(Offset(w - _radius, h), radius: const Radius.circular(_radius))
+      ..lineTo(_radius, h)
+      ..arcToPoint(Offset(0, h - _radius), radius: const Radius.circular(_radius))
+      ..close();
+
+    canvas.drawShadow(path, shadow, 12, false);
+    canvas.drawPath(path, Paint()..color = color);
+    if (edge != null) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = edge!,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NotchedBarPainter old) =>
+      old.cx != cx || old.color != color || old.edge != edge || old.shadow != shadow;
 }

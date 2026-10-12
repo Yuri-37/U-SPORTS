@@ -35,7 +35,7 @@ Kept as before: each item plays once; after the first click or touch anything al
 
 ## Portrait navigation
 
-The capsule is gone. It is now four separate round buttons floating in a row, like the sideways arc. The current page is a navy disc with a white ring and a soft side glow. The others are plain discs with a shadow. Each tap pops the button with a spring and sends out an expanding ring. Remove animations turns the pop and ring off.
+Now a rounded bar in the card colour with a raised round button for the current page, sitting in a notch cut into the bar (the bar floats over the page, nothing behind it, so content scrolls underneath). The button is the school navy with a white icon and a soft glow; the other tabs show a dark icon with their label under it, and the current tab shows its label. Tapping another tab slides the button and its notch across on the same spring as the reveal, so it overshoots the target, and the button leans into the move and swings back upright as it lands. No ring, pop or other tap effect. Remove animations makes it jump with no motion. The sideways layout keeps its arc of round buttons.
 
 ## Checks
 
