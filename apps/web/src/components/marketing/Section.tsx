@@ -1,5 +1,6 @@
 import React from 'react'
 import { Button } from '../ui'
+import CountUp from './CountUp'
 
 /*
   Section building blocks shared by the public pages (hub, app details).
@@ -38,6 +39,7 @@ export function SectionHeading({
   action,
   secondaryAction,
   align = 'left',
+  ref,
 }: {
   label: string
   title: string
@@ -47,10 +49,12 @@ export function SectionHeading({
   secondaryAction?: { label: string; onClick: () => void }
   /** 'center' stacks everything on the page's axis (no side actions). */
   align?: 'left' | 'center'
+  /** For scroll reveal; React 19 passes it as a normal prop. */
+  ref?: React.Ref<HTMLDivElement>
 }) {
   if (align === 'center') {
     return (
-      <div className="mb-12 flex flex-col items-center text-center">
+      <div ref={ref} className="mb-12 flex flex-col items-center text-center">
         <SectionLabel dot={dot}>{label}</SectionLabel>
         <h2 className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] mt-4">{title}</h2>
         {subtitle && (
@@ -60,7 +64,7 @@ export function SectionHeading({
     )
   }
   return (
-    <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div ref={ref} className="mb-10 flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-2xl">
         <SectionLabel dot={dot}>{label}</SectionLabel>
         <h2 className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] mt-4">{title}</h2>
@@ -87,20 +91,24 @@ export function SectionHeading({
 }
 
 /** One figure in the inverted stats band. */
-export function StatCell({ value, label }: { value: number; label: string }) {
+export function StatCell({ value, label, countUp }: { value: number; label: string; countUp?: boolean }) {
   return (
     <div className="px-4 text-center">
-      <p className="font-display text-4xl lg:text-5xl text-white">{value.toLocaleString()}</p>
+      <p className="font-display text-4xl lg:text-5xl text-white">
+        {countUp ? <CountUp value={value} /> : value.toLocaleString()}
+      </p>
       <p className="label-mono mt-3 text-white/70">{label}</p>
     </div>
   )
 }
 
 /** Compact figure + label pair used inside the sport tiles. */
-export function MiniStat({ value, label }: { value: number; label: string }) {
+export function MiniStat({ value, label, countUp }: { value: number; label: string; countUp?: boolean }) {
   return (
     <div>
-      <p className="font-display text-2xl leading-none text-[var(--text-primary)]">{value}</p>
+      <p className="font-display text-2xl leading-none text-[var(--text-primary)]">
+        {countUp ? <CountUp value={value} /> : value}
+      </p>
       <p className="label-mono mt-1.5 text-[var(--text-muted)]">{label}</p>
     </div>
   )

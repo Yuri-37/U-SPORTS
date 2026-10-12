@@ -190,7 +190,7 @@ export default function EventDetailPage({
     return <div className="text-center py-12 text-[var(--text-muted)]">Event not found</div>
 
   return (
-    <div className={cn('max-w-5xl mx-auto space-y-6', outerClassName)}>
+    <div className={cn('max-w-5xl mx-auto space-y-6 overflow-x-clip', outerClassName)}>
       <div className="flex items-start gap-3">
         <Button
           type="button"

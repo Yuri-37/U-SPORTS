@@ -198,6 +198,8 @@ code, pre, .mono {
 :root {
   /* Strong ease-out for entrances and feedback (Emil Kowalski's UI curve). */
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Ease-out with a small overshoot: the scroll reveal settles like a spring. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Brand RGB triplets, so shadows/glows can be tinted at arbitrary alpha. */
   --school-primary-rgb: 0, 45, 98;
@@ -355,24 +357,52 @@ code, pre, .mono {
 .stagger > *:nth-child(6) { animation-delay: 200ms; }
 
 /*
-  Scroll reveal (hooks/useScrollReveal.ts): an item waits, invisible, until it
-  scrolls into view, then fades and rises once. `translate` (not `transform`)
-  and `backwards` fill, so nothing stays applied afterwards and .card-lift's
+  Scroll reveal (hooks/useScrollReveal.ts). Deliberately dramatic: an item waits,
+  invisible, until it scrolls into view, then flies in once. Cards rise 70px from
+  85% size and settle with a small overshoot; rows slide in from alternating
+  sides; headings slide in from the left. Only opacity, translate, scale and (web
+  only) blur animate. They are the individual properties (not the transform shorthand), and
+  fill is "backwards", so nothing stays applied afterwards and .card-lift's
   hover still works. Values mirror AppMotion.reveal* in the Android app.
+
+  Fade and move are separate animations so the spring overshoot never has to
+  stretch opacity past 1; the fade finishes first and the move keeps settling.
 */
-@keyframes reveal-up {
-  from { opacity: 0; translate: 0 0.5rem; }
+@keyframes reveal-fade {
+  from { opacity: 0; filter: blur(10px); }
 }
-@keyframes reveal-up-row {
-  from { opacity: 0; translate: 0 0.25rem; }
+@keyframes reveal-move-up {
+  from { translate: 0 70px; scale: 0.85; }
+}
+@keyframes reveal-move-left {
+  from { translate: -64px 0; scale: 0.94; }
+}
+@keyframes reveal-move-right {
+  from { translate: 64px 0; scale: 0.94; }
+}
+@keyframes reveal-move-heading {
+  from { translate: -56px 0; }
 }
 [data-reveal='pending'] { opacity: 0; }
 [data-reveal='shown'] {
-  animation: reveal-up 300ms var(--ease-out-strong) var(--reveal-delay, 0ms) backwards;
+  animation-name: reveal-fade, reveal-move-up;
+  animation-duration: 550ms, 800ms;
+  animation-timing-function: ease-out, var(--ease-spring);
+  animation-delay: var(--reveal-delay, 0ms);
+  animation-fill-mode: backwards;
 }
 [data-reveal='shown'][data-reveal-kind='row'] {
-  animation-name: reveal-up-row;
-  animation-duration: 200ms;
+  animation-duration: 450ms, 700ms;
+}
+[data-reveal='shown'][data-reveal-kind='row'][data-reveal-side='left'] {
+  animation-name: reveal-fade, reveal-move-left;
+}
+[data-reveal='shown'][data-reveal-kind='row'][data-reveal-side='right'] {
+  animation-name: reveal-fade, reveal-move-right;
+}
+[data-reveal='shown'][data-reveal-kind='heading'] {
+  animation-name: reveal-fade, reveal-move-heading;
+  animation-duration: 550ms, 700ms;
 }
 @media print {
   [data-reveal] { opacity: 1; animation: none; }

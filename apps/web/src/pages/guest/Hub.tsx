@@ -324,6 +324,7 @@ export default function GuestHub() {
       {liveMatches.length > 0 && (
         <section className="max-w-6xl mx-auto px-6 pb-20">
           <SectionHeading
+            ref={reveal.heading}
             label="Happening now"
             title="Live games"
             dot="danger"
@@ -465,6 +466,7 @@ export default function GuestHub() {
       {/* ── Events ─────────────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-8">
         <SectionHeading
+          ref={reveal.heading}
           label="Schedule"
           title="Events"
           action={{ label: 'Upcoming →', onClick: () => navigate('/guest/events') }}
@@ -510,7 +512,7 @@ export default function GuestHub() {
 
       {/* ── Sports ─────────────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
-        <SectionHeading label="Competitions" title="Browse by sport" />
+        <SectionHeading ref={reveal.heading} label="Competitions" title="Browse by sport" />
         {/*
           Asymmetric on desktop: the first tile takes two rows so the grid
           reads as a composition rather than three equal boxes. On mobile it
@@ -551,10 +553,12 @@ export default function GuestHub() {
               {/* Counted from data already on the page — no extra queries. */}
               <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
                 <MiniStat
+                  countUp
                   value={liveMatches.filter((m) => m.event?.sport === s.sport).length}
                   label="Live now"
                 />
                 <MiniStat
+                  countUp
                   value={recentEvents.filter((e) => e.sport === s.sport).length}
                   label="Open events"
                 />
@@ -589,10 +593,10 @@ export default function GuestHub() {
           />
           <div className="relative max-w-6xl mx-auto px-6 py-24 lg:py-32">
             <div ref={reveal.card} className="grid grid-cols-2 lg:grid-cols-4 gap-y-12 lg:divide-x lg:divide-white/20">
-              <StatCell value={stats.athletes} label="Athletes" />
-              <StatCell value={stats.teams} label="Teams" />
-              <StatCell value={stats.events} label="Competitions" />
-              <StatCell value={stats.matchesPlayed} label="Games played" />
+              <StatCell countUp value={stats.athletes} label="Athletes" />
+              <StatCell countUp value={stats.teams} label="Teams" />
+              <StatCell countUp value={stats.events} label="Competitions" />
+              <StatCell countUp value={stats.matchesPlayed} label="Games played" />
             </div>
           </div>
         </section>
@@ -602,6 +606,7 @@ export default function GuestHub() {
       {championSpotlights.length > 0 && (
         <section className="max-w-6xl mx-auto px-6 py-24">
           <SectionHeading
+            ref={reveal.heading}
             label="Results"
             title="Recent champions"
             subtitle="Knockout finals from completed competitions. Open an event for its full bracket and match history."

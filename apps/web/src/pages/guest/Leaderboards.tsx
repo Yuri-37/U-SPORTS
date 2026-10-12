@@ -136,7 +136,7 @@ export default function GuestLeaderboards() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 overflow-x-clip">
       <div className="flex items-start gap-3">
         <Button
           type="button"

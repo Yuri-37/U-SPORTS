@@ -3,40 +3,49 @@ import { REVEAL_INSET_PX, revealDelayMs, type RevealKind } from '../lib/scrollRe
 
 type RevealRef = (el: HTMLElement | null) => void | (() => void)
 
-const canAnimate = () =>
+/** True once the visitor has clicked or pressed a key anywhere on the site. */
+let interacted = false
+if (typeof window !== 'undefined') {
+  const mark = () => {
+    interacted = true
+  }
+  window.addEventListener('pointerdown', mark, { capture: true, passive: true })
+  window.addEventListener('keydown', mark, { capture: true })
+}
+
+export const hasInteracted = () => interacted
+
+/** False when the visitor asked for reduced motion, or the browser cannot observe. */
+export const canAnimateReveal = () =>
   typeof IntersectionObserver !== 'undefined' &&
   !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const inViewport = (el: HTMLElement) => {
+export const inViewport = (el: HTMLElement) => {
   const r = el.getBoundingClientRect()
   return r.top < window.innerHeight && r.bottom > 0
 }
 
 /**
- * Items fade and rise once as they scroll into view. Call once per page and
- * put `reveal.card` or `reveal.row` on each item's `ref`.
+ * Items fly in once as they scroll into view. Call once per page and put
+ * `reveal.card`, `reveal.row` or `reveal.heading` on each item's `ref`.
+ *
+ * Rows alternate between sliding in from the left and from the right.
  *
  * After the visitor's first click or key press, anything that mounts already
- * on screen (a tab, a filter, a live update) shows at once; only what is
- * still below the fold waits to be scrolled to.
+ * on screen (a tab, a filter, a live update) shows at once; only what is still
+ * below the fold waits to be scrolled to.
  */
-export function useScrollReveal(): { card: RevealRef; row: RevealRef } {
+export function useScrollReveal(): { card: RevealRef; row: RevealRef; heading: RevealRef } {
   const observerRef = useRef<IntersectionObserver | null>(null)
-  const interactedRef = useRef(false)
+  const rowCountRef = useRef(0)
 
-  useEffect(() => {
-    const mark = () => {
-      interactedRef.current = true
-    }
-    window.addEventListener('pointerdown', mark, { capture: true, passive: true })
-    window.addEventListener('keydown', mark, { capture: true })
-    return () => {
-      window.removeEventListener('pointerdown', mark, { capture: true })
-      window.removeEventListener('keydown', mark, { capture: true })
+  useEffect(
+    () => () => {
       observerRef.current?.disconnect()
       observerRef.current = null
-    }
-  }, [])
+    },
+    [],
+  )
 
   return useMemo(() => {
     const observer = () => {
@@ -53,15 +62,16 @@ export function useScrollReveal(): { card: RevealRef; row: RevealRef } {
           entering.forEach((entry, i) => {
             const el = entry.target as HTMLElement
             io.unobserve(el)
-            const kind: RevealKind = el.dataset.revealKind === 'row' ? 'row' : 'card'
-            el.style.setProperty('--reveal-delay', `${revealDelayMs(i, kind)}ms`)
+            el.style.setProperty('--reveal-delay', `${revealDelayMs(i)}ms`)
             el.dataset.reveal = 'shown'
             const done = (ev: AnimationEvent) => {
-              // Ignore animations bubbling up from inside the card (score pops, pulses).
-              if (ev.target !== el || !ev.animationName.startsWith('reveal-up')) return
+              // Only the long move animation ends the reveal; ignore the quicker
+              // fade and anything bubbling up from inside the card.
+              if (ev.target !== el || !ev.animationName.startsWith('reveal-move')) return
               el.removeEventListener('animationend', done)
               delete el.dataset.reveal
               delete el.dataset.revealKind
+              delete el.dataset.revealSide
               el.style.removeProperty('--reveal-delay')
             }
             el.addEventListener('animationend', done)
@@ -78,16 +88,17 @@ export function useScrollReveal(): { card: RevealRef; row: RevealRef } {
       (el) => {
         if (!el || el.dataset.reveal === 'shown') return
         if (el.dataset.reveal !== 'pending') {
-          if (!canAnimate()) return
-          if (interactedRef.current && inViewport(el)) return
+          if (!canAnimateReveal()) return
+          if (interacted && inViewport(el)) return
           el.dataset.reveal = 'pending'
           el.dataset.revealKind = kind
+          if (kind === 'row') el.dataset.revealSide = rowCountRef.current++ % 2 === 0 ? 'left' : 'right'
         }
         const io = observer()
         io.observe(el)
         return () => io.unobserve(el)
       }
 
-    return { card: attach('card'), row: attach('row') }
+    return { card: attach('card'), row: attach('row'), heading: attach('heading') }
   }, [])
 }
