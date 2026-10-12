@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,7 +38,7 @@ class AppShell extends ConsumerWidget {
     // Guests have no last branch to switch to — send them to login instead of
     // a dashboard they can't see.
     if (index == 3 && role != 'athlete' && role != 'Coach') {
-      context.go('/auth/login');
+      context.push('/auth/login');
       return;
     }
     final branch = _branchFor(index, role);
@@ -89,34 +93,22 @@ class AppShell extends ConsumerWidget {
   ) {
     final mq = MediaQuery.of(context);
     return Scaffold(
-      body: Stack(
-        children: [
-          MediaQuery(
-            data: mq.copyWith(padding: mq.padding.copyWith(bottom: mq.padding.bottom + _PillNav.clearance)),
-            child: navigationShell,
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: _PillNav(
-                  items: [
-                    const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
-                    const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
-                    const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
-                    _NavItem(profileLabel, profileIcon, profileIconSelected),
-                  ],
-                  selected: selected,
-                  onSelect: (i) => _onTap(context, i, role),
-                ),
-              ),
-            ),
-          ),
-        ],
+      body: _MinimizeOnScroll(
+        page: MediaQuery(
+          data: mq.copyWith(padding: mq.padding.copyWith(bottom: mq.padding.bottom + _PillNav.clearance)),
+          child: navigationShell,
+        ),
+        navBuilder: (minimized) => _PillNav(
+          items: [
+            const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
+            const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
+            const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
+            _NavItem(profileLabel, profileIcon, profileIconSelected),
+          ],
+          selected: selected,
+          minimized: minimized,
+          onSelect: (i) => _onTap(context, i, role),
+        ),
       ),
     );
   }
@@ -269,22 +261,155 @@ class _ArcButton extends StatelessWidget {
   }
 }
 
+/// Slims the navigation while the page is scrolling and brings it back when the
+/// scrolling stops, so the raised button never sits on top of the text you are
+/// reading. Only vertical scrolling counts; with Remove animations on it never
+/// minimises.
+class _MinimizeOnScroll extends StatefulWidget {
+  const _MinimizeOnScroll({required this.page, required this.navBuilder});
+
+  final Widget page;
+  final Widget Function(bool minimized) navBuilder;
+
+  @override
+  State<_MinimizeOnScroll> createState() => _MinimizeOnScrollState();
+}
+
+class _MinimizeOnScrollState extends State<_MinimizeOnScroll> {
+  bool _minimized = false;
+  Timer? _restore;
+
+  void _set(bool v) {
+    if (_minimized != v && mounted) setState(() => _minimized = v);
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical || MediaQuery.disableAnimationsOf(context)) return false;
+    if (n is ScrollUpdateNotification && (n.scrollDelta ?? 0).abs() > 1) {
+      _restore?.cancel();
+      _set(true);
+      // Safety net if the end notification never comes.
+      _restore = Timer(const Duration(milliseconds: 700), () => _set(false));
+    } else if (n is ScrollEndNotification) {
+      _restore?.cancel();
+      _restore = Timer(const Duration(milliseconds: 250), () => _set(false));
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _restore?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.page),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _SlideAwayWhenCovered(
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: widget.navBuilder(_minimized),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// How far a page that covers the tabs (the login page) has risen, 0 to 1. The
+/// page reports it through [NavCoverReporter]; the navigation reads it to slide
+/// itself away. (A page route with a custom transition does not drive the
+/// route underneath it, so this carries the value across.)
+final ValueNotifier<double> navCover = ValueNotifier<double>(0);
+
+/// Put around a page that slides over the tabs: feeds its transition progress
+/// into [navCover] while it animates, and resets it when the page is gone.
+class NavCoverReporter extends StatefulWidget {
+  const NavCoverReporter({super.key, required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  State<NavCoverReporter> createState() => _NavCoverReporterState();
+}
+
+class _NavCoverReporterState extends State<NavCoverReporter> {
+  void _report() => navCover.value = widget.animation.value;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.animation.addListener(_report);
+  }
+
+  @override
+  void dispose() {
+    widget.animation.removeListener(_report);
+    // Not during this frame's build: the navigation listens to this value.
+    WidgetsBinding.instance.addPostFrameCallback((_) => navCover.value = 0);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Slides the navigation down and out of the way while the login page is rising
+/// over the tabs, and back again when it leaves.
+class _SlideAwayWhenCovered extends StatelessWidget {
+  const _SlideAwayWhenCovered({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<double>(
+      valueListenable: navCover,
+      child: child,
+      builder: (context, covered, child) => Transform.translate(
+        offset: Offset(0, covered * (_PillNav.height + 60)),
+        child: child,
+      ),
+    );
+  }
+}
+
 /// The portrait navigation: a rounded bar with a raised round button for the
 /// page you are on, sitting in a notch cut into the bar. Tapping another tab
-/// slides the button (and its notch) across with a spring, leaning into the move
-/// and swinging back upright as it lands. Labels sit under the icons.
+/// slides the button (and its notch) across with a spring, leaning into the
+/// move and swinging back upright as it lands. Labels sit under the icons.
+///
+/// While the page scrolls the bar slims down and the button sinks into it
+/// ([minimized]), so nothing sticks up over the text.
 class _PillNav extends StatelessWidget {
-  const _PillNav({required this.items, required this.selected, required this.onSelect});
+  const _PillNav({required this.items, required this.selected, required this.onSelect, required this.minimized});
 
   final List<_NavItem> items;
   final int selected;
   final ValueChanged<int> onSelect;
+  final bool minimized;
 
-  static const double barHeight = 68;
+  static const double barHeight = 64;
+  static const double barHeightMin = 44;
 
   /// How far the raised button rises above the top of the bar.
-  static const double lift = 24;
-  static const double bubble = 54;
+  static const double lift = 12;
+  static const double bubble = 44;
+  static const double bubbleMin = 32;
+
+  /// Total height the navigation reserves (bar plus the raised button).
   static const double height = lift + barHeight;
 
   /// Room the bar takes at the bottom of the screen (its height, the padding
@@ -304,78 +429,95 @@ class _PillNav extends StatelessWidget {
         builder: (context, box) {
           final slot = box.maxWidth / items.length;
           return TweenAnimationBuilder<double>(
-            // Starts at the current tab; every later change slides from where it is.
-            tween: Tween<double>(end: selected.toDouble()),
-            duration: reduce ? Duration.zero : const Duration(milliseconds: 560),
-            curve: AppMotion.spring,
-            builder: (context, pos, _) {
-              final cx = slot * (pos + 0.5);
-              // Leans into the move, then swings back as the spring settles.
-              final tilt = reduce ? 0.0 : ((selected - pos) * 0.5).clamp(-0.45, 0.45);
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _NotchedBarPainter(
-                        cx: cx,
-                        color: barColor,
-                        edge: dark ? LayoutTokens.borderSubtle(context) : null,
-                        shadow: Colors.black.withValues(alpha: dark ? 0.6 : 0.18),
-                      ),
-                    ),
-                  ),
-                  for (var i = 0; i < items.length; i++)
-                    Positioned(
-                      left: slot * i,
-                      width: slot,
-                      top: lift,
-                      height: barHeight,
-                      child: _NavSlot(
-                        item: items[i],
-                        selected: i == selected,
-                        // 0 when the raised button is over this tab, 1 when it is a slot away.
-                        away: (pos - i).abs().clamp(0.0, 1.0),
-                        onTap: () => onSelect(i),
-                      ),
-                    ),
-                  Positioned(
-                    left: cx - bubble / 2,
-                    top: lift + 4 - bubble / 2,
-                    width: bubble,
-                    height: bubble,
-                    child: IgnorePointer(
-                      child: Transform.rotate(
-                        angle: tilt,
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: navy,
-                            boxShadow: [
-                              BoxShadow(
-                                color: navy.withValues(alpha: dark ? 0.7 : 0.45),
-                                blurRadius: 16,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
+            // 0 = full bar, 1 = slimmed down while scrolling.
+            tween: Tween<double>(end: minimized && !reduce ? 1 : 0),
+            duration: reduce ? Duration.zero : const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            builder: (context, t, _) {
+              final barH = lerpDouble(barHeight, barHeightMin, t)!;
+              final barTop = height - barH;
+              final r = lerpDouble(bubble, bubbleMin, t)! / 2;
+              final bubbleCy = barTop + lerpDouble(10, barH / 2, t)!;
+              return TweenAnimationBuilder<double>(
+                // Starts at the current tab; every later change slides from where it is.
+                tween: Tween<double>(end: selected.toDouble()),
+                duration: reduce ? Duration.zero : const Duration(milliseconds: 560),
+                curve: AppMotion.spring,
+                builder: (context, pos, _) {
+                  final cx = slot * (pos + 0.5);
+                  // Leans into the move, then swings back as the spring settles.
+                  final tilt = reduce ? 0.0 : ((selected - pos) * 0.5).clamp(-0.45, 0.45);
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _NotchedBarPainter(
+                            cx: cx,
+                            barTop: barTop,
+                            depth: lerpDouble(36, 0, t)!,
+                            color: barColor,
+                            edge: dark ? LayoutTokens.borderSubtle(context) : null,
+                            shadow: Colors.black.withValues(alpha: dark ? 0.6 : 0.18),
                           ),
-                          child: AnimatedSwitcher(
-                            duration: reduce ? Duration.zero : const Duration(milliseconds: 220),
-                            transitionBuilder: (child, animation) =>
-                                FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child)),
-                            child: Icon(
-                              items[selected].selectedIcon,
-                              key: ValueKey<int>(selected),
-                              size: 26,
-                              color: Colors.white,
+                        ),
+                      ),
+                      for (var i = 0; i < items.length; i++)
+                        Positioned(
+                          left: slot * i,
+                          width: slot,
+                          top: barTop,
+                          height: barH,
+                          child: _NavSlot(
+                            item: items[i],
+                            selected: i == selected,
+                            // 0 when the raised button is over this tab, 1 when it is a slot away.
+                            away: (pos - i).abs().clamp(0.0, 1.0),
+                            // Labels fade out as the bar slims down.
+                            labelOpacity: 1 - t,
+                            iconTop: lerpDouble(13, 10, t)!,
+                            onTap: () => onSelect(i),
+                          ),
+                        ),
+                      Positioned(
+                        left: cx - r,
+                        top: bubbleCy - r,
+                        width: r * 2,
+                        height: r * 2,
+                        child: IgnorePointer(
+                          child: Transform.rotate(
+                            angle: tilt,
+                            child: Container(
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: navy,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: navy.withValues(alpha: dark ? 0.7 : 0.45),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: reduce ? Duration.zero : const Duration(milliseconds: 220),
+                                transitionBuilder: (child, animation) => FadeTransition(
+                                    opacity: animation, child: ScaleTransition(scale: animation, child: child)),
+                                child: Icon(
+                                  items[selected].selectedIcon,
+                                  key: ValueKey<int>(selected),
+                                  size: lerpDouble(23, 18, t),
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               );
             },
           );
@@ -386,50 +528,95 @@ class _PillNav extends StatelessWidget {
 }
 
 /// One tab in the bar: its icon (which fades out as the raised button arrives
-/// over it) and its label. Names are read aloud by screen readers and show on
+/// over it) and its label. A tap gives a quick squash-and-spring so the press is
+/// always acknowledged, even for "Sign in", which opens a page instead of
+/// moving the button. Names are read aloud by screen readers and show on
 /// long-press.
-class _NavSlot extends StatelessWidget {
-  const _NavSlot({required this.item, required this.selected, required this.away, required this.onTap});
+class _NavSlot extends StatefulWidget {
+  const _NavSlot({
+    required this.item,
+    required this.selected,
+    required this.away,
+    required this.labelOpacity,
+    required this.iconTop,
+    required this.onTap,
+  });
 
   final _NavItem item;
   final bool selected;
   final double away;
+  final double labelOpacity;
+  final double iconTop;
   final VoidCallback onTap;
 
   @override
+  State<_NavSlot> createState() => _NavSlotState();
+}
+
+class _NavSlotState extends State<_NavSlot> with SingleTickerProviderStateMixin {
+  late final AnimationController _press = AnimationController(vsync: this, duration: const Duration(milliseconds: 320), value: 1);
+
+  @override
+  void dispose() {
+    _press.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final label = Color.lerp(AppTheme.brandInk(context), LayoutTokens.mutedText(context), away)!;
+    final label = Color.lerp(AppTheme.brandInk(context), LayoutTokens.mutedText(context), widget.away)!;
     return Tooltip(
-      message: item.label,
+      message: widget.item.label,
       child: Semantics(
         button: true,
-        selected: selected,
-        label: item.label,
+        selected: widget.selected,
+        label: widget.item.label,
         excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Opacity(
-                opacity: away,
-                child: Icon(item.icon, size: 24, color: LayoutTokens.secondaryText(context)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  height: 1.1,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: label,
+          onTap: () {
+            if (!MediaQuery.disableAnimationsOf(context)) _press.forward(from: 0);
+            widget.onTap();
+          },
+          child: AnimatedBuilder(
+            animation: _press,
+            builder: (context, child) => Transform.scale(
+              scale: 0.84 + 0.16 * Curves.easeOutBack.transform(_press.value),
+              child: child,
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: widget.iconTop,
+                  left: 0,
+                  right: 0,
+                  child: Opacity(
+                    opacity: widget.away,
+                    child: Icon(widget.item.icon, size: 24, color: LayoutTokens.secondaryText(context)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 9),
-            ],
+                Positioned(
+                  bottom: 8,
+                  left: 4,
+                  right: 4,
+                  child: Opacity(
+                    opacity: widget.labelOpacity,
+                    child: Text(
+                      widget.item.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        height: 1.1,
+                        fontWeight: widget.selected ? FontWeight.w800 : FontWeight.w600,
+                        color: label,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -439,37 +626,45 @@ class _NavSlot extends StatelessWidget {
 
 /// The bar, with a round notch cut out of its top edge under the raised button.
 class _NotchedBarPainter extends CustomPainter {
-  const _NotchedBarPainter({required this.cx, required this.color, required this.edge, required this.shadow});
+  const _NotchedBarPainter({
+    required this.cx,
+    required this.barTop,
+    required this.depth,
+    required this.color,
+    required this.edge,
+    required this.shadow,
+  });
 
   final double cx;
+  final double barTop;
+  final double depth;
   final Color color;
   final Color? edge;
   final Color shadow;
 
-  static const double _radius = 24;
-  static const double _halfWidth = 46;
-  static const double _depth = 38;
+  static const double _halfWidth = 40;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const top = _PillNav.lift;
+    final top = barTop;
     final w = size.width;
     final h = size.height;
+    final radius = math.min(24.0, (h - top) / 2);
     // Keep the notch inside the bar's rounded ends, even on the spring's overshoot.
-    final c = cx.clamp(_radius + _halfWidth * 0.5, w - _radius - _halfWidth * 0.5);
+    final c = cx.clamp(radius + _halfWidth * 0.5, w - radius - _halfWidth * 0.5);
 
     final path = Path()
-      ..moveTo(0, top + _radius)
-      ..arcToPoint(const Offset(_radius, top), radius: const Radius.circular(_radius))
+      ..moveTo(0, top + radius)
+      ..arcToPoint(Offset(radius, top), radius: Radius.circular(radius))
       ..lineTo(c - _halfWidth, top)
-      ..cubicTo(c - _halfWidth * 0.65, top, c - _halfWidth * 0.75, top + _depth, c, top + _depth)
-      ..cubicTo(c + _halfWidth * 0.75, top + _depth, c + _halfWidth * 0.65, top, c + _halfWidth, top)
-      ..lineTo(w - _radius, top)
-      ..arcToPoint(Offset(w, top + _radius), radius: const Radius.circular(_radius))
-      ..lineTo(w, h - _radius)
-      ..arcToPoint(Offset(w - _radius, h), radius: const Radius.circular(_radius))
-      ..lineTo(_radius, h)
-      ..arcToPoint(Offset(0, h - _radius), radius: const Radius.circular(_radius))
+      ..cubicTo(c - _halfWidth * 0.65, top, c - _halfWidth * 0.75, top + depth, c, top + depth)
+      ..cubicTo(c + _halfWidth * 0.75, top + depth, c + _halfWidth * 0.65, top, c + _halfWidth, top)
+      ..lineTo(w - radius, top)
+      ..arcToPoint(Offset(w, top + radius), radius: Radius.circular(radius))
+      ..lineTo(w, h - radius)
+      ..arcToPoint(Offset(w - radius, h), radius: Radius.circular(radius))
+      ..lineTo(radius, h)
+      ..arcToPoint(Offset(0, h - radius), radius: Radius.circular(radius))
       ..close();
 
     canvas.drawShadow(path, shadow, 12, false);
@@ -487,5 +682,10 @@ class _NotchedBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _NotchedBarPainter old) =>
-      old.cx != cx || old.color != color || old.edge != edge || old.shadow != shadow;
+      old.cx != cx ||
+      old.barTop != barTop ||
+      old.depth != depth ||
+      old.color != color ||
+      old.edge != edge ||
+      old.shadow != shadow;
 }

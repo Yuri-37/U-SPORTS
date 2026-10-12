@@ -46,6 +46,8 @@ Future<void> main() async {
   );
 
   await AppearanceDarkModeNotifier.preload();
+  // The school's colours and name from last time, so the first frame is already right.
+  await InstitutionCache.preload();
 
   try {
     await Firebase.initializeApp();

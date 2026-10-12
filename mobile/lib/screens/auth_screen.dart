@@ -126,7 +126,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final institution = ref.watch(institutionProvider).valueOrNull;
+    final institution = ref.watch(institutionProvider).valueOrNull ?? InstitutionCache.cached;
     final hintDomain = institution?.studentEmailDomain ?? 'students.nu-dasma.edu.ph';
     final schoolName = institution?.name.trim() ?? '';
 

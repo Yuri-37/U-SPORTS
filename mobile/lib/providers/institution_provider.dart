@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
@@ -57,13 +60,51 @@ Color? _parseHex(String? hex) {
   return Color(int.parse(h, radix: 16));
 }
 
+/// The school's look (colours, name, logo) from the last launch, kept on the
+/// device. [preload] runs before the first frame so the app opens already
+/// wearing the school's colours and name, instead of showing built-in defaults
+/// for a moment until the server answers.
+class InstitutionCache {
+  static const _key = 'institution_look';
+
+  /// The last row seen, or null on a fresh install.
+  static InstitutionData? cached;
+
+  static Future<void> preload() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_key);
+      if (raw == null) return;
+      cached = _apply(Map<String, dynamic>.from(jsonDecode(raw) as Map));
+    } catch (_) {
+      // A damaged cache is just no cache.
+    }
+  }
+
+  static Future<void> save(Map<String, dynamic> row) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_key, jsonEncode(row));
+    } catch (_) {}
+  }
+
+  /// Parses a row and applies its colours to the theme.
+  static InstitutionData _apply(Map<String, dynamic> row) {
+    final data = InstitutionData.fromRow(row);
+    final p = _parseHex(data.primaryColorHex);
+    final s = _parseHex(data.secondaryColorHex);
+    if (p != null) AppTheme.schoolPrimary = p;
+    if (s != null) AppTheme.schoolSecondary = s;
+    return data;
+  }
+}
+
 final institutionProvider = FutureProvider<InstitutionData?>((ref) async {
   final row = await Supabase.instance.client.from('institution').select().maybeSingle();
   if (row == null) return null;
-  final data = InstitutionData.fromRow(Map<String, dynamic>.from(row as Map));
-  final p = _parseHex(data.primaryColorHex);
-  final s = _parseHex(data.secondaryColorHex);
-  if (p != null) AppTheme.schoolPrimary = p;
-  if (s != null) AppTheme.schoolSecondary = s;
+  final map = Map<String, dynamic>.from(row as Map);
+  final data = InstitutionCache._apply(map);
+  InstitutionCache.cached = data;
+  await InstitutionCache.save(map);
   return data;
 });

@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,6 +23,7 @@ import '../screens/athlete_profile_screen.dart';
 import '../screens/sport_detail_screen.dart';
 import '../screens/team_detail_screen.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/ui/branch_fader.dart';
 
 /// Lets push_notifications_service.dart navigate on a tap (foreground local
 /// notification, backgrounded-tap, or cold-start-from-terminated) without a
@@ -143,9 +144,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // Four persistent tab branches, wrapped in AppShell's bottom nav bar.
       // Each branch keeps its own Navigator/state across tab switches.
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (ctx, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
+        // Like an indexed stack (every tab stays alive) but switching tabs fades
+        // and slides instead of swapping instantly.
+        navigatorContainerBuilder: (ctx, navigationShell, children) =>
+            BranchFader(currentIndex: navigationShell.currentIndex, children: children),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/', builder: (ctx, _) => const HomeScreen()),
@@ -208,7 +213,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           readOnly: st.uri.queryParameters['readonly'] == 'true',
         ),
       ),
-      GoRoute(path: '/auth/login', builder: (ctx, _) => const AuthScreen()),
+      // The login page rises and fades in over the tabs (and the tab bar slides
+      // away under it), instead of cutting straight to it.
+      GoRoute(
+        path: '/auth/login',
+        pageBuilder: (ctx, st) => CustomTransitionPage<void>(
+          key: st.pageKey,
+          child: const AuthScreen(),
+          transitionDuration: const Duration(milliseconds: 380),
+          reverseTransitionDuration: const Duration(milliseconds: 300),
+          transitionsBuilder: (context, animation, secondary, child) {
+            if (MediaQuery.disableAnimationsOf(context)) return child;
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeInCubic,
+            );
+            return NavCoverReporter(
+              animation: animation,
+              child: FadeTransition(
+                opacity: curved,
+                child: SlideTransition(
+                  position: Tween<Offset>(begin: const Offset(0, 0.14), end: Offset.zero).animate(curved),
+                  child: child,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
       GoRoute(
         path: '/auth/forgot-password',
         builder: (ctx, _) => const ForgotPasswordScreen(),

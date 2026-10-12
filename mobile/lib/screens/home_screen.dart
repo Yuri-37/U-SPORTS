@@ -186,7 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         showBack: false,
         titleWidget: const InstitutionBrandTitle(compact: true),
         actions: const [HubHeaderActions()],
-        hero: _hero(institutionAsync.valueOrNull),
+        hero: _hero(institutionAsync.valueOrNull ?? InstitutionCache.cached),
         onRefresh: () async {
           ref.invalidate(institutionProvider);
           ref.invalidate(announcementsHubProvider);

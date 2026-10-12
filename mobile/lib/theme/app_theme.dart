@@ -34,9 +34,12 @@ class AppTheme {
   /// itself is unreadable. Same value as web's dark `--brand-ink`.
   static const Color brandInkDark = Color(0xFF8FB2FF);
 
-  // School branding - overridden at runtime from institution table
-  static Color schoolPrimary = const Color(0xFF002D62);
-  static Color schoolSecondary = const Color(0xFFFFD700);
+  // School branding - overridden at runtime from institution table, and
+  // remembered between launches (InstitutionCache) so the first frame already
+  // has it. These are only the very first launch on a fresh install, so they
+  // match the school's current colours rather than an older navy.
+  static Color schoolPrimary = const Color(0xFF0066FF);
+  static Color schoolSecondary = const Color(0xFFF4C430);
 
   /// Brand color safe to use as text/icon color on the page background.
   static Color brandInk(BuildContext context) =>
