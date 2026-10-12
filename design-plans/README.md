@@ -23,6 +23,7 @@ Each plan is self-contained: it lists the files, the current code, the exact tar
 | 37 | Android: one scroll-reveal widget from Flutter's own tools | mobile / shared | MEDIUM | DONE |
 | 38 | Android: Home, Events and the event screen reveal on scroll | mobile | MEDIUM | DONE |
 | 39 | Android: Rankings, sport and team screens reveal on scroll | mobile | LOW | DONE |
+| 40 | Dramatic scroll reveal (replaces the numbers in 33–39) and round portrait navigation | web + mobile | MEDIUM | DONE |
 
 ## Recommended order (motion plans)
 
@@ -51,6 +52,8 @@ Each plan is self-contained: it lists the files, the current code, the exact tar
 - Code was dry-run in a throwaway worktree at c5ef129:
   - web: `tsc`, `vite build` and the new vitest pass, and a Playwright harness confirmed the load cascade, reveal on scroll, no replay, the instant-after-click rule, reduced motion and the restored hover lift;
   - mobile: `flutter analyze` is clean and all 32 tests pass with plans 37–39 applied.
+
+Plan 40 later made the reveal much bigger (70px, spring, count-up numbers, sliding headings and rows). Its numbers replace the ones written in 33–39.
 
 ## Dependencies
 

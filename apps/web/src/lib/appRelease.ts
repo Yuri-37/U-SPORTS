@@ -7,8 +7,8 @@
  * Rename the file before uploading, or this link breaks.
  */
 export const APP_RELEASE = {
-  version: '1.10.17',
-  releasedAt: '2026-10-11',
+  version: '1.10.18',
+  releasedAt: '2026-10-12',
   sizeMb: 57,
   /** Flutter's default minSdk (24) for this project. */
   minAndroid: 'Android 7.0 or newer',
