@@ -71,30 +71,53 @@ class AppShell extends ConsumerWidget {
       },
       child: compact
           ? _sidewaysShell(context, role, selected, profileLabel, profileIcon, profileIconSelected)
-          : Scaffold(
-              body: navigationShell,
-              // Four round buttons floating above the page, icons only; the page's own
-              // colour fills the strip around them so it reads as one surface.
-              bottomNavigationBar: ColoredBox(
-                color: LayoutTokens.sheet(context),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                    child: _PillNav(
-                      items: [
-                        const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
-                        const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
-                        const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
-                        _NavItem(profileLabel, profileIcon, profileIconSelected),
-                      ],
-                      selected: selected,
-                      onSelect: (i) => _onTap(context, i, role),
-                    ),
-                  ),
+          : _floatingShell(context, role, selected, profileLabel, profileIcon, profileIconSelected),
+    );
+  }
+
+  /// The page fills the whole screen and the four round buttons float over its
+  /// bottom edge with nothing behind them, so the content scrolls underneath.
+  /// The pages are told to leave [_PillNav.clearance] free at the bottom (through
+  /// the bottom padding they already respect) so their last row can scroll clear.
+  Widget _floatingShell(
+    BuildContext context,
+    String role,
+    int selected,
+    String profileLabel,
+    IconData profileIcon,
+    IconData profileIconSelected,
+  ) {
+    final mq = MediaQuery.of(context);
+    return Scaffold(
+      body: Stack(
+        children: [
+          MediaQuery(
+            data: mq.copyWith(padding: mq.padding.copyWith(bottom: mq.padding.bottom + _PillNav.clearance)),
+            child: navigationShell,
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                child: _PillNav(
+                  items: [
+                    const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
+                    const _NavItem('Rankings', Icons.emoji_events_outlined, Icons.emoji_events_rounded),
+                    const _NavItem('Events', Icons.calendar_today_outlined, Icons.calendar_today_rounded),
+                    _NavItem(profileLabel, profileIcon, profileIconSelected),
+                  ],
+                  selected: selected,
+                  onSelect: (i) => _onTap(context, i, role),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -257,6 +280,10 @@ class _PillNav extends StatelessWidget {
   final List<_NavItem> items;
   final int selected;
   final ValueChanged<int> onSelect;
+
+  /// Room the buttons take at the bottom of the screen (their height, the
+  /// padding around them and a gap), beyond the system inset.
+  static const double clearance = _OrbButton.size + 12 + 10 + 8 + 8;
 
   @override
   Widget build(BuildContext context) {

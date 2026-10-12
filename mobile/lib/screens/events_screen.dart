@@ -209,7 +209,9 @@ class _EventsList extends ConsumerWidget {
           child: ListView.separated(
             // With a header the rows carry their own side padding, so the
             // header (which has its own) is not indented twice.
-            padding: header != null ? const EdgeInsets.only(bottom: 24) : const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            padding: header != null
+                ? EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom)
+                : EdgeInsets.fromLTRB(16, 16, 16, 24 + MediaQuery.paddingOf(context).bottom),
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: list.length + (header != null ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 10),

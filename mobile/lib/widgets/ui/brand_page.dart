@@ -100,6 +100,9 @@ class BrandPage extends StatelessWidget {
             EdgeInsets.only(
               left: MediaQuery.paddingOf(context).left,
               right: MediaQuery.paddingOf(context).right,
+              // Room for the floating navigation (and the system bar) so the
+              // last row can scroll clear of it.
+              bottom: MediaQuery.paddingOf(context).bottom,
             ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

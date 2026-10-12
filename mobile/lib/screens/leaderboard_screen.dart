@@ -246,7 +246,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (playersHeader != null) playersHeader,
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: Reveal(child: SheetGroup(
+                  Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.paddingOf(context).bottom), child: Reveal(child: SheetGroup(
                                     dividers: false,
                                     children: [
                                       SingleChildScrollView(
@@ -324,7 +324,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (teamsHeader != null) teamsHeader,
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: SheetGroup(revealRows: true,
+                  Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.paddingOf(context).bottom), child: SheetGroup(revealRows: true,
                               children: [
                                 for (var i = 0; i < standings.length; i++)
                                   _teamRow(context, i, standings[i]),
