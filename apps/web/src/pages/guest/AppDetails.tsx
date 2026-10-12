@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import { useScrollReveal } from '../../hooks/useScrollReveal'
 import {
   Radio,
   GitBranch,
@@ -144,6 +145,7 @@ function formatDate(iso: string) {
 
 export default function AppDetails() {
   const navigate = useNavigate()
+  const reveal = useScrollReveal()
   const released = formatDate(APP_RELEASE.releasedAt)
   const download = () => window.location.assign(APP_RELEASE.downloadUrl)
 
@@ -187,9 +189,13 @@ export default function AppDetails() {
 
         {/* Screenshots straight from the shipped app. */}
         <div className="max-w-5xl mx-auto px-6 pb-20">
-          <div className="flex justify-center gap-5 overflow-x-auto pb-2 stagger">
+          <div className="flex justify-center gap-5 overflow-x-auto overflow-y-hidden pb-2">
             {SCREENSHOTS.map((s) => (
-              <figure key={s.src} className="shrink-0 w-[11.5rem] sm:w-[13rem] text-center">
+              <figure
+                key={s.src}
+                ref={reveal.card}
+                className="shrink-0 w-[11.5rem] sm:w-[13rem] text-center"
+              >
                 <div className="rounded-[1.75rem] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1.5 shadow-[var(--shadow-lift-lg)]">
                   <img
                     src={s.src}
@@ -207,8 +213,13 @@ export default function AppDetails() {
 
       {/* ── About ────────────────────────────────────────────────────────── */}
       <section className="max-w-3xl mx-auto px-6 pb-24 text-center">
-        <SectionHeading align="center" label="About" title="Intramurals, in your pocket" />
-        <div className="space-y-5 text-lg text-[var(--text-secondary)] leading-relaxed">
+        <SectionHeading
+          ref={reveal.heading}
+          align="center"
+          label="About"
+          title="Intramurals, in your pocket"
+        />
+        <div ref={reveal.card} className="space-y-5 text-lg text-[var(--text-secondary)] leading-relaxed">
           <p>
             U-Sports brings NU Dasmariñas intramural sports to your phone. Follow live games, check
             brackets and rankings, and — if you're a student-athlete — see your own schedule and
@@ -242,10 +253,10 @@ export default function AppDetails() {
 
       {/* ── Sports ───────────────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-6 pb-24">
-        <SectionHeading align="center" label="Sports" title="Supported sports" />
-        <div className="grid gap-6 sm:grid-cols-3 stagger">
+        <SectionHeading ref={reveal.heading} align="center" label="Sports" title="Supported sports" />
+        <div className="grid gap-6 sm:grid-cols-3">
           {SPORTS.map((s) => (
-            <Card key={s.name} className="p-8 text-center">
+            <Card key={s.name} ref={reveal.card} className="p-8 text-center">
               <SportIcon
                 sport={s.sport}
                 className="mx-auto h-10 w-10 text-[var(--accent-default)]"
@@ -267,12 +278,15 @@ export default function AppDetails() {
       >
         <div className="absolute inset-0 texture-dots" aria-hidden="true" />
         <div className="relative max-w-3xl mx-auto px-6 py-24 text-center">
-          <h2 className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] text-white">
+          <h2
+            ref={reveal.heading}
+            className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] text-white"
+          >
             Install on Android
           </h2>
           <ol className="mt-12 space-y-6 text-left">
             {INSTALL_STEPS.map((step, i) => (
-              <li key={i} className="flex items-start gap-5">
+              <li key={i} ref={reveal.row} className="flex items-start gap-5">
                 <span className="shrink-0 h-10 w-10 rounded-full bg-white text-[var(--school-primary)] font-display text-lg flex items-center justify-center">
                   {i + 1}
                 </span>
@@ -280,7 +294,7 @@ export default function AppDetails() {
               </li>
             ))}
           </ol>
-          <div className="mt-12">
+          <div ref={reveal.card} className="mt-12">
             <button
               type="button"
               onClick={download}
@@ -295,7 +309,7 @@ export default function AppDetails() {
 
       {/* ── Your data + Good to know ─────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-6 py-24 grid gap-6 md:grid-cols-2">
-        <Card className="p-8">
+        <Card ref={reveal.card} className="p-8">
           <div className="flex items-center gap-3">
             <IconTile icon={ShieldCheck} />
             <h3 className="font-semibold text-lg">Your data</h3>
@@ -314,7 +328,7 @@ export default function AppDetails() {
           </button>
         </Card>
 
-        <Card className="p-8">
+        <Card ref={reveal.card} className="p-8">
           <div className="flex items-center gap-3">
             <IconTile icon={Wifi} />
             <h3 className="font-semibold text-lg">Good to know</h3>
@@ -335,8 +349,8 @@ export default function AppDetails() {
 
       {/* ── App info ─────────────────────────────────────────────────────── */}
       <section className="max-w-3xl mx-auto px-6 pb-24">
-        <SectionHeading align="center" label="Details" title="App information" />
-        <Card className="p-0 overflow-hidden">
+        <SectionHeading ref={reveal.heading} align="center" label="Details" title="App information" />
+        <Card ref={reveal.card} className="p-0 overflow-hidden">
           <dl className="divide-y divide-[var(--border-subtle)]">
             <InfoRow label="Version" value={APP_RELEASE.version} />
             <InfoRow label="Updated" value={released} />
@@ -384,12 +398,23 @@ function FeatureSection({
   subtitle?: string
   features: Feature[]
 }) {
+  const reveal = useScrollReveal()
   return (
     <section className="max-w-6xl mx-auto px-6 pb-24">
-      <SectionHeading align="center" label={label} title={title} subtitle={subtitle} />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 stagger">
+      <SectionHeading
+        ref={reveal.heading}
+        align="center"
+        label={label}
+        title={title}
+        subtitle={subtitle}
+      />
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {features.map((f) => (
-          <Card key={f.title} className="p-7 text-center flex flex-col items-center">
+          <Card
+            key={f.title}
+            ref={reveal.card}
+            className="p-7 text-center flex flex-col items-center"
+          >
             <IconTile icon={f.icon} />
             <h3 className="mt-5 font-semibold text-base tracking-[-0.01em]">{f.title}</h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">{f.body}</p>
