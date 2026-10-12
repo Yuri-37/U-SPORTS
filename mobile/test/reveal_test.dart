@@ -27,12 +27,18 @@ Widget _tall(String below) => RevealScope(
     );
 
 void main() {
-  test('items entering together step 40ms for cards and 20ms for rows, capped', () {
-    expect(revealDelay(0, RevealKind.card), Duration.zero);
-    expect(revealDelay(3, RevealKind.card), const Duration(milliseconds: 120));
-    expect(revealDelay(3, RevealKind.row), const Duration(milliseconds: 60));
-    expect(revealDelay(50, RevealKind.card), const Duration(milliseconds: 200));
-    expect(revealDelay(50, RevealKind.row), const Duration(milliseconds: 120));
+  test('items entering together step 100ms, capped at 400ms so everything lands by about 1.2s', () {
+    expect(revealDelay(0), Duration.zero);
+    expect(revealDelay(3), const Duration(milliseconds: 300));
+    expect(revealDelay(50), const Duration(milliseconds: 400));
+    expect(revealDelay(50) + const Duration(milliseconds: 800), lessThanOrEqualTo(const Duration(milliseconds: 1200)));
+  });
+
+  test('count-up runs 0 to the target and eases out', () {
+    expect(countUpAt(0, 250), 0);
+    expect(countUpAt(1, 250), 250);
+    expect(countUpAt(0.5, 100), greaterThan(80));
+    expect(countUpAt(9, 7), 7);
   });
 
   testWidgets('without a RevealScope the child shows at once', (tester) async {
@@ -77,5 +83,58 @@ void main() {
     expect(_opacity(tester, 'added'), 1);
     await tester.pump(const Duration(milliseconds: 50));
     expect(_opacity(tester, 'added'), 1);
+  });
+
+  testWidgets('a card starts low and small, overshoots, and ends settled', (tester) async {
+    await tester.pumpWidget(_app(const RevealScope(child: Reveal(child: SizedBox(height: 100, child: Text('card'))))));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    Offset at() => tester.getTopLeft(find.text('card'));
+    final start = at().dy;
+    await tester.pump(const Duration(milliseconds: 250));
+    final mid = at().dy;
+    expect(mid, lessThan(start + 70)); // already rising
+    // sample the whole move: it must pass its resting spot (overshoot) before settling
+    var minDy = double.infinity;
+    for (var i = 0; i < 80; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+      final dy = at().dy;
+      if (dy < minDy) minDy = dy;
+    }
+    await tester.pumpAndSettle();
+    expect(minDy, lessThan(at().dy)); // overshot its resting spot on the way
+  });
+
+  testWidgets('rows alternate sides and headings slide in', (tester) async {
+    await tester.pumpWidget(_app(const RevealScope(
+      child: Column(children: [
+        Reveal(kind: RevealKind.row, child: SizedBox(height: 40, child: Text('r0'))),
+        Reveal(kind: RevealKind.row, child: SizedBox(height: 40, child: Text('r1'))),
+        Reveal(kind: RevealKind.heading, child: SizedBox(height: 40, child: Text('h'))),
+      ]),
+    )));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 60));
+    final r0 = tester.getTopLeft(find.text('r0')).dx;
+    final r1 = tester.getTopLeft(find.text('r1')).dx;
+    final h = tester.getTopLeft(find.text('h')).dx;
+    await tester.pumpAndSettle();
+    final rest = tester.getTopLeft(find.text('r0')).dx;
+    expect(r0, lessThan(rest)); // first row comes from the left
+    expect(r1, greaterThan(tester.getTopLeft(find.text('r1')).dx)); // second from the right
+    expect(h, lessThan(tester.getTopLeft(find.text('h')).dx)); // heading from the left
+  });
+
+  testWidgets('a stat counts up inside a scope and shows the final number without one', (tester) async {
+    await tester.pumpWidget(_app(const RevealScope(child: CountUpText(value: '78%'))));
+    await tester.pump(const Duration(milliseconds: 100));
+    final early = (tester.widget<Text>(find.byType(Text)).data)!;
+    expect(early, isNot('78%'));
+    await tester.pumpAndSettle();
+    expect(find.text('78%'), findsOneWidget);
+
+    await tester.pumpWidget(_app(const CountUpText(value: '78%')));
+    expect(find.text('78%'), findsOneWidget);
   });
 }

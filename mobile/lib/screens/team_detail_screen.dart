@@ -232,7 +232,7 @@ class TeamDetailScreen extends ConsumerWidget {
                 )
               : null,
           children: [
-            SectionHeader(title: 'Roster (${team.roster.length})'),
+            SectionHeader(title: 'Roster (${team.roster.length})', reveal: true),
             if (team.roster.isEmpty)
               const SheetMessage(text: 'No roster yet.')
             else
@@ -242,7 +242,7 @@ class TeamDetailScreen extends ConsumerWidget {
                 ],
               ),
             if (team.coaches.isNotEmpty) ...[
-              const SectionHeader(title: 'Coaches'),
+              const SectionHeader(title: 'Coaches', reveal: true),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -251,7 +251,7 @@ class TeamDetailScreen extends ConsumerWidget {
                     .toList(),
               ),
             ],
-            const SectionHeader(title: 'Matches'),
+            const SectionHeader(title: 'Matches', reveal: true),
             matchesAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.all(24),

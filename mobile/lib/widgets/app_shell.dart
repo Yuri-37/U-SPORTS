@@ -73,14 +73,14 @@ class AppShell extends ConsumerWidget {
           ? _sidewaysShell(context, role, selected, profileLabel, profileIcon, profileIconSelected)
           : Scaffold(
               body: navigationShell,
-              // A dark pill floating above the page, icons only; the page's own
-              // colour fills the strip around it so it reads as one surface.
+              // Four round buttons floating above the page, icons only; the page's own
+              // colour fills the strip around them so it reads as one surface.
               bottomNavigationBar: ColoredBox(
                 color: LayoutTokens.sheet(context),
                 child: SafeArea(
                   top: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
                     child: _PillNav(
                       items: [
                         const _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
@@ -246,10 +246,11 @@ class _ArcButton extends StatelessWidget {
   }
 }
 
-/// The portrait navigation: a capsule in the app's navy (the same colour as the
-/// page headers) holding four round icon buttons; the page you are on is a white
-/// disc with a navy icon. Names show on long-press
-/// and are read aloud by screen readers.
+/// The portrait navigation: four separate round buttons floating in a row, like
+/// the sideways arc. The page you are on is a filled navy disc with a soft glow;
+/// the others are plain discs with a shadow. Every tap pops the button with a
+/// small spring and sends out a ring. Names show on long-press and are read
+/// aloud by screen readers.
 class _PillNav extends StatelessWidget {
   const _PillNav({required this.items, required this.selected, required this.onSelect});
 
@@ -259,70 +260,138 @@ class _PillNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      height: 66,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        // Light: the hero's navy. Dark: its deepest shade, so the capsule
-        // still stands off the near-black page, with a hairline edge.
-        color: dark ? AppTheme.heroGradient().last : AppTheme.schoolPrimary,
-        borderRadius: BorderRadius.circular(33),
-        border: dark ? Border.all(color: Colors.white.withValues(alpha: 0.14)) : null,
-        boxShadow: [
-          BoxShadow(
-            color: (dark ? Colors.black : AppTheme.schoolPrimary).withValues(alpha: dark ? 0.5 : 0.32),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return SizedBox(
+      height: _OrbButton.size + 12,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           for (var i = 0; i < items.length; i++)
-            Expanded(
-              child: Center(
-                child: _PillButton(item: items[i], selected: i == selected, onTap: () => onSelect(i)),
-              ),
-            ),
+            _OrbButton(item: items[i], selected: i == selected, onTap: () => onSelect(i)),
         ],
       ),
     );
   }
 }
 
-class _PillButton extends StatelessWidget {
-  const _PillButton({required this.item, required this.selected, required this.onTap});
+class _OrbButton extends StatefulWidget {
+  const _OrbButton({required this.item, required this.selected, required this.onTap});
+
+  static const double size = 56;
 
   final _NavItem item;
   final bool selected;
   final VoidCallback onTap;
 
   @override
+  State<_OrbButton> createState() => _OrbButtonState();
+}
+
+class _OrbButtonState extends State<_OrbButton> with SingleTickerProviderStateMixin {
+  /// One shot per tap or selection: drives the spring pop and the ring.
+  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+
+  @override
+  void didUpdateWidget(covariant _OrbButton old) {
+    super.didUpdateWidget(old);
+    if (widget.selected && !old.selected) _play();
+  }
+
+  void _play() {
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    _pulse.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    final selected = widget.selected;
+    final navy = AppTheme.schoolPrimary;
+    final fill = selected ? navy : LayoutTokens.cardBackground(context);
+    final ring = selected ? Colors.white.withValues(alpha: 0.9) : LayoutTokens.borderSubtle(context);
+    final glow = <BoxShadow>[
+      if (selected) ...[
+        // A side glow in the school colour, plus a tight shadow under it.
+        BoxShadow(color: navy.withValues(alpha: dark ? 0.75 : 0.55), blurRadius: 22, spreadRadius: 1, offset: const Offset(0, 5)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 8, offset: const Offset(0, 3)),
+      ] else
+        BoxShadow(color: Colors.black.withValues(alpha: dark ? 0.5 : 0.14), blurRadius: 14, offset: const Offset(0, 4)),
+    ];
+
+    final orb = AnimatedContainer(
+      duration: reduce ? Duration.zero : const Duration(milliseconds: 260),
+      curve: AppMotion.easeOutStrong,
+      width: _OrbButton.size,
+      height: _OrbButton.size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: fill,
+        border: Border.all(color: ring, width: selected ? 2 : 1),
+        boxShadow: glow,
+      ),
+      child: Icon(
+        selected ? widget.item.selectedIcon : widget.item.icon,
+        size: 25,
+        color: selected ? Colors.white : LayoutTokens.mutedText(context),
+      ),
+    );
+
     return Tooltip(
-      message: item.label,
+      message: widget.item.label,
       child: Semantics(
         button: true,
         selected: selected,
-        label: item.label,
+        label: widget.item.label,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: AppMotion.scoreChange,
-            curve: AppMotion.easeOutStrong,
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: selected ? Colors.white : Colors.transparent,
-            ),
-            child: Icon(
-              selected ? item.selectedIcon : item.icon,
-              size: 24,
-              color: selected ? AppTheme.schoolPrimary : Colors.white.withValues(alpha: 0.78),
-            ),
+          onTap: () {
+            _play();
+            widget.onTap();
+          },
+          child: AnimatedBuilder(
+            animation: _pulse,
+            child: orb,
+            builder: (context, child) {
+              final t = _pulse.value;
+              final running = _pulse.isAnimating;
+              // Squash, then spring up past full size and settle: back-out curve.
+              final pop = running ? 0.82 + 0.18 * Curves.easeOutBack.transform(t.clamp(0.0, 1.0)) : 1.0;
+              final lift = selected ? 1.08 : 1.0;
+              return SizedBox(
+                width: _OrbButton.size + 8,
+                height: _OrbButton.size + 8,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (running)
+                      Transform.scale(
+                        scale: 1 + 0.9 * Curves.easeOut.transform(t),
+                        child: Container(
+                          width: _OrbButton.size,
+                          height: _OrbButton.size,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: navy.withValues(alpha: 0.55 * (1 - t)), width: 3),
+                          ),
+                        ),
+                      ),
+                    AnimatedScale(
+                      scale: lift,
+                      duration: reduce ? Duration.zero : const Duration(milliseconds: 350),
+                      curve: Curves.easeOutBack,
+                      child: Transform.scale(scale: pop, child: child),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),

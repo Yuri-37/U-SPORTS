@@ -410,8 +410,8 @@ class FrostedStats extends StatelessWidget {
                 style: AppTheme.overline(Colors.white.withValues(alpha: 0.78)),
               ),
               const SizedBox(height: 6),
-              Text(
-                stats[i].value,
+              CountUpText(
+                value: stats[i].value,
                 textAlign: TextAlign.center,
                 style: AppTheme.display(size: 28, color: Colors.white, height: 1.05),
               ),
@@ -590,6 +590,7 @@ class SectionHeader extends StatelessWidget {
     this.leading,
     this.trailing,
     this.padding = const EdgeInsets.fromLTRB(4, 24, 4, 12),
+    this.reveal = false,
   });
 
   final String title;
@@ -597,8 +598,17 @@ class SectionHeader extends StatelessWidget {
   final Widget? trailing;
   final EdgeInsets padding;
 
+  /// Slides in from the left as it scrolls into view (needs a [RevealScope]
+  /// above; otherwise it simply shows).
+  final bool reveal;
+
   @override
   Widget build(BuildContext context) {
+    final header = _build(context);
+    return reveal ? Reveal(kind: RevealKind.heading, child: header) : header;
+  }
+
+  Widget _build(BuildContext context) {
     return Padding(
       padding: padding,
       child: Row(

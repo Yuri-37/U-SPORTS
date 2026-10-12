@@ -243,6 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // sharing that dot made a finished-results section read as
                   // urgent/live, same as an actually-live match.
                   SectionHeader(
+                    reveal: true,
                     title: 'Recent champions',
                     leading: Icon(Icons.emoji_events_rounded, size: 20, color: LayoutTokens.warning(context)),
                   ),
@@ -277,6 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SectionHeader(
+                    reveal: true,
                     title: 'Live now',
                     leading: Container(
                       width: 9,
@@ -305,6 +307,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             error: (_, __) => const SizedBox.shrink(),
           ),
           SectionHeader(
+            reveal: true,
             title: 'Events',
             // `go`, not `push` — /events is a bottom-nav tab root.
             trailing: Row(
@@ -344,7 +347,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             error: (_, __) => const SizedBox.shrink(),
           ),
-          const SectionHeader(title: 'Browse by sport'),
+          const SectionHeader(title: 'Browse by sport', reveal: true),
           Row(
             children: [
               Expanded(child: Reveal(child: _browseSportCard(context, 'basketball'))),

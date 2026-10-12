@@ -4,19 +4,26 @@ import 'package:flutter/material.dart';
 
 import '../../theme/motion.dart';
 
-/// What is being revealed: a standalone card, or one row of a list.
-enum RevealKind { card, row }
+/// What is being revealed: a standalone card, one row of a list, or a section
+/// heading.
+enum RevealKind { card, row, heading }
 
 /// Delay for the [index]th item that enters the screen in the same frame.
-Duration revealDelay(int index, RevealKind kind) {
-  final step = kind == RevealKind.row ? AppMotion.revealRowStep : AppMotion.revealCardStep;
-  final max = kind == RevealKind.row ? AppMotion.revealRowMaxDelay : AppMotion.revealCardMaxDelay;
-  final d = step * (index < 0 ? 0 : index);
-  return d > max ? max : d;
+Duration revealDelay(int index) {
+  final d = AppMotion.revealStep * (index < 0 ? 0 : index);
+  return d > AppMotion.revealMaxDelay ? AppMotion.revealMaxDelay : d;
 }
 
-/// Wraps one screen whose cards and rows reveal as they scroll into view.
-/// Without it, [Reveal] shows its child straight away.
+/// The number shown [progress] (0..1) of the way through a count-up, matching
+/// the website: fast at first, then easing in.
+int countUpAt(double progress, int target) {
+  final p = progress.clamp(0.0, 1.0);
+  return (target * (1 - (1 - p) * (1 - p) * (1 - p))).round();
+}
+
+/// Wraps one screen whose cards, rows and headings fly in as they scroll into
+/// view, and whose stat numbers count up. Without it, [Reveal] and
+/// [CountUpText] simply show their final state.
 class RevealScope extends StatefulWidget {
   const RevealScope({super.key, required this.child});
 
@@ -31,6 +38,7 @@ class _RevealScopeState extends State<RevealScope> {
   final Set<Object> _revealedIds = {};
   bool _interacted = false;
   bool _checkScheduled = false;
+  int _rowCount = 0;
 
   bool _wasRevealed(Object? id) => id != null && _revealedIds.contains(id);
 
@@ -84,7 +92,7 @@ class _RevealScopeState extends State<RevealScope> {
     for (var i = 0; i < entering.length; i++) {
       final item = entering[i].item;
       _done(item);
-      item.play(revealDelay(i, item.widget.kind));
+      item.play(revealDelay(i));
     }
   }
 
@@ -115,8 +123,10 @@ class _RevealScopeState extends State<RevealScope> {
   }
 }
 
-/// One card or row that fades and rises into view the first time it scrolls
-/// on screen. Pass [id] in lazily built lists so a row rebuilt after being
+/// One card, row or heading that flies in the first time it scrolls on screen:
+/// it fades while rising (cards, from 85% size, settling with a small
+/// overshoot), sliding in from alternating sides (rows) or sliding in from the
+/// left (headings). Pass [id] in lazily built lists so a row rebuilt after being
 /// scrolled away does not play again.
 class Reveal extends StatefulWidget {
   const Reveal({super.key, required this.child, this.kind = RevealKind.card, this.id});
@@ -130,17 +140,31 @@ class Reveal extends StatefulWidget {
 }
 
 class _RevealState extends State<Reveal> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: widget.kind == RevealKind.row ? AppMotion.revealRow : AppMotion.revealCard,
-    value: 1,
+  late final Duration _move = switch (widget.kind) {
+    RevealKind.card => AppMotion.revealCard,
+    RevealKind.row => AppMotion.revealRow,
+    RevealKind.heading => AppMotion.revealHeading,
+  };
+  late final Duration _fadeTime = widget.kind == RevealKind.row ? AppMotion.revealRowFade : AppMotion.revealCardFade;
+
+  late final AnimationController _controller = AnimationController(vsync: this, duration: _move, value: 1);
+
+  /// Opacity cannot overshoot, so it finishes early on a plain ease-out while
+  /// the move carries on settling on the spring.
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _controller,
+    curve: Interval(0, _fadeTime.inMilliseconds / _move.inMilliseconds, curve: Curves.easeOut),
   );
-  late final Animation<double> _t = CurvedAnimation(parent: _controller, curve: AppMotion.easeOutStrong);
+  late final Animation<double> _spring = CurvedAnimation(parent: _controller, curve: AppMotion.spring);
+
   _RevealScopeState? _scope;
   Timer? _delay;
   bool _started = false;
   bool checked = false;
   bool startedVisible = false;
+
+  /// -1 slides in from the left, 1 from the right (rows alternate).
+  double _side = -1;
 
   @override
   void didChangeDependencies() {
@@ -160,6 +184,7 @@ class _RevealState extends State<Reveal> with SingleTickerProviderStateMixin {
     final scope = context.findAncestorStateOfType<_RevealScopeState>();
     if (scope == null || still || scope._wasRevealed(widget.id)) return; // stays at 1
     _scope = scope;
+    if (widget.kind == RevealKind.row) _side = scope._rowCount++ % 2 == 0 ? -1 : 1;
     startedVisible = scope._interacted;
     _controller.value = startedVisible ? 1 : 0;
     scope._register(this);
@@ -194,16 +219,105 @@ class _RevealState extends State<Reveal> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final distance = widget.kind == RevealKind.row ? AppMotion.revealRowDistance : AppMotion.revealCardDistance;
     return FadeTransition(
-      opacity: _t,
+      opacity: _fade,
       alwaysIncludeSemantics: true,
       child: AnimatedBuilder(
-        animation: _t,
-        builder: (context, child) =>
-            Transform.translate(offset: Offset(0, distance * (1 - _t.value)), child: child),
+        animation: _spring,
         child: widget.child,
+        builder: (context, child) {
+          // 0 when settled; goes slightly negative on the overshoot.
+          final left = 1 - _spring.value;
+          if (left == 0) return child!;
+          final Offset offset;
+          final double scale;
+          switch (widget.kind) {
+            case RevealKind.card:
+              offset = Offset(0, AppMotion.revealCardDistance * left);
+              scale = 1 - (1 - AppMotion.revealCardStartScale) * left;
+            case RevealKind.row:
+              offset = Offset(_side * AppMotion.revealRowDistance * left, 0);
+              scale = 1 - (1 - AppMotion.revealRowStartScale) * left;
+            case RevealKind.heading:
+              offset = Offset(-AppMotion.revealHeadingDistance * left, 0);
+              scale = 1;
+          }
+          return Transform.translate(
+            offset: offset,
+            child: scale == 1 ? child : Transform.scale(scale: scale, child: child),
+          );
+        },
       ),
+    );
+  }
+}
+
+/// A stat figure that counts up from 0 to its value the first time it shows
+/// (the leading number in [value], so "78%" counts 0%..78%). Counts only inside
+/// a [RevealScope], not after a touch and not with Remove animations on; every
+/// change after the first count shows at once, so a live figure never recounts.
+class CountUpText extends StatefulWidget {
+  const CountUpText({super.key, required this.value, this.style, this.textAlign});
+
+  final String value;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  @override
+  State<CountUpText> createState() => _CountUpTextState();
+}
+
+class _CountUpTextState extends State<CountUpText> with SingleTickerProviderStateMixin {
+  static final _number = RegExp(r'^(\D*)(\d+)(.*)$');
+
+  late final AnimationController _controller = AnimationController(vsync: this, duration: AppMotion.countUp);
+  bool _played = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeStart();
+  }
+
+  @override
+  void didUpdateWidget(covariant CountUpText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) _maybeStart();
+  }
+
+  void _maybeStart() {
+    if (_played) return;
+    final m = _number.firstMatch(widget.value);
+    if (m == null || int.parse(m.group(2)!) == 0) return; // nothing to count to yet
+    final scope = context.findAncestorStateOfType<_RevealScopeState>();
+    if (scope == null || scope._interacted || MediaQuery.disableAnimationsOf(context)) {
+      _played = true; // shows the final value from now on
+      return;
+    }
+    _played = true;
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = widget.style?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final m = _number.firstMatch(widget.value);
+        var text = widget.value;
+        if (m != null && _controller.isAnimating) {
+          final target = int.parse(m.group(2)!);
+          text = '${m.group(1)}${countUpAt(_controller.value, target)}${m.group(3)}';
+        }
+        return Text(text, style: style, textAlign: widget.textAlign);
+      },
     );
   }
 }
