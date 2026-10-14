@@ -9,6 +9,7 @@ import { sessionScopedProfile } from '../../lib/sessionProfile'
 import HeaderAccountCluster from './HeaderAccountCluster'
 import DarkModeToggle from './DarkModeToggle'
 import UsportsMark from '../brand/UsportsMark'
+import SportsWordmark from '../brand/SportsWordmark'
 import GuestPrivacyNotice from '../guest/GuestPrivacyNotice'
 
 const GUEST_NAV = [
@@ -48,9 +49,7 @@ export default function GuestLayout() {
           <div className="flex items-center gap-2 shrink-0">
             <UsportsMark size={30} />
             {/* On the very narrowest phones (320px) the mark alone has to do. */}
-            <span className="hidden min-[360px]:inline font-bold text-[15px] leading-none">
-              U-Sports
-            </span>
+            <SportsWordmark height={14} className="hidden min-[360px]:inline text-[var(--text-primary)]" />
           </div>
           {institution?.logo_url || institution?.name ? (
             // Below ~430px the crest zone, the Dashboard label, the bell and the

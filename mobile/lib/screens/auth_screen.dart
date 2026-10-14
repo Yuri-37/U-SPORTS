@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
 import '../widgets/usports_mark.dart';
+import '../widgets/sports_wordmark.dart';
 import '../widgets/ui/brand_page.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -147,7 +148,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             // identity; the school is named quietly underneath.
             const UsportsMark(size: 76),
             const SizedBox(height: 16),
-            Text('U-Sports', textAlign: TextAlign.center, style: AppTheme.display(size: 30, color: Colors.white)),
+            const SportsWordmark(height: 21),
             if (schoolName.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

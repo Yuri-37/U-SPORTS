@@ -10,6 +10,7 @@ import { defaultPostLoginPath, safeInternalPath } from '../../lib/navigation'
 import { sessionScopedProfile } from '../../lib/sessionProfile'
 import { friendlyAuthError } from '../../lib/utils'
 import UsportsMark from '../../components/brand/UsportsMark'
+import SportsWordmark from '../../components/brand/SportsWordmark'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -83,8 +84,8 @@ export default function LoginPage() {
               the school's own branding (that follows below, as its own,
               clearly separate block, not merged into this one). */}
           <UsportsMark size={84} />
-          <h1 className="mt-4 text-3xl font-black font-[Barlow_Condensed] tracking-widest text-white">
-            U-SPORTS
+          <h1 className="mt-5 text-white">
+            <SportsWordmark height={22} />
           </h1>
 
           <div className="mt-16 flex flex-col items-center">
@@ -116,7 +117,9 @@ export default function LoginPage() {
           <div className="mb-8 lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
               <UsportsMark size={28} />
-              <h1 className="text-2xl font-bold font-[Barlow_Condensed]">U-Sports</h1>
+              <h1 className="text-[var(--text-primary)]">
+                <SportsWordmark height={16} />
+              </h1>
             </div>
             <div className="mt-4 flex items-center justify-center gap-2">
               {institution?.logo_url ? (
