@@ -15,6 +15,16 @@ function formatSeasonSelectLabel(s: Season): string {
   return s.name
 }
 
+/** The rank number; first place sits on the school's accent colour. */
+function RankMark({ rank }: { rank: number }) {
+  if (rank !== 1) return <>{rank}</>
+  return (
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--school-secondary)] text-[var(--school-on-accent,var(--school-primary))] font-bold">
+      1
+    </span>
+  )
+}
+
 export default function GuestLeaderboards() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -241,7 +251,7 @@ export default function GuestLeaderboards() {
                     <tr key={i} className="border-t border-[var(--border-subtle)]">
                       {Array.from({ length: 6 }).map((_, j) => (
                         <td key={j} className="px-4 py-3">
-                          <div className="h-4 bg-[var(--surface-elevated)] rounded animate-pulse" />
+                          <div className="h-5 bg-[var(--surface-elevated)] rounded animate-pulse" />
                         </td>
                       ))}
                     </tr>
@@ -268,7 +278,7 @@ export default function GuestLeaderboards() {
                       onClick={() => navigate(`/guest/athletes/${p.athlete_id}`)}
                     >
                       <td className="px-4 py-3 text-[var(--text-muted)] font-mono text-xs">
-                        {i + 1}
+                        <RankMark rank={i + 1} />
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {p.athlete?.profile?.full_name ?? '—'}
@@ -308,7 +318,7 @@ export default function GuestLeaderboards() {
                   onClick={() => ts.team?.id && navigate(`/guest/teams/${ts.team.id}`)}
                 >
                   <span className="text-lg font-bold text-[var(--text-muted)] w-6 text-center">
-                    {i + 1}
+                    <RankMark rank={i + 1} />
                   </span>
                   <div className="flex-1">
                     <p className="font-bold">{ts.team?.name}</p>

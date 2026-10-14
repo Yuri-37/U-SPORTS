@@ -1,9 +1,9 @@
 import React, { Suspense, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router'
+import { Outlet, ScrollRestoration, useNavigate, useLocation } from 'react-router'
 import { useAuth } from './hooks/useAuth'
 import { useInstitutionStore } from './stores/institutionStore'
 import { useNotificationStore } from './stores/notificationStore'
-import { Spinner } from './components/ui'
+import BallLoader from './components/ui/BallLoader'
 import { defaultPostLoginPath, safeInternalPath } from './lib/navigation'
 import { sessionScopedProfile } from './lib/sessionProfile'
 import PrivacyNoticeGate from './components/auth/PrivacyNoticeGate'
@@ -101,14 +101,7 @@ export default function App() {
   }, [session, scopedProfile, loading, location.pathname])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner size="lg" />
-          <p className="text-[var(--text-muted)] text-sm">Loading U-Sports...</p>
-        </div>
-      </div>
-    )
+    return <BallLoader />
   }
 
   // /jumbotron runs unattended on a venue TV (already exempt in isPublicRoute
@@ -133,11 +126,7 @@ export default function App() {
   return (
     <>
       <Suspense
-        fallback={
-          <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-            <Spinner size="lg" />
-          </div>
-        }
+        fallback={<BallLoader label="Loading…" />}
       >
         <Outlet />
       </Suspense>
@@ -145,6 +134,8 @@ export default function App() {
           tour step that navigates would otherwise unmount mid-step into the
           Suspense fallback. */}
       <TourOverlay />
+      {/* Every page opens at the top; Back returns to where you were. */}
+      <ScrollRestoration />
     </>
   )
 }

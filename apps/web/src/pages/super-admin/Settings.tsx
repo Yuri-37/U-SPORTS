@@ -7,6 +7,7 @@ import { toast } from '../../stores/toastStore'
 import api from '../../lib/api'
 import { describeApiError } from '../../lib/apiError'
 import { applyTheme } from '../../lib/utils'
+import { contrastRatio, MIN_ACCENT_CONTRAST } from '../../lib/colorContrast'
 
 const LOGO_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
 const LOGO_MAX_BYTES = 5 * 1024 * 1024
@@ -103,6 +104,9 @@ export default function SuperAdminSettings() {
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
+
+  // How well the secondary colour shows up on the primary; null while a hex is half-typed.
+  const accentRatio = HEX.test(form.primary_color) && HEX.test(form.secondary_color) ? contrastRatio(form.secondary_color, form.primary_color) : null
 
   const update = (field: keyof FormState, value: string) => {
     setForm((f) => ({ ...f, [field]: value }))
@@ -316,6 +320,16 @@ export default function SuperAdminSettings() {
               </div>
             </div>
           </div>
+          {accentRatio !== null && accentRatio < MIN_ACCENT_CONTRAST && (
+            <p
+              role="status"
+              className="text-xs rounded-lg border border-[var(--warning)]/40 bg-[var(--warning)]/10 px-3 py-2 text-[var(--warning-ink)]"
+            >
+              These two colors are very close ({accentRatio.toFixed(1)}:1), so the secondary color won't stand
+              out where the site uses it on the primary (big numbers, rings, the first-place badge). Aim for
+              about 3:1 or more.
+            </p>
+          )}
           <p className="text-xs text-[var(--text-muted)]">
             Colors preview on this page as you pick them. They apply to everyone on the website and
             in the Android app after you Save (the app picks them up the next time it opens).

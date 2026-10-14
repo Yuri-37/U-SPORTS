@@ -1,8 +1,9 @@
 import React from 'react'
 
 /**
- * The U-Sports mark: a white "U" on a blue tile. Same artwork as the browser
- * tab icon (public/favicon.svg) and the Android app icon, so the product has
+ * The U-Sports mark (brand/usports-mark-blue.svg): the white faceted "U" on a
+ * blue tile. Same artwork as the browser tab icon (public/favicon.svg) and the
+ * Android app icon, so the product has
  * one recognisable logo that is not the school's crest. The crest comes from
  * the institution profile and is shown separately, smaller, beside it.
  */
@@ -15,7 +16,7 @@ export default function UsportsMark({
 }) {
   return (
     <svg
-      viewBox="0 0 1024 1024"
+      viewBox="0 0 1500 1500"
       width={size}
       height={size}
       role="img"
@@ -23,14 +24,8 @@ export default function UsportsMark({
       className={className}
       style={{ flexShrink: 0, borderRadius: size * 0.22 }}
     >
-      <rect width="1024" height="1024" fill="#0066FF" />
-      <path
-        d="M 372,280 L 372,680 A 140,140 0 0 0 652,680 L 652,280"
-        fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="140"
-        strokeLinecap="round"
-      />
+      <rect width="1500" height="1500" fill="#0066FF" />
+      <path fill="#FFFFFF" d="M517.4 404.9L672 404.9L608.44 592.95A121.7 121.7 0 0 1 580.8 762.4L478.4 590.3ZM982.6 404.9L828 404.9L891.56 592.95A121.7 121.7 0 0 0 919.2 762.4L1021.6 590.3ZM580.8 762.4L478.6 927.2L574.4 1095.1L925.6 1095.1L1021.4 927.2L919.2 762.4L858.1 928.9L641.9 928.9Z" />
     </svg>
   )
 }

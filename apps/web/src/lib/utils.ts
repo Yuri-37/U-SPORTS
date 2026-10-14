@@ -1,3 +1,4 @@
+import { accentOnPrimary, readableInk, readableOn, rgbTriplet } from './colorContrast'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import type { EventStatus, Sport, StatDefinition } from '../types'
@@ -114,6 +115,14 @@ export function applyTheme(primaryColor: string, secondaryColor: string) {
   const root = document.documentElement
   root.style.setProperty('--school-primary', primaryColor)
   root.style.setProperty('--school-secondary', secondaryColor)
+  // The tinted shadows and textures, and the brand text colour on a light page,
+  // follow the primary too (instead of staying the original navy).
+  const rgb = rgbTriplet(primaryColor)
+  if (rgb) root.style.setProperty('--school-primary-rgb', rgb)
+  root.style.setProperty('--school-ink', readableInk(primaryColor))
+  // Accent for text that sits ON the primary (big numbers), and text that sits ON the accent.
+  root.style.setProperty('--school-accent', accentOnPrimary(primaryColor, secondaryColor))
+  root.style.setProperty('--school-on-accent', readableOn(secondaryColor))
 }
 
 export function generateStudentEmail(fullName: string, studentDomain: string): string {

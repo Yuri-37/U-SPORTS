@@ -478,7 +478,7 @@ export default function GuestHub() {
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-28" />
+              <Skeleton key={i} className="h-[124px]" />
             ))}
           </div>
         ) : recentEvents.length === 0 ? (
@@ -663,7 +663,7 @@ export default function GuestHub() {
                   className="rounded-xl p-[2px] lg:mb-0"
                   style={{
                     background:
-                      'linear-gradient(to bottom right, var(--school-primary), var(--accent-default), var(--school-primary))',
+                      'linear-gradient(to bottom right, var(--school-primary), var(--school-secondary), var(--school-primary))',
                   }}
                 >
                   {body}

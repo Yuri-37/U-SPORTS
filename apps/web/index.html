@@ -17,9 +17,46 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>U-Sports</title>
+    <style>
+      /* Boot loader: a bouncing basketball. It lives in index.html so it paints before any script arrives; the app shows the same markup (components/ui/BallLoader.tsx) while it signs in, so nothing jumps. */
+      .ub-boot { --ub-bg:#f1f5f9; --ub-text:#64748b; --ub-shadow:rgba(15,23,42,.30); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:var(--ub-bg); }
+      html[data-theme="dark"] .ub-boot { --ub-bg:#0a0a0f; --ub-text:#7e7e9a; --ub-shadow:rgba(0,0,0,.75); }
+      .ub-stage { position:relative; width:96px; height:128px; }
+      .ub-ball { position:absolute; left:16px; bottom:10px; width:64px; height:64px; transform-origin:50% 100%; animation:ub-bounce .9s infinite; }
+      .ub-spin { display:block; animation:ub-spin 1.8s linear infinite; }
+      .ub-shadow { position:absolute; left:18px; bottom:2px; width:60px; height:9px; border-radius:50%; background:var(--ub-shadow); animation:ub-shadow .9s infinite; }
+      .ub-text { margin:0; font:500 14px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ub-text); letter-spacing:.01em; }
+      @keyframes ub-bounce {
+        0%   { transform:translateY(0) scale(1.18,.82); animation-timing-function:cubic-bezier(.2,.7,.4,1); }
+        50%  { transform:translateY(-62px) scale(1,1); animation-timing-function:cubic-bezier(.6,0,.8,.3); }
+        100% { transform:translateY(0) scale(1.18,.82); }
+      }
+      @keyframes ub-spin { to { transform:rotate(360deg); } }
+      @keyframes ub-shadow {
+        0%,100% { transform:scaleX(1); opacity:1; }
+        50%     { transform:scaleX(.5); opacity:.45; }
+      }
+      @keyframes ub-fade { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .ub-ball, .ub-spin, .ub-shadow { animation:none; }
+        .ub-ball { animation:ub-fade 1.6s ease-in-out infinite; }
+      }
+    </style>
+    <script>
+      /* The theme the app applies a moment later, so a dark-mode visitor never sees a light flash. */
+      try { var s = JSON.parse(localStorage.getItem("u-sports-appearance") || "null"); document.documentElement.dataset.theme = s && s.state && s.state.theme === "dark" ? "dark" : "light"; } catch (e) {}
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="ub-boot" role="status" aria-live="polite">
+        <div class="ub-stage">
+          <div class="ub-ball"><svg class="ub-spin" viewBox="0 0 100 100" width="64" height="64" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#F28A1E"/><path d="M50 4v92M4 50h92M17 16c20 22 20 46 0 68M83 16c-20 22-20 46 0 68" fill="none" stroke="#7A3A08" stroke-width="3.2" stroke-linecap="round"/><circle cx="50" cy="50" r="46" fill="none" stroke="#B4600F" stroke-width="2.5"/><path d="M26 22c6-7 14-11 22-12" fill="none" stroke="#FFD3A1" stroke-width="4" stroke-linecap="round" opacity=".55"/></svg></div>
+          <div class="ub-shadow"></div>
+        </div>
+        <p class="ub-text">Loading U-Sports…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

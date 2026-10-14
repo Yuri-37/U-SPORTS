@@ -181,7 +181,7 @@ function GuestFooter() {
   const place = [institution?.address, institution?.region].filter((v) => v && v.trim()).join(', ')
 
   return (
-    <footer className="mt-20 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]">
+    <footer className="mt-20 border-t-4 border-[var(--school-secondary)] bg-[var(--surface-card)]">
       <div className="max-w-6xl mx-auto px-6 py-14 grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-3">

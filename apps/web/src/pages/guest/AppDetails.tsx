@@ -287,7 +287,7 @@ export default function AppDetails() {
           <ol className="mt-12 space-y-6 text-left">
             {INSTALL_STEPS.map((step, i) => (
               <li key={i} ref={reveal.row} className="flex items-start gap-5">
-                <span className="shrink-0 h-10 w-10 rounded-full bg-white text-[var(--school-primary)] font-display text-lg flex items-center justify-center">
+                <span className="shrink-0 h-10 w-10 rounded-full bg-[var(--school-secondary)] text-[var(--school-on-accent,var(--school-primary))] font-display text-lg flex items-center justify-center">
                   {i + 1}
                 </span>
                 <p className="pt-1.5 text-white/90 leading-relaxed">{step}</p>

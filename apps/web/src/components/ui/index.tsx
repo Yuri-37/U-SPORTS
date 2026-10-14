@@ -438,8 +438,8 @@ export function Spinner({
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-lg bg-[var(--surface-elevated)]', className)} />
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <div style={style} className={cn('animate-pulse rounded-lg bg-[var(--surface-elevated)]', className)} />
 }
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────

@@ -181,9 +181,10 @@ export default function EventDetailPage({
   if (loading)
     return (
       <div className={cn('max-w-5xl mx-auto space-y-4', outerClassName)}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-16" />
-        ))}
+        {/* Title, tab bar, then the bracket: the heights of what replaces them. */}
+        <Skeleton className="h-14" />
+        <Skeleton className="h-10" />
+        <Skeleton className="h-72" />
       </div>
     )
   if (notFound || !event)

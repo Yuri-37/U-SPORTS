@@ -20,7 +20,9 @@ export function SectionLabel({
     <span className="inline-flex items-center gap-3 rounded-full border border-[var(--school-primary)]/25 bg-[var(--school-primary)]/5 px-4 py-1.5">
       <span
         className={`h-2 w-2 rounded-full ${
-          dot === 'danger' ? 'bg-[var(--danger)] animate-pulse-dot' : 'bg-[var(--school-primary)]'
+          dot === 'danger'
+            ? 'bg-[var(--danger)] animate-pulse-dot'
+            : 'bg-[var(--school-secondary)] ring-2 ring-[var(--school-primary)]/25'
         }`}
       />
       <span className="label-mono text-[var(--brand-ink)]">
@@ -57,6 +59,7 @@ export function SectionHeading({
       <div ref={ref} className="mb-12 flex flex-col items-center text-center">
         <SectionLabel dot={dot}>{label}</SectionLabel>
         <h2 className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] mt-4">{title}</h2>
+        <span aria-hidden="true" className="mt-4 block h-1 w-14 rounded-full bg-[var(--school-secondary)]" />
         {subtitle && (
           <p className="mt-3 max-w-2xl text-[var(--text-secondary)] leading-relaxed">{subtitle}</p>
         )}
@@ -68,6 +71,7 @@ export function SectionHeading({
       <div className="max-w-2xl">
         <SectionLabel dot={dot}>{label}</SectionLabel>
         <h2 className="font-display text-3xl lg:text-[2.6rem] leading-[1.15] mt-4">{title}</h2>
+        <span aria-hidden="true" className="mt-4 block h-1 w-14 rounded-full bg-[var(--school-secondary)]" />
         {subtitle && (
           <p className="mt-3 text-[var(--text-secondary)] leading-relaxed">{subtitle}</p>
         )}
@@ -94,7 +98,7 @@ export function SectionHeading({
 export function StatCell({ value, label, countUp }: { value: number; label: string; countUp?: boolean }) {
   return (
     <div className="px-4 text-center">
-      <p className="font-display text-4xl lg:text-5xl text-white">
+      <p className="font-display text-4xl lg:text-5xl text-[var(--school-accent,var(--school-secondary))]">
         {countUp ? <CountUp value={value} /> : value.toLocaleString()}
       </p>
       <p className="label-mono mt-3 text-white/70">{label}</p>

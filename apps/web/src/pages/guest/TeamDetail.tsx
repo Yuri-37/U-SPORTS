@@ -153,8 +153,9 @@ export default function GuestTeamDetail() {
         >
           Back
         </Button>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24" />
+        {/* Header card, stats, then the roster and matches lists. */}
+        {[98, 122, 288, 288].map((h, i) => (
+          <Skeleton key={i} style={{ height: h }} />
         ))}
       </div>
     )

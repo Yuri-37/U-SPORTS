@@ -68,8 +68,9 @@ export default function GuestAthleteProfile() {
         >
           Back
         </Button>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24" />
+        {/* Same heights as the cards that replace them, so nothing jumps. */}
+        {[114, 102, 122, 126].map((h) => (
+          <Skeleton key={h} style={{ height: h }} />
         ))}
       </div>
     )

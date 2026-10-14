@@ -200,7 +200,7 @@ export default function GuestEvents() {
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-[134px]" />
           ))}
         </div>
       ) : view === 'upcoming' ? (

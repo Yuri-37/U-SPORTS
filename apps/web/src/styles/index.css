@@ -216,7 +216,7 @@ code, pre, .mono {
     [data-theme], and `dark:` follows the OS preference, so the two disagree
     the moment a viewer's OS and in-app theme differ.
   */
-  --brand-ink: #002d62;
+  --brand-ink: var(--school-ink, #002d62);
 
   /*
     Status colors used AS TEXT on a 10% tint of themselves (badges, banners).
@@ -531,12 +531,11 @@ code, pre, .mono {
   left: 50%;
   right: 50%;
   bottom: -0.35rem;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--school-primary);
+  height: 3px;
+  border-radius: 3px;
+  background: var(--school-secondary);
   transition: left 0.25s ease-out, right 0.25s ease-out;
 }
-[data-theme='dark'] .nav-underline::after { background: var(--school-secondary); }
 .nav-underline:hover::after,
 .nav-underline[data-active='true']::after {
   left: 0;
