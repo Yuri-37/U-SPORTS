@@ -16,7 +16,7 @@ export default function UsportsMark({
 }) {
   return (
     <svg
-      viewBox="0 0 1500 1500"
+      viewBox="193 193 1114 1114"
       width={size}
       height={size}
       role="img"
@@ -24,7 +24,7 @@ export default function UsportsMark({
       className={className}
       style={{ flexShrink: 0, borderRadius: size * 0.22 }}
     >
-      <rect width="1500" height="1500" fill="#0066FF" />
+      <rect x="193" y="193" width="1114" height="1114" fill="#0066FF" />
       <path fill="#FFFFFF" d="M517.4 404.9L672 404.9L608.44 592.95A121.7 121.7 0 0 1 580.8 762.4L478.4 590.3ZM982.6 404.9L828 404.9L891.56 592.95A121.7 121.7 0 0 0 919.2 762.4L1021.6 590.3ZM580.8 762.4L478.6 927.2L574.4 1095.1L925.6 1095.1L1021.4 927.2L919.2 762.4L858.1 928.9L641.9 928.9Z" />
     </svg>
   )
