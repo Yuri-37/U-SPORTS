@@ -1,6 +1,6 @@
 name: u_sports_mobile
 description: U-Sports mobile app for athletes and guests
-version: 1.10.20+30
+version: 1.10.21+31
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -62,18 +62,16 @@ flutter_launcher_icons:
   adaptive_icon_foreground: assets/icons/app_icon_foreground.png
 
 # Splash screen shown natively before Flutter's first frame. Uses brand blue
-# for both light/dark (not the app's theme backgrounds) because the logo mark
-# and wordmark are white — white-on-near-white (the light theme bg) would be
-# invisible, and blue matches the app icon's own look either way.
+# for both light/dark (not the app's theme backgrounds) because the logo is
+# white -- white-on-near-white (the light theme bg) would be invisible, and blue
+# matches the app icon's own look either way. The logo is the full lockup (the
+# U mark over "SPORTS"), so there is no separate bottom branding line.
 # Regenerate with:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
   color: '#0066FF'
   color_dark: '#0066FF'
   image: assets/splash/splash_logo.png
-  branding: assets/splash/splash_branding.png
-  branding_dark: assets/splash/splash_branding.png
-  branding_mode: bottom
   android_12:
     color: '#0066FF'
     color_dark: '#0066FF'

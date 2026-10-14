@@ -10,10 +10,11 @@ import '../utils/participant_labels.dart';
 import '../utils/sport_helpers.dart';
 import '../utils/error_helpers.dart';
 import 'ui/animated_score.dart';
+import 'ui/app_sheet.dart';
 
 /// Live hub detail sheet — watches [hubLiveProvider] so scores update as super admin scores.
 void showHubLiveMatchSheet(BuildContext context, {required String matchId}) {
-  showModalBottomSheet<void>(
+  showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) {

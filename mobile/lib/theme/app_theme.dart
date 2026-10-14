@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -40,6 +42,22 @@ class AppTheme {
   // match the school's current colours rather than an older navy.
   static Color schoolPrimary = const Color(0xFF0066FF);
   static Color schoolSecondary = const Color(0xFFF4C430);
+
+  static double _contrast(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+  }
+
+  /// The secondary colour if it stands out on the primary, otherwise white: for
+  /// big numbers and other text that sits ON the primary colour.
+  static Color accentOnPrimary() => _contrast(schoolSecondary, schoolPrimary) >= 2.5 ? schoolSecondary : Colors.white;
+
+  /// Dark or white, whichever reads better on a surface painted in the secondary colour.
+  static Color onAccent() {
+    const dark = Color(0xFF0F172A);
+    return _contrast(dark, schoolSecondary) >= _contrast(Colors.white, schoolSecondary) ? dark : Colors.white;
+  }
 
   /// Brand color safe to use as text/icon color on the page background.
   static Color brandInk(BuildContext context) =>

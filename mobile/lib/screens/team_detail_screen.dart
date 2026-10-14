@@ -15,7 +15,9 @@ import '../utils/error_helpers.dart';
 import '../utils/feedback.dart';
 import '../widgets/coach_roster_edit_sheet.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 
 /// Opens the courtside roster sheet for one player. Only reachable when
 /// [canManageTeamProvider] says this user coaches the team; the API re-checks
@@ -28,7 +30,7 @@ Future<void> _openRosterEdit(
   _RosterEntry player,
   Set<int> takenSlots,
 ) async {
-  final result = await showModalBottomSheet<RosterEditResult>(
+  final result = await showAppSheet<RosterEditResult>(
     context: context,
     isScrollControlled: true,
     builder: (_) => CoachRosterEditSheet(
@@ -196,7 +198,14 @@ class TeamDetailScreen extends ConsumerWidget {
     final canEditRoster = ref.watch(canManageTeamProvider(teamId));
 
     return teamAsync.when(
-      loading: () => const BrandPage.fixed(title: 'Team', body: Center(child: CircularProgressIndicator())),
+      loading: () => BrandPage.fixed(
+        title: 'Team',
+        body: ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+          children: const [SheetRowsSkeleton(count: 5)],
+        ),
+      ),
       error: (e, _) => BrandPage.fixed(title: 'Team', body: SheetMessage(text: friendlyError(e))),
       data: (team) {
         if (team == null) {
@@ -253,10 +262,7 @@ class TeamDetailScreen extends ConsumerWidget {
             ],
             const SectionHeader(title: 'Matches', reveal: true),
             matchesAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const SheetRowsSkeleton(count: 3),
               error: (e, _) => SheetMessage(text: friendlyError(e)),
               data: (matches) {
                 if (matches.isEmpty) return const SheetMessage(text: 'No matches yet.');

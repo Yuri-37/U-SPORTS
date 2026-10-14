@@ -10,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../theme/layout_tokens.dart';
+import 'ui/app_sheet.dart';
 import 'ui/brand_page.dart' show isCompactHeight;
 
 /// Persistent bottom nav shell for the four tab branches (Home, Rankings,
@@ -228,7 +229,7 @@ class _ArcButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = selected ? AppTheme.schoolPrimary : LayoutTokens.cardBackground(context);
-    final ring = selected ? Colors.white.withValues(alpha: 0.9) : LayoutTokens.borderSubtle(context);
+    final ring = selected ? AppTheme.schoolSecondary : LayoutTokens.borderSubtle(context);
     return Tooltip(
       message: item.label,
       child: Semantics(
@@ -367,7 +368,7 @@ class _NavCoverReporterState extends State<NavCoverReporter> {
 }
 
 /// Slides the navigation down and out of the way while the login page is rising
-/// over the tabs, and back again when it leaves.
+/// over the tabs, or while a bottom sheet is open, and back again afterwards.
 class _SlideAwayWhenCovered extends StatelessWidget {
   const _SlideAwayWhenCovered({required this.child});
 
@@ -375,12 +376,21 @@ class _SlideAwayWhenCovered extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context);
     return ValueListenableBuilder<double>(
       valueListenable: navCover,
       child: child,
-      builder: (context, covered, child) => Transform.translate(
-        offset: Offset(0, covered * (_PillNav.height + 60)),
-        child: child,
+      builder: (context, covered, child) => ValueListenableBuilder<int>(
+        valueListenable: openSheets,
+        builder: (context, sheets, _) => TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: sheets > 0 ? 1 : 0),
+          duration: reduce ? Duration.zero : const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          builder: (context, sheetOut, _) => Transform.translate(
+            offset: Offset(0, math.max(covered, sheetOut) * (_PillNav.height + 60)),
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -492,6 +502,8 @@ class _PillNav extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: navy,
+                                // The accent colour as a ring around the current tab.
+                                border: Border.all(color: AppTheme.schoolSecondary, width: 2.5),
                                 boxShadow: [
                                   BoxShadow(
                                     color: navy.withValues(alpha: dark ? 0.7 : 0.45),

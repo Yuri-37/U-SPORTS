@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'ui/app_sheet.dart';
 import 'package:flutter/material.dart';
 import '../utils/feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,7 +79,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
   }
 
   void _openSheet() {
-    showModalBottomSheet(
+    showAppSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(

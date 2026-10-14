@@ -10,6 +10,7 @@ import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 import '../widgets/ui/hub_header_actions.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -183,7 +184,17 @@ class _EventsList extends ConsumerWidget {
         );
 
     return allAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: header != null ? const EdgeInsets.only(bottom: 24) : const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          if (header != null) header!,
+          Padding(
+            padding: header != null ? const EdgeInsets.symmetric(horizontal: 16) : EdgeInsets.zero,
+            child: const EventCardListSkeleton(count: 5),
+          ),
+        ],
+      ),
       error: (e, _) => scrollableMessage(friendlyError(e)),
       data: (all) {
         var list = all.where((ev) => statuses.contains(ev['status'] as String? ?? '')).toList();

@@ -8,6 +8,7 @@ import '../theme/layout_tokens.dart';
 import '../widgets/double_back_exit.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 import '../widgets/ui/hub_header_actions.dart';
 import '../utils/leaderboard_stats.dart';
 import '../utils/sport_helpers.dart';
@@ -90,6 +91,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
         : ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [header, child],
+          );
+
+    // A loading pane: the same header, then placeholders shaped like the table or rows.
+    Widget skeletonPane(Widget? header, Widget skeleton) => header == null
+        ? SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: skeleton,
+          )
+        : ListView(
+            physics: const NeverScrollableScrollPhysics(),
+            children: [header, Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: skeleton)],
           );
 
     final Widget chips = Padding(
@@ -215,7 +228,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> with Sing
         : null;
 
     final Widget playersPane = players?.when(
-                              loading: () => pane(playersHeader, const Center(child: CircularProgressIndicator())),
+                              loading: () => skeletonPane(playersHeader, const TableSkeleton()),
                               error: (e, _) => pane(playersHeader, SheetMessage(text: friendlyError(e))),
                               data: (rows) {
                                 if (_seasonId == null) {
@@ -307,7 +320,7 @@ physics: const AlwaysScrollableScrollPhysics(),
                             ) ??
         pane(playersHeader, const SizedBox());
     final Widget teamsPane = teams?.when(
-                        loading: () => pane(teamsHeader, const Center(child: CircularProgressIndicator())),
+                        loading: () => skeletonPane(teamsHeader, const SheetRowsSkeleton(count: 6)),
                         error: (e, _) => pane(teamsHeader, SheetMessage(text: friendlyError(e))),
                         data: (rows) {
                           if (_seasonId == null) {

@@ -416,7 +416,7 @@ class FrostedStats extends StatelessWidget {
               CountUpText(
                 value: stats[i].value,
                 textAlign: TextAlign.center,
-                style: AppTheme.display(size: 28, color: Colors.white, height: 1.05),
+                style: AppTheme.display(size: 28, color: AppTheme.accentOnPrimary(), height: 1.05),
               ),
             ],
           ),
@@ -618,13 +618,25 @@ class SectionHeader extends StatelessWidget {
         children: [
           if (leading != null) ...[leading!, const SizedBox(width: 8)],
           Expanded(
-            child: Text(
-              title,
-              style: AppTheme.display(
-                size: 18,
-                height: 1.2,
-                color: LayoutTokens.primaryText(context),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.display(
+                    size: 18,
+                    height: 1.2,
+                    color: LayoutTokens.primaryText(context),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                // The school's accent colour, as a short bar under every heading.
+                Container(
+                  width: 28,
+                  height: 4,
+                  decoration: BoxDecoration(color: AppTheme.schoolSecondary, borderRadius: BorderRadius.circular(2)),
+                ),
+              ],
             ),
           ),
           if (trailing != null) trailing!,
@@ -822,6 +834,16 @@ class RankBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = rank <= 3;
     final c = top ? AppTheme.brandInk(context) : LayoutTokens.mutedText(context);
+    if (rank == 1) {
+      // First place sits on the school's accent colour.
+      return Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: AppTheme.schoolSecondary, borderRadius: BorderRadius.circular(13)),
+        child: Text('1', style: AppTheme.display(size: 16, color: AppTheme.onAccent(), height: 1)),
+      );
+    }
     return Container(
       width: 40,
       height: 40,

@@ -25,6 +25,7 @@ import '../widgets/institution_logo.dart';
 import '../widgets/live_match_card.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 import '../widgets/ui/hub_header_actions.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -265,7 +266,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               );
             },
-            loading: () => const SizedBox.shrink(),
+            loading: () => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SectionHeader(
+                  reveal: true,
+                  title: 'Recent champions',
+                  leading: Icon(Icons.emoji_events_rounded, size: 20, color: LayoutTokens.warning(context)),
+                ),
+                const SheetRowsSkeleton(count: 2),
+              ],
+            ),
             error: (_, __) => const SizedBox.shrink(),
           ),
           liveAsync.when(
@@ -303,7 +314,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               );
             },
-            loading: () => const SizedBox.shrink(),
+            loading: () => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SectionHeader(
+                  reveal: true,
+                  title: 'Live now',
+                  leading: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(color: LayoutTokens.danger(context), shape: BoxShape.circle),
+                  ),
+                ),
+                const Padding(padding: EdgeInsets.only(bottom: 12), child: LiveMatchCardSkeleton()),
+              ],
+            ),
             error: (_, __) => const SizedBox.shrink(),
           ),
           SectionHeader(
@@ -341,10 +366,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               );
             },
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: LinearProgressIndicator(minHeight: 2),
-            ),
+            loading: () => const EventCardListSkeleton(count: 3),
             error: (_, __) => const SizedBox.shrink(),
           ),
           const SectionHeader(title: 'Browse by sport', reveal: true),

@@ -13,8 +13,10 @@ import '../utils/error_helpers.dart';
 import '../widgets/match_roster_stats.dart';
 import '../widgets/tournament_bracket_view.dart';
 import '../widgets/ui/animated_score.dart';
+import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.eventId, this.initialTab = 0});
@@ -95,7 +97,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
   }
 
   void _showMatchSheet(BuildContext context, String matchId) {
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) {
@@ -110,8 +112,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                 final st = ref.watch(scoringStateProvider(matchId));
                 return st.when(
                   loading: () => const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
+                    padding: EdgeInsets.fromLTRB(16, 20, 16, 24),
+                    child: SheetRowsSkeleton(count: 3),
                   ),
                   error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
                   data: (data) {
@@ -329,7 +331,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
         title: 'Event',
         showBack: true,
         onBack: back,
-        body: const Center(child: CircularProgressIndicator()),
+        body: ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          children: const [SheetRowsSkeleton(count: 5)],
+        ),
       ),
       error: (e, _) => BrandPage.fixed(
         title: 'Event',
@@ -549,11 +555,16 @@ class _PodiumRow extends StatelessWidget {
     final isChampion = rank == 1;
     final rankColor = isChampion ? LayoutTokens.warning(context) : LayoutTokens.mutedText(context);
     return SheetTile(
-      leading: IconTile(
-        icon: isChampion ? Icons.emoji_events_rounded : Icons.military_tech_rounded,
-        color: rankColor,
-        size: 42,
-      ),
+      leading: isChampion
+          // The champion sits on the school's accent colour.
+          ? Container(
+              width: 42,
+              height: 42,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: AppTheme.schoolSecondary, borderRadius: BorderRadius.circular(42 * 0.32)),
+              child: Icon(Icons.emoji_events_rounded, color: AppTheme.onAccent(), size: 22),
+            )
+          : IconTile(icon: Icons.military_tech_rounded, color: rankColor, size: 42),
       title: name,
       subtitle: placementRankLabel(rank),
       onTap: onTap,

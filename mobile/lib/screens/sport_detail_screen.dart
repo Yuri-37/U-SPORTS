@@ -12,6 +12,7 @@ import '../utils/error_helpers.dart';
 import '../widgets/event_card.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/reveal.dart';
+import '../widgets/ui/skeleton.dart';
 
 /// Drill-down page for a single sport, reached from Home's "Browse by Sport"
 /// cards. A real pushed route (back arrow, no tab-switch ambiguity) combining
@@ -131,7 +132,11 @@ class _SportDetailScreenState extends ConsumerState<SportDetailScreen> with Sing
         Expanded(
           child: _showTeams
               ? teams?.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => const SingleChildScrollView(
+                      physics: NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      child: SheetRowsSkeleton(count: 6),
+                    ),
                     error: (e, _) => SheetMessage(text: friendlyError(e)),
                     data: (rows) {
                       if (_seasonId == null) return const SheetMessage(text: 'No seasons available yet.');
@@ -152,7 +157,11 @@ physics: const AlwaysScrollableScrollPhysics(),
                   ) ??
                   const SizedBox()
               : players?.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => const SingleChildScrollView(
+                      physics: NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      child: TableSkeleton(),
+                    ),
                     error: (e, _) => SheetMessage(text: friendlyError(e)),
                     data: (rows) {
                       if (_seasonId == null) return const SheetMessage(text: 'No seasons available yet.');
@@ -247,7 +256,11 @@ physics: const AlwaysScrollableScrollPhysics(),
 
   Widget _eventsTab(BuildContext context, AsyncValue<List<Map<String, dynamic>>> eventsAsync) {
     return eventsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const SingleChildScrollView(
+        physics: NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: EventCardListSkeleton(count: 5),
+      ),
       error: (e, _) => SheetMessage(text: friendlyError(e)),
       data: (events) {
         if (events.isEmpty) {
