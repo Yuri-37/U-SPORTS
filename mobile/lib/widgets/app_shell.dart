@@ -229,7 +229,7 @@ class _ArcButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = selected ? AppTheme.schoolPrimary : LayoutTokens.cardBackground(context);
-    final ring = selected ? AppTheme.schoolSecondary : LayoutTokens.borderSubtle(context);
+    final ring = selected ? Colors.white.withValues(alpha: 0.9) : LayoutTokens.borderSubtle(context);
     return Tooltip(
       message: item.label,
       child: Semantics(
@@ -502,8 +502,6 @@ class _PillNav extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: navy,
-                                // The accent colour as a ring around the current tab.
-                                border: Border.all(color: AppTheme.schoolSecondary, width: 2.5),
                                 boxShadow: [
                                   BoxShadow(
                                     color: navy.withValues(alpha: dark ? 0.7 : 0.45),

@@ -1,6 +1,6 @@
 name: u_sports_mobile
 description: U-Sports mobile app for athletes and guests
-version: 1.10.22+32
+version: 1.10.23+33
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
