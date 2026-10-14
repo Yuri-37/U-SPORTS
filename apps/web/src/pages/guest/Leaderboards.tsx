@@ -15,14 +15,14 @@ function formatSeasonSelectLabel(s: Season): string {
   return s.name
 }
 
-/** The rank number; first place sits on the school's accent colour. */
-function RankMark({ rank }: { rank: number }) {
-  if (rank !== 1) return <>{rank}</>
-  return (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--school-secondary)] text-[var(--school-on-accent,var(--school-primary))] font-bold">
-      1
-    </span>
-  )
+/**
+ * The rank number. Every rank sits in the same fixed-size box, so the digits line
+ * up in one column; first place just fills that box with the school's accent colour.
+ */
+function RankMark({ rank, large = false }: { rank: number; large?: boolean }) {
+  const box = large ? 'h-7 w-7 text-base' : 'h-5 w-5 text-xs'
+  const first = rank === 1 ? 'bg-[var(--school-secondary)] text-[var(--school-on-accent,var(--school-primary))] font-bold' : ''
+  return <span className={`inline-flex items-center justify-center rounded-full ${box} ${first}`}>{rank}</span>
 }
 
 export default function GuestLeaderboards() {
@@ -230,7 +230,7 @@ export default function GuestLeaderboards() {
               <thead className="bg-[var(--surface-elevated)]">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] w-10">
-                    #
+                    <span className="inline-flex w-5 justify-center">#</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)]">
                     Athlete
@@ -317,8 +317,8 @@ export default function GuestLeaderboards() {
                   className="flex items-center gap-4 cursor-pointer hover:border-[var(--accent-default)]/40 transition-colors"
                   onClick={() => ts.team?.id && navigate(`/guest/teams/${ts.team.id}`)}
                 >
-                  <span className="text-lg font-bold text-[var(--text-muted)] w-6 text-center">
-                    <RankMark rank={i + 1} />
+                  <span className="text-lg font-bold text-[var(--text-muted)] w-7 flex justify-center">
+                    <RankMark rank={i + 1} large />
                   </span>
                   <div className="flex-1">
                     <p className="font-bold">{ts.team?.name}</p>
