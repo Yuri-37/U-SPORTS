@@ -46,10 +46,10 @@ export default function GuestLayout() {
           {/* Two separate zones, never merged: the product on the left, the
               school after a divider. One line each -- no tagline, no stacked
               sub-row -- so neither logo is shrunk to a speck. */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0 shrink">
             <UsportsMark size={30} />
             {/* On the very narrowest phones (320px) the mark alone has to do. */}
-            <SportsWordmark height={14} className="hidden min-[360px]:inline text-[var(--text-primary)]" />
+            <SportsWordmark shrink height={14} className="hidden min-[360px]:inline text-[var(--text-primary)]" />
           </div>
           {institution?.logo_url || institution?.name ? (
             // Below ~430px the crest zone, the Dashboard label, the bell and the
@@ -102,7 +102,7 @@ export default function GuestLayout() {
             <Button
               size="sm"
               variant="outline"
-              className="shrink-0"
+              className={`shrink-0 ${isAuthed ? 'max-[399px]:hidden' : ''}`}
               onClick={() => navigate('/app')}
               icon={<Smartphone className="w-3.5 h-3.5" />}
               aria-label="Get the app"
