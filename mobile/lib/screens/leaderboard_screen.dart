@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../theme/layout_tokens.dart';
 import '../widgets/double_back_exit.dart';
 import '../widgets/ui/brand_page.dart';
+import '../widgets/ui/person_avatar.dart';
 import '../widgets/ui/reveal.dart';
 import '../widgets/ui/skeleton.dart';
 import '../widgets/ui/hub_header_actions.dart';
@@ -294,7 +295,11 @@ physics: const AlwaysScrollableScrollPhysics(),
                                               onSelectChanged: aid == null ? null : (_) => context.push('/athletes/$aid'),
                                               cells: [
                                                 DataCell(Text('${i + 1}', style: TextStyle(color: LayoutTokens.mutedText(context)))),
-                                                DataCell(Text(name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                                DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                                                  PersonAvatar(name: name, imageUrl: prof?['avatar_url'] as String?, size: 28),
+                                                  const SizedBox(width: 10),
+                                                  Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                                ])),
                                                 ...cells.map(
                                                   (c) => DataCell(
                                                     Text(

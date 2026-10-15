@@ -6,6 +6,7 @@ import { Card, TabBar, Button, Select, Input } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel } from '../../lib/utils'
 import { playerStatCells, sortByRank, sortTeamStandings } from '../../lib/leaderboardStats'
+import Avatar from '../../components/ui/Avatar'
 import type { Season } from '../../types'
 
 function formatSeasonSelectLabel(s: Season): string {
@@ -108,7 +109,7 @@ export default function GuestLeaderboards() {
         supabase
           .from('player_season_stats')
           .select(
-            '*, athlete:athletes(position, profile:profiles!athletes_profile_id_fkey(full_name))',
+            '*, athlete:athletes(position, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url))',
           )
           .eq('sport', sport)
           .eq('season_id', effectiveSeasonId)
@@ -251,7 +252,7 @@ export default function GuestLeaderboards() {
                     <tr key={i} className="border-t border-[var(--border-subtle)]">
                       {Array.from({ length: 6 }).map((_, j) => (
                         <td key={j} className="px-4 py-3">
-                          <div className="h-5 bg-[var(--surface-elevated)] rounded animate-pulse" />
+                          <div className="h-6 bg-[var(--surface-elevated)] rounded animate-pulse" />
                         </td>
                       ))}
                     </tr>
@@ -281,7 +282,10 @@ export default function GuestLeaderboards() {
                         <RankMark rank={i + 1} />
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        {p.athlete?.profile?.full_name ?? '—'}
+                        <span className="flex items-center gap-2.5">
+                          <Avatar src={p.athlete?.profile?.avatar_url} name={p.athlete?.profile?.full_name ?? '?'} size={24} />
+                          {p.athlete?.profile?.full_name ?? '—'}
+                        </span>
                       </td>
                       {playerStatCells(sport, p.stats, p.games_played).map((c) => (
                         <td

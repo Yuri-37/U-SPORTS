@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
-import { getSportLabel, getInitials } from '../../lib/utils'
+import { getSportLabel } from '../../lib/utils'
+import Avatar from '../../components/ui/Avatar'
 import SportIcon, { SportTag } from '../../components/ui/SportIcon'
 import { seasonStatHighlights } from '../../lib/leaderboardStats'
 
@@ -105,9 +106,7 @@ export default function GuestAthleteProfile() {
       </Button>
 
       <Card className="flex items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-[var(--school-primary)] flex items-center justify-center text-xl font-bold text-[var(--school-secondary)]">
-          {getInitials(athlete.profile?.full_name ?? '?')}
-        </div>
+        <Avatar src={athlete.profile?.avatar_url} name={athlete.profile?.full_name ?? '?'} size={64} />
         <div>
           <h1 className="font-bold text-xl">{athlete.profile?.full_name}</h1>
           <p className="text-sm text-[var(--text-muted)]">

@@ -16,6 +16,7 @@ import '../utils/feedback.dart';
 import '../widgets/coach_roster_edit_sheet.dart';
 import '../widgets/ui/brand_page.dart';
 import '../widgets/ui/app_sheet.dart';
+import '../widgets/ui/person_avatar.dart';
 import '../widgets/ui/reveal.dart';
 import '../widgets/ui/skeleton.dart';
 
@@ -62,6 +63,7 @@ class _RosterEntry {
     required this.name,
     required this.position,
     required this.jerseyNumber,
+    this.avatarUrl,
     this.lineupSlot,
   });
   final String athleteId;
@@ -72,6 +74,7 @@ class _RosterEntry {
   final String name;
   final String? position;
   final String? jerseyNumber;
+  final String? avatarUrl;
 
   /// Non-null for the starting lineup; null for bench. Drives the "Starting"
   /// badge, matching the web team page.
@@ -92,7 +95,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
       .select('''
         id,
         lineup_slot,
-        athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name)),
+        athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url)),
         team:teams(
           id, name, sport,
           coaches:team_coaches(organizer:organizers(profile:profiles!organizers_profile_id_fkey(full_name)))
@@ -129,6 +132,7 @@ final _teamDetailProvider = FutureProvider.autoDispose.family<_TeamDetailData?, 
         name: (prof?['full_name'] as String?) ?? 'Athlete',
         position: (ath['position'] as String?)?.trim(),
         jerseyNumber: ath['jersey_number']?.toString(),
+        avatarUrl: prof?['avatar_url'] as String?,
         lineupSlot: (row['lineup_slot'] as num?)?.toInt(),
       ));
     }
@@ -285,7 +289,7 @@ class TeamDetailScreen extends ConsumerWidget {
     bool canEditRoster,
   ) {
     return SheetTile(
-      leading: const IconTile(icon: Icons.person_rounded),
+      leading: PersonAvatar(name: p.name, imageUrl: p.avatarUrl, size: 42),
       title: p.name,
       subtitle: p.position,
       onTap: () => context.push('/athletes/${p.athleteId}'),

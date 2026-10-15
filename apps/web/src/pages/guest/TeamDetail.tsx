@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { Card, Badge, Skeleton, Button } from '../../components/ui'
+import Avatar from '../../components/ui/Avatar'
 import { supabase } from '../../lib/supabase'
 import { getSportLabel, formatDateTime } from '../../lib/utils'
 import SportIcon from '../../components/ui/SportIcon'
@@ -41,7 +42,7 @@ export default function GuestTeamDetail() {
       supabase
         .from('team_members')
         .select(
-          'lineup_slot, athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name))',
+          'lineup_slot, athlete:athletes(id, position, jersey_number, profile:profiles!athletes_profile_id_fkey(full_name, avatar_url))',
         )
         .eq('team_id', id),
       supabase
@@ -238,9 +239,12 @@ export default function GuestTeamDetail() {
                 className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)] last:border-0 cursor-pointer hover:text-[var(--accent-default)]"
                 onClick={() => navigate(`/guest/athletes/${a.id}`)}
               >
-                <div>
-                  <p className="font-medium">{a.profile?.full_name ?? 'Athlete'}</p>
-                  {a.position && <p className="text-xs text-[var(--text-muted)]">{a.position}</p>}
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar src={a.profile?.avatar_url} name={a.profile?.full_name ?? 'Athlete'} size={36} />
+                  <div className="min-w-0">
+                    <p className="font-medium">{a.profile?.full_name ?? 'Athlete'}</p>
+                    {a.position && <p className="text-xs text-[var(--text-muted)]">{a.position}</p>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {a.lineup_slot != null && (
