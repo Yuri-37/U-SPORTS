@@ -1,6 +1,6 @@
 name: u_sports_mobile
 description: U-Sports mobile app for athletes and guests
-version: 1.10.24+34
+version: 1.10.25+35
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -65,7 +65,8 @@ flutter_launcher_icons:
 # for both light/dark (not the app's theme backgrounds) because the logo is
 # white -- white-on-near-white (the light theme bg) would be invisible, and blue
 # matches the app icon's own look either way. The centre is the U mark alone, as big as
-# Android 12's round crop allows; "SPORTS" is the small branding line at the bottom.
+# Android 12's round crop allows. "SPORTS" is the branding line at the bottom; its image is exactly 2.5:1
+# because Android 12+ stretches it to a fixed 200x80dp box.
 # Regenerate with:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
