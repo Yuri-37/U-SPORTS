@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../providers/auth_provider.dart';
@@ -53,6 +54,12 @@ class AthleteDashboardScreen extends ConsumerWidget {
     );
   }
 }
+
+/// The reminder is shown once per app launch. The dashboard rebuilds from scratch whenever the
+/// profile reloads (a new profile photo does it), and each rebuild used to ask again.
+String? _passwordNudgeShownFor;
+
+String _passwordNudgeDismissedKey(String userId) => 'password_nudge_dismissed_$userId';
 
 class _AthleteDashboardBody extends ConsumerStatefulWidget {
   const _AthleteDashboardBody({required this.athleteId, required this.sport});
@@ -118,14 +125,20 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
   /// change-password (see POST /api/auth/change-password), so this is exactly
   /// the "still on the default/import password" signal — not literally
   /// "first login," but the closest reliable proxy without new schema.
-  /// initState only runs once per app session for this tab (the bottom-nav
-  /// shell keeps it alive across tab switches), so this naturally shows once
-  /// per session rather than on every rebuild.
+  /// Shown once per app launch for each account (see [_passwordNudgeShownFor]): this body is
+  /// rebuilt from scratch whenever the profile reloads, so initState alone is not enough.
   Future<void> _maybeShowPasswordNudge() async {
     if (!mounted) return;
     final profile = await ref.read(profileProvider.future);
     if (!mounted || profile == null) return;
     if (profile.passwordChangedAt != null) return;
+    if (_passwordNudgeShownFor == profile.id) return;
+    // "I already set my own" is remembered on this phone as well as on the server, so the
+    // reminder stays gone even if the server could not be reached when it was pressed.
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (prefs.getBool(_passwordNudgeDismissedKey(profile.id)) == true) return;
+    _passwordNudgeShownFor = profile.id;
 
     showDialog(
       context: context,
@@ -142,6 +155,7 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
             onPressed: () async {
               Navigator.of(ctx).pop();
               // Already chose their own password through the emailed link: stop the reminder for good.
+              await prefs.setBool(_passwordNudgeDismissedKey(profile.id), true);
               try {
                 await ref.read(apiClientProvider).postJson('/auth/password-set');
                 ref.invalidate(profileProvider);

@@ -297,6 +297,13 @@ export default function AthleteDashboard() {
   // recorded: one tap stops the reminder for good.
   const markPasswordSet = async () => {
     setShowPasswordNudge(false)
+    // Remembered in this browser as well, so the reminder stays gone even if the server
+    // could not be reached when the button was pressed.
+    try {
+      if (profile?.id) localStorage.setItem(`usports_password_nudge_dismissed_${profile.id}`, '1')
+    } catch {
+      /* storage blocked: the server stamp below still applies */
+    }
     try {
       await api.post('/auth/password-set', undefined, { silentError: true })
       if (profile?.id) await fetchProfile(profile.id)
@@ -312,6 +319,11 @@ export default function AthleteDashboard() {
   // per visit to this page.
   useEffect(() => {
     if (!profile || profile.password_changed_at) return
+    try {
+      if (localStorage.getItem(`usports_password_nudge_dismissed_${profile.id}`) === '1') return
+    } catch {
+      /* storage blocked: fall through and ask */
+    }
     if (sessionStorage.getItem('usports_password_nudge_shown') === '1') return
     sessionStorage.setItem('usports_password_nudge_shown', '1')
     setShowPasswordNudge(true)
