@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Yuri Gabriel Dacuba · Portfolio</title>
-  <meta name="description" content="Portfolio of Yuri Gabriel Dacuba, a 4th-year BSIT student at NU Dasmariñas looking for a 400-hour IT internship (OJT) from November 20, 2026. Full-stack web and mobile developer." />
+  <meta name="description" content="Portfolio of Yuri Gabriel Dacuba, a 4th-year BSIT student at NU Dasmariñas looking for a 400-hour IT internship (OJT). Full-stack web and mobile developer." />
   <link rel="icon" href="img/yuri.png" />
   <style>
     :root {
@@ -206,7 +206,7 @@
                onerror="this.style.display='none'" />
         </div>
         <div>
-          <p class="badge">Open for OJT · from November 20, 2026</p>
+          <p class="badge">Open for OJT · 400 hours</p>
           <h1>Yuri Gabriel Dacuba</h1>
           <p class="role">4th-year BSIT student · National University – Dasmariñas · Imus, Cavite</p>
           <p class="lead">
@@ -230,9 +230,9 @@
         <h2>What I'm looking for</h2>
         <div class="facts">
           <div class="card fact"><div class="num">400 hrs</div><div class="label">Required OJT hours</div></div>
-          <div class="card fact"><div class="num">Nov 20, 2026</div><div class="label">Available to start</div></div>
           <div class="card fact"><div class="num">Flexible</div><div class="label">On-site (Cavite or Metro Manila), hybrid or work from home</div></div>
-          <div class="card fact"><div class="num">Ready</div><div class="label">MOA and recommendation letter from NU Dasmariñas</div></div>
+          <div class="card fact"><div class="num">Endorsed</div><div class="label">Endorsement and conforme letter, plus a MOA signed by NU Dasmariñas officials</div></div>
+          <div class="card fact"><div class="num">On track</div><div class="label">Training agreement, internship plan, attendance and weekly and monthly activity reports</div></div>
         </div>
         <div class="card">
           <h3>Roles I'm aiming for</h3>
@@ -330,13 +330,28 @@
             </ul>
           </article>
 
-          <!-- Add more project cards by copying the block above. For example, IT-eatery:
           <article class="card project">
-            <div class="project-head"><h3>IT-eatery</h3></div>
-            <p class="muted">One or two sentences: what it does and who it is for.</p>
-            <ul class="tags"><li>Add the tech used</li></ul>
+            <div class="project-head">
+              <h3>IT-eary: Karinderya Ordering and Counter System</h3>
+              <div class="project-links">
+                <a href="https://github.com/ENTREP3/IT-eary" target="_blank" rel="noopener">Source</a>
+              </div>
+            </div>
+            <p class="muted">
+              A team project: a digital companion for the neighborhood karinderya, built around
+              a ticket-based counter flow. Diners order without an account, show a short ticket
+              code at the counter, and get a receipt once the cashier marks it paid.
+            </p>
+            <ul class="points">
+              <li>Six front ends on one Supabase backend: a React storefront, cashier counter and owner dashboard, each on its own subdomain, plus three Flutter Android apps for the same audiences.</li>
+              <li>Business rules live in PostgreSQL: orders are priced server-side, payments are recorded through database functions, and row-level security decides what each role sees.</li>
+              <li>Owner dashboard with order analytics, a kitchen queue, inventory, menu control and expense tracking. Cash and GCash payments, with live updates through Supabase Realtime.</li>
+            </ul>
+            <ul class="tags">
+              <li>React</li><li>TypeScript</li><li>Vite</li><li>Tailwind CSS v4</li><li>Flutter</li>
+              <li>Supabase (PostgreSQL, Auth, Realtime, RLS)</li><li>Docker</li>
+            </ul>
           </article>
-          -->
 
         </div>
       </div>
@@ -446,8 +461,7 @@
         <div class="cta">
           <a class="btn primary" href="mailto:yuridacuba307@gmail.com">Email me</a>
           <a class="btn ghost" href="https://github.com/Yuri-37" target="_blank" rel="noopener">GitHub</a>
-          <!-- Add your LinkedIn: replace the URL below and uncomment.
-          <a class="btn ghost" href="https://www.linkedin.com/in/your-profile" target="_blank" rel="noopener">LinkedIn</a> -->
+          <a class="btn ghost" href="https://www.linkedin.com/in/yuri-gabriel-dacuba-0aaaba3b6/" target="_blank" rel="noopener">LinkedIn</a>
         </div>
       </div>
     </section>
