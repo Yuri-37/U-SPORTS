@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Yuri · Portfolio</title>
-  <meta name="description" content="Portfolio of Yuri: web and mobile software, including the U-Sports university sports platform." />
+  <title>Yuri Gabriel Dacuba · Portfolio</title>
+  <meta name="description" content="Portfolio of Yuri Gabriel Dacuba, a 4th-year BSIT student at NU Dasmariñas looking for a 400-hour IT internship (OJT) from November 20, 2026. Full-stack web and mobile developer." />
+  <link rel="icon" href="img/yuri.png" />
   <style>
     :root {
       --bg: #f7f7f5;
@@ -14,6 +15,7 @@
       --line: #e3e4e8;
       --accent: #1f5eff;
       --accent-ink: #ffffff;
+      --good: #12805c;
       --radius: 14px;
     }
     @media (prefers-color-scheme: dark) {
@@ -25,6 +27,7 @@
         --line: #272a33;
         --accent: #6d93ff;
         --accent-ink: #0b0c10;
+        --good: #4cc9a0;
       }
     }
     :root[data-theme="dark"] {
@@ -35,10 +38,11 @@
       --line: #272a33;
       --accent: #6d93ff;
       --accent-ink: #0b0c10;
+      --good: #4cc9a0;
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
     body {
       margin: 0;
       background: var(--bg);
@@ -69,21 +73,43 @@
       display: flex; align-items: center; justify-content: space-between;
       height: 60px; gap: 12px;
     }
-    .brand { font-weight: 800; text-decoration: none; color: var(--text); }
+    .brand { font-weight: 800; text-decoration: none; color: var(--text); white-space: nowrap; }
+    nav { display: flex; align-items: center; }
     nav a {
       color: var(--muted); text-decoration: none; margin-left: 18px;
       font-size: .95rem;
     }
     nav a:hover { color: var(--text); }
     .theme-btn {
+      margin-left: 18px;
       background: none; border: 1px solid var(--line); color: var(--text);
       border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: .85rem;
     }
 
     /* Hero */
-    .hero { padding: 96px 0 72px; border-top: none; }
-    .hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); letter-spacing: -.02em; }
-    .hero .lead { font-size: 1.15rem; color: var(--muted); max-width: 640px; }
+    .hero { padding: 72px 0 64px; border-top: none; }
+    .hero-grid { display: grid; gap: 40px; grid-template-columns: 220px 1fr; align-items: center; }
+    .portrait {
+      position: relative; width: 220px; aspect-ratio: 3 / 4; border-radius: 24px;
+      overflow: hidden; border: 1px solid var(--line); background: var(--surface);
+      display: grid; place-items: center;
+      font-size: 3rem; font-weight: 800; color: var(--accent);
+    }
+    .portrait img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: center top;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: .85rem; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--surface); margin-bottom: 16px;
+    }
+    .badge::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+    }
+    .hero h1 { font-size: clamp(2rem, 5.5vw, 3.2rem); letter-spacing: -.02em; }
+    .hero .role { font-size: 1.05rem; color: var(--muted); margin-bottom: 14px; }
+    .hero .lead { font-size: 1.1rem; color: var(--muted); max-width: 600px; }
     .cta { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
     .btn {
       display: inline-block; padding: 11px 20px; border-radius: 999px;
@@ -98,26 +124,59 @@
       background: var(--surface); border: 1px solid var(--line);
       border-radius: var(--radius); padding: 24px;
     }
+    .card h3 { margin-bottom: 8px; }
     .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
     .tags li {
       font-size: .8rem; padding: 3px 10px; border-radius: 999px;
       border: 1px solid var(--line); color: var(--muted);
     }
+    .tags li.top { border-color: var(--accent); color: var(--accent); font-weight: 600; }
     ul.points { padding-left: 20px; margin: 0 0 8px; }
     ul.points li { margin-bottom: 6px; color: var(--muted); }
+    .card ul.plain { margin: 0; padding-left: 18px; color: var(--muted); }
 
+    /* Internship details */
+    .facts { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 16px; }
+    .fact .num { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+    .fact .label { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+
+    /* Projects */
     .project { grid-column: 1 / -1; }
     .project-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
     .project-links { display: flex; gap: 14px; flex-wrap: wrap; }
+    .shots { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin: 18px 0 6px; }
+    .shots figure { margin: 0; }
+    .shots a { display: block; }
+    .shots img {
+      display: block; width: 100%; height: auto; border-radius: 10px;
+      border: 1px solid var(--line); background: #fff;
+    }
+    .shots figcaption { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+    .shots .wide { flex: 3 1 280px; }
+    .shots .tall { flex: 1 1 130px; max-width: 200px; }
 
-    .skills .card h3 { margin-bottom: 8px; }
-    .skills ul { margin: 0; padding-left: 18px; color: var(--muted); }
+    /* Certificate */
+    .cert-img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+    .score { display: flex; align-items: baseline; gap: 10px; margin: 14px 0 10px; }
+    .score .big { font-size: 2rem; font-weight: 800; }
+    .bars { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .bars li { font-size: .85rem; color: var(--muted); }
+    .bars .row { display: flex; justify-content: space-between; gap: 8px; }
+    .bar { height: 6px; border-radius: 999px; background: var(--line); margin-top: 3px; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 
     footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
 
+    @media (max-width: 720px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 24px; }
+      .portrait { width: 150px; }
+    }
     @media (max-width: 600px) {
       nav a { margin-left: 12px; font-size: .88rem; }
-      .hero { padding: 64px 0 48px; }
+      nav a.hide-sm { display: none; }
+      .theme-btn { margin-left: 12px; }
+      .hero { padding: 48px 0 40px; }
+      section { padding: 48px 0; }
     }
   </style>
 </head>
@@ -125,11 +184,12 @@
 
   <header class="top">
     <div class="wrap">
-      <a class="brand" href="#top">Yuri</a>
+      <a class="brand" href="#top">Yuri Dacuba</a>
       <nav>
-        <a href="#about">About</a>
+        <a class="hide-sm" href="#about">About</a>
         <a href="#projects">Projects</a>
-        <a href="#skills">Skills</a>
+        <a class="hide-sm" href="#skills">Skills</a>
+        <a href="#credentials">Credentials</a>
         <a href="#contact">Contact</a>
         <button class="theme-btn" id="theme" type="button" aria-label="Toggle colour theme">Theme</button>
       </nav>
@@ -139,17 +199,55 @@
   <main id="top">
 
     <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="portrait" aria-hidden="false">
+          <span aria-hidden="true">YD</span>
+          <img src="img/yuri.png" alt="Portrait of Yuri Gabriel Dacuba" width="433" height="577"
+               onerror="this.style.display='none'" />
+        </div>
+        <div>
+          <p class="badge">Open for OJT · from November 20, 2026</p>
+          <h1>Yuri Gabriel Dacuba</h1>
+          <p class="role">4th-year BSIT student · National University – Dasmariñas · Imus, Cavite</p>
+          <p class="lead">
+            I build full-stack web and mobile apps: React and TypeScript on the front,
+            Node.js and PostgreSQL behind them, Flutter on Android. I'm looking for a
+            400-hour IT internship where I can ship real features and help keep them bug-free.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="#projects">See my work</a>
+            <a class="btn ghost" href="mailto:yuridacuba307@gmail.com">Email me</a>
+            <!-- To add a resume button: put resume.pdf in this folder, then uncomment.
+            <a class="btn ghost" href="resume.pdf" target="_blank" rel="noopener">Resume (PDF)</a> -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ojt">
       <div class="wrap">
-        <p class="eyebrow">Software developer</p>
-        <h1>Hi, I'm Yuri. I build real-time web and mobile products.</h1>
-        <p class="lead">
-          I design and ship full-stack applications: a React website, an Express API,
-          a Supabase database with live updates, and a Flutter Android app. My recent
-          work is a university sports platform used by students, coaches and organizers.
-        </p>
-        <div class="cta">
-          <a class="btn primary" href="#projects">See my work</a>
-          <a class="btn ghost" href="#contact">Get in touch</a>
+        <p class="eyebrow">Internship details</p>
+        <h2>What I'm looking for</h2>
+        <div class="facts">
+          <div class="card fact"><div class="num">400 hrs</div><div class="label">Required OJT hours</div></div>
+          <div class="card fact"><div class="num">Nov 20, 2026</div><div class="label">Available to start</div></div>
+          <div class="card fact"><div class="num">Flexible</div><div class="label">On-site (Cavite or Metro Manila), hybrid or work from home</div></div>
+          <div class="card fact"><div class="num">Ready</div><div class="label">MOA and recommendation letter from NU Dasmariñas</div></div>
+        </div>
+        <div class="card">
+          <h3>Roles I'm aiming for</h3>
+          <ul class="tags">
+            <li class="top">Applications Software Developer</li>
+            <li class="top">Web Developer</li>
+            <li class="top">Web Designer</li>
+            <li class="top">Quality Assurance Specialist</li>
+            <li>Software Engineer</li>
+            <li>Computer Programmer</li>
+            <li>Database Administrator</li>
+            <li>Data / Systems Analyst</li>
+            <li>Technical Support</li>
+            <li>Web Administrator</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -159,14 +257,16 @@
         <p class="eyebrow">About</p>
         <h2>How I work</h2>
         <p>
-          I'm a student developer at NU Dasmariñas. I like software that people
-          actually use under pressure, such as live scoring during a game or role-based
-          access that has to get it right. I care about clear data models, honest
-          error handling, and interfaces that stay consistent from screen to screen.
+          I'm a 4th-year Bachelor of Science in Information Technology student at
+          National University – Dasmariñas. I enjoy software that people use under
+          pressure, like live scoring during a game or role-based access that has to be
+          right. I care about clear data models, honest error handling and interfaces
+          that stay consistent from screen to screen.
         </p>
         <p class="muted">
-          <!-- Replace with a sentence or two about your studies, interests, or what you are looking for. -->
-          Currently open to internships and junior developer roles.
+          Outside of code, I've worked on a factory floor, where I learned to follow
+          procedures, hit daily targets and catch defects before they leave the line.
+          I bring the same habits to testing software.
         </p>
       </div>
     </section>
@@ -190,6 +290,34 @@
               an Android app. Covers rosters, schedules, live scoring, brackets, rankings
               and insights.
             </p>
+
+            <div class="shots">
+              <figure class="wide">
+                <a href="img/usports-web-hub.jpg" target="_blank" rel="noopener">
+                  <img src="img/usports-web-hub.jpg" alt="U-Sports web home page showing the live sports hub" loading="lazy" />
+                </a>
+                <figcaption>Web: the public hub</figcaption>
+              </figure>
+              <figure class="wide">
+                <a href="img/usports-web-rankings.jpg" target="_blank" rel="noopener">
+                  <img src="img/usports-web-rankings.jpg" alt="U-Sports web rankings page with player statistics" loading="lazy" />
+                </a>
+                <figcaption>Web: rankings and leaderboards</figcaption>
+              </figure>
+              <figure class="tall">
+                <a href="img/usports-app-live.webp" target="_blank" rel="noopener">
+                  <img src="img/usports-app-live.webp" alt="U-Sports Android app showing live matches" loading="lazy" />
+                </a>
+                <figcaption>Android: live now</figcaption>
+              </figure>
+              <figure class="tall">
+                <a href="img/usports-app-rankings.webp" target="_blank" rel="noopener">
+                  <img src="img/usports-app-rankings.webp" alt="U-Sports Android app showing player rankings" loading="lazy" />
+                </a>
+                <figcaption>Android: rankings</figcaption>
+              </figure>
+            </div>
+
             <ul class="points">
               <li>Live scoring with Supabase Realtime, undo, and a lock so two scorekeepers cannot collide. Includes a full-screen jumbotron view for projection.</li>
               <li>Single elimination, double elimination and round-robin brackets, with seeding and byes.</li>
@@ -197,46 +325,112 @@
               <li>Exports to CSV, Excel and PDF, and a privacy flow covering data download and account deletion (Data Privacy Act, RA 10173).</li>
             </ul>
             <ul class="tags">
-              <li>React 19</li><li>TypeScript</li><li>Vite</li><li>Express</li>
-              <li>Supabase (PostgreSQL, Auth, Realtime)</li><li>Flutter</li><li>Vercel</li>
+              <li>React 19</li><li>TypeScript</li><li>Vite</li><li>Tailwind CSS v4</li><li>Express</li>
+              <li>Supabase (PostgreSQL, Auth, Storage, Realtime)</li><li>Flutter</li><li>Vercel</li><li>Render</li>
             </ul>
           </article>
 
-          <!-- Add more project cards by copying the block above. -->
+          <!-- Add more project cards by copying the block above. For example, IT-eatery:
+          <article class="card project">
+            <div class="project-head"><h3>IT-eatery</h3></div>
+            <p class="muted">One or two sentences: what it does and who it is for.</p>
+            <ul class="tags"><li>Add the tech used</li></ul>
+          </article>
+          -->
 
         </div>
       </div>
     </section>
 
-    <section id="skills" class="skills">
+    <section id="skills">
       <div class="wrap">
         <p class="eyebrow">Skills</p>
         <h2>What I work with</h2>
         <div class="grid">
           <div class="card">
-            <h3>Frontend</h3>
-            <ul>
-              <li>React, TypeScript, Vite</li>
-              <li>Tailwind CSS, Zustand, React Router</li>
-              <li>Flutter and Dart (Riverpod, go_router)</li>
+            <h3>Languages</h3>
+            <ul class="plain">
+              <li>TypeScript, JavaScript</li>
+              <li>Dart (Flutter)</li>
+              <li>SQL and PL/pgSQL</li>
+              <li>HTML5, CSS3, Java, C++</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Backend and data</h3>
-            <ul>
+            <h3>Web and backend</h3>
+            <ul class="plain">
+              <li>React 19, Vite, React Router v7</li>
+              <li>Tailwind CSS v4, Zustand, Recharts</li>
               <li>Node.js, Express</li>
-              <li>PostgreSQL, Supabase (Auth, Storage, Realtime)</li>
-              <li>SQL migrations, row-level security</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Practices</h3>
-            <ul>
-              <li>Git and GitHub, CI workflows</li>
-              <li>Vitest, cross-checking shared rules across apps</li>
-              <li>Writing technical documentation and test plans</li>
+            <h3>Mobile, data and deploy</h3>
+            <ul class="plain">
+              <li>Flutter (Riverpod, go_router)</li>
+              <li>Supabase: PostgreSQL, Auth, Storage, Realtime</li>
+              <li>Resend SMTP, Vercel, Render</li>
+              <li>Git and GitHub</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="credentials">
+      <div class="wrap">
+        <p class="eyebrow">Credentials and experience</p>
+        <h2>Certification and work history</h2>
+        <div class="grid">
+
+          <article class="card">
+            <h3>IT Specialist: Databases</h3>
+            <p class="muted">Certiport · Pearson VUE · awarded September 24, 2025</p>
+            <a href="img/its-databases-cert.png" target="_blank" rel="noopener">
+              <img class="cert-img" src="img/its-databases-cert.png"
+                   alt="Certiport Information Technology Specialist certificate in Databases awarded to Yuri Gabriel Dacuba"
+                   loading="lazy" />
+            </a>
+            <div class="score">
+              <span class="big">825</span>
+              <span class="muted">out of 1000 · 700 required to pass</span>
+            </div>
+            <ul class="bars">
+              <li><div class="row"><span>Database design</span><span>87%</span></div><div class="bar"><span style="width:87%"></span></div></li>
+              <li><div class="row"><span>Database object management</span><span>88%</span></div><div class="bar"><span style="width:88%"></span></div></li>
+              <li><div class="row"><span>Data retrieval</span><span>68%</span></div><div class="bar"><span style="width:68%"></span></div></li>
+              <li><div class="row"><span>Data manipulation</span><span>67%</span></div><div class="bar"><span style="width:67%"></span></div></li>
+              <li><div class="row"><span>Troubleshooting</span><span>100%</span></div><div class="bar"><span style="width:100%"></span></div></li>
+            </ul>
+            <p class="muted" style="margin-top:14px;font-size:.9rem">
+              Verify at <a href="https://verify.certiport.com" target="_blank" rel="noopener">verify.certiport.com</a>
+              with code <strong>wnn5N-48e2</strong>.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3>Sy On Inc.</h3>
+            <p class="muted">Production staff (temporary) · garment steam ironing</p>
+            <ul class="points">
+              <li>Inspected finished pieces by eye and caught defects before they moved on.</li>
+              <li>Followed standard operating procedures on a fast-moving factory line.</li>
+              <li>Met daily output targets while keeping quality consistent.</li>
+            </ul>
+            <p class="muted" style="margin-top:14px;font-size:.9rem">
+              Not an IT role, but the same habits I use for QA: check carefully, follow
+              the process, and finish on time.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3>Education</h3>
+            <p class="muted">National University – Dasmariñas</p>
+            <ul class="points">
+              <li>Bachelor of Science in Information Technology, 4th year.</li>
+              <li>Internship (OJT) requirement: 400 hours.</li>
+            </ul>
+          </article>
+
         </div>
       </div>
     </section>
@@ -246,12 +440,14 @@
         <p class="eyebrow">Contact</p>
         <h2>Let's talk</h2>
         <p>
-          The fastest way to reach me is email. You can also find my code on GitHub.
+          Open to internship offers and interviews. The fastest way to reach me is email.
+          I'm based in Imus, Cavite, and I can send my resume and cover letter right away.
         </p>
         <div class="cta">
-          <!-- Replace with your real email address. -->
-          <a class="btn primary" href="mailto:dacubayc@students.nu-dasma.edu.ph">Email me</a>
+          <a class="btn primary" href="mailto:yuridacuba307@gmail.com">Email me</a>
           <a class="btn ghost" href="https://github.com/Yuri-37" target="_blank" rel="noopener">GitHub</a>
+          <!-- Add your LinkedIn: replace the URL below and uncomment.
+          <a class="btn ghost" href="https://www.linkedin.com/in/your-profile" target="_blank" rel="noopener">LinkedIn</a> -->
         </div>
       </div>
     </section>
@@ -259,7 +455,7 @@
   </main>
 
   <footer>
-    <div class="wrap">© <span id="year"></span> Yuri. Built with plain HTML and CSS.</div>
+    <div class="wrap">© <span id="year"></span> Yuri Gabriel Dacuba. Built with plain HTML and CSS.</div>
   </footer>
 
   <script>
