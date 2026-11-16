@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router'
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router'
 import { Trophy, Calendar, LogIn, Globe, LayoutDashboard, MapPin, Smartphone } from 'lucide-react'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -46,11 +46,15 @@ export default function GuestLayout() {
           {/* Two separate zones, never merged: the product on the left, the
               school after a divider. One line each -- no tagline, no stacked
               sub-row -- so neither logo is shrunk to a speck. */}
-          <div className="flex items-center gap-2 min-w-0 shrink">
+          <Link
+            to="/guest"
+            aria-label="U-Sports public hub"
+            className="flex items-center gap-2 min-w-0 shrink rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--school-primary)]"
+          >
             <UsportsMark size={30} />
             {/* On the very narrowest phones (320px) the mark alone has to do. */}
             <SportsWordmark shrink height={14} className="hidden min-[360px]:inline text-[var(--text-primary)]" />
-          </div>
+          </Link>
           {institution?.logo_url || institution?.name ? (
             // Below ~430px the crest zone, the Dashboard label, the bell and the
             // account menu cannot all fit, and the right-hand group (which never

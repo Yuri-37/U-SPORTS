@@ -7,21 +7,21 @@
     </tr>
     <tr>
       <td style="padding:32px;">
-        <h1 style="margin:0 0 12px;font-size:20px;color:#12161F;">Set your password</h1>
+        <h1 style="margin:0 0 12px;font-size:20px;color:#12161F;">{{ if .Data.password_pending }}Set your password{{ else }}Reset your password{{ end }}</h1>
         <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3E4557;">
-          Use the button below to choose a password for your U-Sports account.
+          {{ if .Data.password_pending }}Your U-Sports account is ready. Use the button below to choose your password.{{ else }}Use the button below to choose a new password for your U-Sports account.{{ end }}
         </p>
         <table role="presentation" style="margin:0 auto;">
           <tr>
             <td style="border-radius:8px;background-color:#002D62;">
-              <a href="{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">
-                Reset password
+              <a href="{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery{{ if .Data.password_pending }}&mode=set{{ end }}" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">
+                {{ if .Data.password_pending }}Set password{{ else }}Reset password{{ end }}
               </a>
             </td>
           </tr>
         </table>
         <p style="margin:24px 0 0;font-size:12.5px;color:#666E85;">
-          If you didn't request this, you can safely ignore this email — your password won't change.
+          {{ if .Data.password_pending }}If you weren't expecting this, you can safely ignore this email.{{ else }}If you didn't request this, you can safely ignore this email — your password won't change.{{ end }}
         </p>
       </td>
     </tr>

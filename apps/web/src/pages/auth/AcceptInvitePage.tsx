@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Lock, Eye, EyeOff, KeyRound } from 'lucide-react'
 import { Button, Input, Alert, PasswordStrengthMeter } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
+import api from '../../lib/api'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
 import { passwordZ } from '../../lib/validation/forms'
@@ -113,6 +114,9 @@ export default function AcceptInvitePage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) throw new Error(updateError.message)
+      // They chose this password themselves, so the "Update your password" reminder must stop.
+      // Best effort: failing to record it must not undo a successful change.
+      await api.post('/auth/password-set', undefined, { silentError: true }).catch(() => {})
       // The invite session is transient — sign out and send them to a normal
       // login with the new password, same reasoning as ResetPasswordPage.
       await supabase.auth.signOut()

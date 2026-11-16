@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/env.dart';
@@ -101,11 +102,17 @@ class ApiClient {
   /// used for avatar upload (see POST /profile/avatar). `http.MultipartRequest`
   /// sets its own Content-Type with the correct boundary, so none is passed
   /// here (matching the web client, which deletes the header for FormData).
-  Future<dynamic> postMultipart(String path, {required String filePath, required String fieldName}) async {
+  /// [contentType] (e.g. 'image/jpeg') names the file's type; without it the part goes
+  /// out as application/octet-stream, which the API's image uploads used to refuse.
+  Future<dynamic> postMultipart(String path, {required String filePath, required String fieldName, String? contentType}) async {
     final token = await _bearer();
     final request = http.MultipartRequest('POST', _uri(path));
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+    request.files.add(await http.MultipartFile.fromPath(
+      fieldName,
+      filePath,
+      contentType: contentType == null ? null : MediaType.parse(contentType),
+    ));
     final streamed = await request.send().timeout(_uploadTimeout);
     final res = await http.Response.fromStream(streamed).timeout(_uploadTimeout);
     _throwIfError(res);

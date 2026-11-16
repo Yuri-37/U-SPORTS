@@ -21,6 +21,7 @@ const QUIET_PATHS = [
   '/notifications',
   '/profile/tour-completion',
   '/auth/accept-privacy-notice',
+  '/auth/password-set',
 ]
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'

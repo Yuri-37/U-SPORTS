@@ -166,7 +166,7 @@ class _RosterList extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: LayoutTokens.mutedText(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(label, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Theme.of(context).colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 6),
             ...players.map((p) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),

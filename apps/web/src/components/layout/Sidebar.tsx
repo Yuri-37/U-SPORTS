@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router'
+import { Link, NavLink, useLocation } from 'react-router'
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useInstitutionStore } from '../../stores/institutionStore'
@@ -106,12 +106,17 @@ export default function Sidebar() {
       <div
         className={cn('flex items-center gap-2.5 pb-4 pt-5', collapsed ? 'flex-col px-2' : 'px-5')}
       >
-        <UsportsMark size={32} />
+        <Link to="/guest" aria-label="U-Sports public hub" title="Public hub" className="shrink-0 rounded-md">
+          <UsportsMark size={32} />
+        </Link>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <span className="block truncate text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
+            <Link
+              to="/guest"
+              className="block truncate text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)]"
+            >
               U-Sports
-            </span>
+            </Link>
             {/* The school's own mark, smaller, under the product name. */}
             <span className="flex min-w-0 items-center gap-1.5">
               {institution?.logo_url ? (

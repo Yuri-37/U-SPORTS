@@ -35,6 +35,14 @@ class AvatarUploadButton extends ConsumerStatefulWidget {
 class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
   bool _busy = false;
 
+  /// The picked photo's type from its file name; image_picker re-encodes to JPEG when it resizes.
+  static String _imageType(String path) {
+    final p = path.toLowerCase();
+    if (p.endsWith('.png')) return 'image/png';
+    if (p.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
   Future<void> _pickAndUpload(ImageSource source) async {
     final picker = ImagePicker();
     final XFile? picked = await picker.pickImage(source: source, maxWidth: 1024, imageQuality: 85);
@@ -46,6 +54,7 @@ class _AvatarUploadButtonState extends ConsumerState<AvatarUploadButton> {
             '/profile/avatar',
             filePath: picked.path,
             fieldName: 'file',
+            contentType: _imageType(picked.path),
           );
       ref.invalidate(profileProvider);
       if (mounted) showSuccess(context, 'Profile photo updated');

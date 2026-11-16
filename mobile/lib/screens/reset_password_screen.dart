@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/feedback.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/api_service.dart';
 import '../theme/layout_tokens.dart';
 import '../utils/error_helpers.dart';
 import '../utils/password_validation.dart';
@@ -12,13 +14,13 @@ import '../widgets/ui/brand_page.dart';
 /// — main.dart's link listener already calls getSessionFromUrl and establishes
 /// the recovery session before navigating here, so by the time this screen
 /// mounts there's either a valid session or the link was invalid/expired.
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _showPassword = false;
@@ -51,6 +53,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       await Supabase.instance.client.auth
           .updateUser(UserAttributes(password: password));
+      // They chose this password themselves, so the "Update your password" reminder must stop.
+      // Best effort: failing to record it must not undo a successful change.
+      try {
+        await ref.read(apiClientProvider).postJson('/auth/password-set');
+      } catch (_) {}
       if (!mounted) return;
       // The recovery session is transient — sign out and send them to a
       // normal login with the new password.

@@ -19,8 +19,11 @@ Future<T?> showAppSheet<T>({
       context: context,
       isScrollControlled: isScrollControlled,
       builder: (ctx) => Padding(
-        // Only the part of the bottom inset not already taken by the keyboard.
-        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(ctx).bottom),
+        // The phone's own bottom bar (3-button navigation or gesture strip), read from the
+        // window itself. MediaQuery.of(ctx) cannot be used: inside the app shell it also
+        // carries the floating navigation bar's reserved height, which left a large empty
+        // band under the sheet. padding.bottom is already zero while the keyboard is up.
+        padding: EdgeInsets.only(bottom: MediaQueryData.fromView(View.of(ctx)).padding.bottom),
         // The space is added here, so a sheet's own SafeArea must not add it again.
         child: MediaQuery.removePadding(context: ctx, removeBottom: true, child: builder(ctx)),
       ),

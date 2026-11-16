@@ -42,7 +42,7 @@ export default function PublicRosterStats({ sport, playerStats, nameA, nameB, sh
     // viewer reading the roster just wants to know who is on the team.
     const renderSide = (name: string, players: PlayerStat[]) => (
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 truncate">
+        <p className="text-sm font-bold text-[var(--text-primary)] mb-2 truncate">
           {name}
         </p>
         <ul className="space-y-1">
@@ -96,7 +96,7 @@ export default function PublicRosterStats({ sport, playerStats, nameA, nameB, sh
               return (
                 <tr key={ps.athlete_id} className="border-t border-[var(--border-subtle)]">
                   <td className="py-2 pr-3 w-36 min-w-36 max-w-36 shrink-0 align-top text-[var(--text-secondary)] sticky left-0 z-[1] bg-[var(--surface-card)] shadow-[1px_0_0_var(--border-subtle)]">
-                    <span className="line-clamp-2 break-words text-xs sm:text-sm" title={teamLabel}>
+                    <span className="line-clamp-2 break-words text-xs sm:text-sm font-semibold" title={teamLabel}>
                       {teamLabel}
                     </span>
                   </td>

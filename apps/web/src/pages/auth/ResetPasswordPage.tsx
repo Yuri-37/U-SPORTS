@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Lock, Eye, EyeOff, KeyRound } from 'lucide-react'
 import { Button, Input, Alert, PasswordStrengthMeter } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
+import api from '../../lib/api'
 import { useInstitutionStore } from '../../stores/institutionStore'
 import { friendlyAuthError } from '../../lib/utils'
 import { passwordZ } from '../../lib/validation/forms'
@@ -22,6 +23,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  // New accounts arrive with &mode=set in the link: they are choosing a first password, not resetting one.
+  const [firstPassword] = useState(() => new URLSearchParams(window.location.search).get('mode') === 'set')
 
   useEffect(() => {
     let active = true
@@ -120,6 +123,9 @@ export default function ResetPasswordPage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) throw new Error(updateError.message)
+      // They chose this password themselves, so the "Update your password" reminder must stop.
+      // Best effort: failing to record it must not undo a successful change.
+      await api.post('/auth/password-set', undefined, { silentError: true }).catch(() => {})
       // The recovery session is transient — sign out and send them to a
       // normal login with the new password, rather than trying to route a
       // recovery session into role-specific post-login paths.
@@ -186,9 +192,9 @@ export default function ResetPasswordPage() {
           </Alert>
         ) : (
           <>
-            <h2 className="text-2xl font-bold mb-1">Set a new password</h2>
+            <h2 className="text-2xl font-bold mb-1">{firstPassword ? 'Set your password' : 'Set a new password'}</h2>
             <p className="text-[var(--text-muted)] text-sm mb-6">
-              Choose a new password for your account.
+              {firstPassword ? 'Choose a password for your account.' : 'Choose a new password for your account.'}
             </p>
 
             {error && (
@@ -239,7 +245,7 @@ export default function ResetPasswordPage() {
                 loading={loading}
                 icon={<KeyRound className="w-4 h-4" />}
               >
-                Update password
+                {firstPassword ? 'Set password' : 'Update password'}
               </Button>
             </form>
           </>

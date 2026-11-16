@@ -25,6 +25,7 @@ import {
 import PageHeader from '../../components/layout/PageHeader'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
+import api from '../../lib/api'
 import { getSportLabel, formatEnumLabel, formatDateTime } from '../../lib/utils'
 import SportIcon, { SportTag } from '../../components/ui/SportIcon'
 import { fetchParticipantLabels } from '../../lib/participantLabels'
@@ -291,6 +292,18 @@ export default function AthleteDashboard() {
   const [statDrilldown, setStatDrilldown] = useState<StatDrilldown | null>(null)
   const [gameDetailMatchId, setGameDetailMatchId] = useState<string | null>(null)
   const [showPasswordNudge, setShowPasswordNudge] = useState(false)
+  const fetchProfile = useAuthStore((st) => st.fetchProfile)
+  // For people who already chose their own password through the emailed link before that was
+  // recorded: one tap stops the reminder for good.
+  const markPasswordSet = async () => {
+    setShowPasswordNudge(false)
+    try {
+      await api.post('/auth/password-set', undefined, { silentError: true })
+      if (profile?.id) await fetchProfile(profile.id)
+    } catch {
+      /* the reminder simply shows again next session */
+    }
+  }
 
   // password_changed_at is null until the athlete has ever used self-service
   // change-password (POST /api/auth/change-password) — the closest reliable
@@ -1899,6 +1912,9 @@ export default function AthleteDashboard() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowPasswordNudge(false)}>
               Later
+            </Button>
+            <Button variant="secondary" onClick={markPasswordSet}>
+              I already set my own
             </Button>
             <Button
               onClick={() => {

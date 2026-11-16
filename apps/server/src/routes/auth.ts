@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { passwordZ } from '../utils/passwordSchema'
+import { clearPasswordPending } from '../utils/accountEmail'
 
 const router = createRouter()
 
@@ -77,6 +78,7 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
   if (stampError)
     console.warn('[change-password] failed to stamp password_changed_at:', stampError.message)
 
+  await clearPasswordPending(userId)
   await writeAuditLog({
     actorId: userId,
     action: 'password_changed',
@@ -84,6 +86,29 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
     entityId: userId,
   })
 
+  res.json({ success: true, passwordChangedAt: now })
+})
+
+// Called by the set/reset-password pages right after the person chose a password
+// through the emailed link. That path talks to Supabase directly, so without this
+// profiles.password_changed_at stayed null and the "Update your password" nudge
+// kept coming back for someone who had just set one. No cooldown applies: it only
+// records that a password the person chose is now in place.
+router.post('/password-set', requireAuth, async (req: AuthRequest, res) => {
+  const userId = req.user!.id
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ password_changed_at: now })
+    .eq('id', userId)
+  if (error) return res.status(500).json({ error: error.message })
+  await clearPasswordPending(userId)
+  await writeAuditLog({
+    actorId: userId,
+    action: 'password_set_via_link',
+    entityType: 'profile',
+    entityId: userId,
+  })
   res.json({ success: true, passwordChangedAt: now })
 })
 

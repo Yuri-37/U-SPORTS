@@ -53,7 +53,7 @@ enable_signup = true
 # run `supabase config push` to publish it -- that would push every value in this
 # file, including the localhost Site URL above, to production.)
 [auth.email.template.recovery]
-subject = "Set your U-Sports password"
+subject = "Your U-Sports password link"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email]

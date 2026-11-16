@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect } from 'react'
-import { Outlet, ScrollRestoration, useNavigate, useLocation } from 'react-router'
+import { Outlet, useNavigate, useLocation } from 'react-router'
+import ScrollMemory from './components/layout/ScrollMemory'
 import { useAuth } from './hooks/useAuth'
 import { useInstitutionStore } from './stores/institutionStore'
 import { useNotificationStore } from './stores/notificationStore'
@@ -134,8 +135,8 @@ export default function App() {
           tour step that navigates would otherwise unmount mid-step into the
           Suspense fallback. */}
       <TourOverlay />
-      {/* Every page opens at the top; Back returns to where you were. */}
-      <ScrollRestoration />
+      {/* Every page opens at the top; Back returns to where you were, once the page has loaded. */}
+      <ScrollMemory />
     </>
   )
 }

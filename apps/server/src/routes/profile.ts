@@ -3,7 +3,7 @@ import multer from 'multer'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, uploadAvatarBuffer, deleteAvatar } from '../utils/avatarStorage'
+import { AVATAR_ALLOWED_MIMES, AVATAR_MAX_BYTES, sniffImageMime, uploadAvatarBuffer, deleteAvatar } from '../utils/avatarStorage'
 import supabase from '../utils/supabase'
 import { writeAuditLog } from '../utils/writeAuditLog'
 import { describeCaughtError } from '../utils/describeCaughtError'
@@ -15,7 +15,9 @@ const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: AVATAR_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
-    if (AVATAR_ALLOWED_MIMES.has(file.mimetype)) cb(null, true)
+    // application/octet-stream is what the mobile app's multipart upload sends when it
+    // cannot name the type; the real type is checked from the bytes in the handler.
+    if (AVATAR_ALLOWED_MIMES.has(file.mimetype) || file.mimetype === 'application/octet-stream') cb(null, true)
     else cb(new Error('Only JPEG, PNG, or WebP images are allowed'))
   },
 })
@@ -40,10 +42,13 @@ router.post(
       const file = req.file
       if (!file?.buffer) return res.status(400).json({ error: 'No file uploaded' })
 
+      const mimetype = sniffImageMime(file.buffer)
+      if (!mimetype) return res.status(400).json({ error: 'Only JPEG, PNG, or WebP images are allowed' })
+
       const { publicUrl } = await uploadAvatarBuffer({
         profileId: req.user!.id,
         buffer: file.buffer,
-        mimetype: file.mimetype,
+        mimetype,
       })
 
       const { error } = await supabase

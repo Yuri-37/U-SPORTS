@@ -52,6 +52,23 @@ function describeMailError(raw: string): string {
 }
 
 /**
+ * Marks an account as "has not chosen its own password yet" in its auth
+ * metadata. The email template reads it ({{ .Data.password_pending }}) to say
+ * "Set password" for a new account and "Reset password" for a real reset --
+ * both travel through Supabase's one recovery email, which is why the wording
+ * could not differ before. Cleared when the person chooses a password.
+ */
+export const PASSWORD_PENDING_KEY = 'password_pending'
+
+export async function clearPasswordPending(userId: string): Promise<void> {
+  try {
+    await supabase.auth.admin.updateUserById(userId, { user_metadata: { [PASSWORD_PENDING_KEY]: false } })
+  } catch {
+    // Wording only: never fail a password change over it.
+  }
+}
+
+/**
  * Sends the "set your own password" link to a freshly created account.
  *
  * Uses the recovery email -- the one flow already proven to reach inboxes
@@ -102,7 +119,7 @@ export async function createStaffAuthUser(params: {
     password,
     email_confirm: true,
     app_metadata: { role },
-    user_metadata: { full_name: fullName, department },
+    user_metadata: { full_name: fullName, department, [PASSWORD_PENDING_KEY]: true },
   })
   if (error || !data?.user?.id) {
     throw new Error(error?.message ?? 'Could not create staff account')
@@ -144,6 +161,7 @@ export async function createAthleteAuthUser(params: {
       department,
       course,
       year_level: yearLevel,
+      [PASSWORD_PENDING_KEY]: true,
     },
   })
   if (error || !data?.user?.id) {

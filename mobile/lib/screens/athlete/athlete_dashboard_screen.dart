@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/layout_tokens.dart';
 import '../../utils/event_placements.dart';
@@ -137,6 +138,17 @@ class _AthleteDashboardBodyState extends ConsumerState<_AthleteDashboardBody> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Later')),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              // Already chose their own password through the emailed link: stop the reminder for good.
+              try {
+                await ref.read(apiClientProvider).postJson('/auth/password-set');
+                ref.invalidate(profileProvider);
+              } catch (_) {}
+            },
+            child: const Text('I already set my own'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.of(ctx).pop();
