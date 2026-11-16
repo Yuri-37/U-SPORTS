@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Yuri · Portfolio</title>
+  <meta name="description" content="Portfolio of Yuri: web and mobile software, including the U-Sports university sports platform." />
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --text: #15161a;
+      --muted: #5d6170;
+      --line: #e3e4e8;
+      --accent: #1f5eff;
+      --accent-ink: #ffffff;
+      --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0e0f13;
+        --surface: #17181e;
+        --text: #f1f2f5;
+        --muted: #9ea3b3;
+        --line: #272a33;
+        --accent: #6d93ff;
+        --accent-ink: #0b0c10;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0e0f13;
+      --surface: #17181e;
+      --text: #f1f2f5;
+      --muted: #9ea3b3;
+      --line: #272a33;
+      --accent: #6d93ff;
+      --accent-ink: #0b0c10;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+    section { padding: 64px 0; border-top: 1px solid var(--line); }
+    h1, h2, h3 { line-height: 1.2; margin: 0 0 12px; }
+    h2 { font-size: 1.6rem; }
+    h3 { font-size: 1.15rem; }
+    p { margin: 0 0 14px; }
+    .muted { color: var(--muted); }
+    .eyebrow {
+      text-transform: uppercase; letter-spacing: .12em; font-size: .75rem;
+      color: var(--accent); font-weight: 700; margin-bottom: 8px;
+    }
+
+    /* Top bar */
+    header.top {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    header.top .wrap {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px; gap: 12px;
+    }
+    .brand { font-weight: 800; text-decoration: none; color: var(--text); }
+    nav a {
+      color: var(--muted); text-decoration: none; margin-left: 18px;
+      font-size: .95rem;
+    }
+    nav a:hover { color: var(--text); }
+    .theme-btn {
+      background: none; border: 1px solid var(--line); color: var(--text);
+      border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: .85rem;
+    }
+
+    /* Hero */
+    .hero { padding: 96px 0 72px; border-top: none; }
+    .hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); letter-spacing: -.02em; }
+    .hero .lead { font-size: 1.15rem; color: var(--muted); max-width: 640px; }
+    .cta { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 11px 20px; border-radius: 999px;
+      text-decoration: none; font-weight: 600; border: 1px solid var(--accent);
+    }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); }
+    .btn.ghost { color: var(--accent); }
+
+    /* Cards */
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .card {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+    .tags li {
+      font-size: .8rem; padding: 3px 10px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--muted);
+    }
+    ul.points { padding-left: 20px; margin: 0 0 8px; }
+    ul.points li { margin-bottom: 6px; color: var(--muted); }
+
+    .project { grid-column: 1 / -1; }
+    .project-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+    .project-links { display: flex; gap: 14px; flex-wrap: wrap; }
+
+    .skills .card h3 { margin-bottom: 8px; }
+    .skills ul { margin: 0; padding-left: 18px; color: var(--muted); }
+
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+
+    @media (max-width: 600px) {
+      nav a { margin-left: 12px; font-size: .88rem; }
+      .hero { padding: 64px 0 48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#top">Yuri</a>
+      <nav>
+        <a href="#about">About</a>
+        <a href="#projects">Projects</a>
+        <a href="#skills">Skills</a>
+        <a href="#contact">Contact</a>
+        <button class="theme-btn" id="theme" type="button" aria-label="Toggle colour theme">Theme</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Software developer</p>
+        <h1>Hi, I'm Yuri. I build real-time web and mobile products.</h1>
+        <p class="lead">
+          I design and ship full-stack applications: a React website, an Express API,
+          a Supabase database with live updates, and a Flutter Android app. My recent
+          work is a university sports platform used by students, coaches and organizers.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#projects">See my work</a>
+          <a class="btn ghost" href="#contact">Get in touch</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="wrap">
+        <p class="eyebrow">About</p>
+        <h2>How I work</h2>
+        <p>
+          I'm a student developer at NU Dasmariñas. I like software that people
+          actually use under pressure, such as live scoring during a game or role-based
+          access that has to get it right. I care about clear data models, honest
+          error handling, and interfaces that stay consistent from screen to screen.
+        </p>
+        <p class="muted">
+          <!-- Replace with a sentence or two about your studies, interests, or what you are looking for. -->
+          Currently open to internships and junior developer roles.
+        </p>
+      </div>
+    </section>
+
+    <section id="projects">
+      <div class="wrap">
+        <p class="eyebrow">Projects</p>
+        <h2>Selected work</h2>
+        <div class="grid">
+
+          <article class="card project">
+            <div class="project-head">
+              <h3>U-Sports: University Sports Management Platform</h3>
+              <div class="project-links">
+                <a href="https://usports.info" target="_blank" rel="noopener">Live site</a>
+                <a href="https://github.com/Yuri-37/U-SPORTS" target="_blank" rel="noopener">Source</a>
+              </div>
+            </div>
+            <p class="muted">
+              A real-time intramural sports platform for NU Dasmariñas, on the web and as
+              an Android app. Covers rosters, schedules, live scoring, brackets, rankings
+              and insights.
+            </p>
+            <ul class="points">
+              <li>Live scoring with Supabase Realtime, undo, and a lock so two scorekeepers cannot collide. Includes a full-screen jumbotron view for projection.</li>
+              <li>Single elimination, double elimination and round-robin brackets, with seeding and byes.</li>
+              <li>Role-based access for guests, athletes, coaches, organizers and super admins. The API enforces it, and the database rejects direct writes that bypass it.</li>
+              <li>Exports to CSV, Excel and PDF, and a privacy flow covering data download and account deletion (Data Privacy Act, RA 10173).</li>
+            </ul>
+            <ul class="tags">
+              <li>React 19</li><li>TypeScript</li><li>Vite</li><li>Express</li>
+              <li>Supabase (PostgreSQL, Auth, Realtime)</li><li>Flutter</li><li>Vercel</li>
+            </ul>
+          </article>
+
+          <!-- Add more project cards by copying the block above. -->
+
+        </div>
+      </div>
+    </section>
+
+    <section id="skills" class="skills">
+      <div class="wrap">
+        <p class="eyebrow">Skills</p>
+        <h2>What I work with</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Frontend</h3>
+            <ul>
+              <li>React, TypeScript, Vite</li>
+              <li>Tailwind CSS, Zustand, React Router</li>
+              <li>Flutter and Dart (Riverpod, go_router)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Backend and data</h3>
+            <ul>
+              <li>Node.js, Express</li>
+              <li>PostgreSQL, Supabase (Auth, Storage, Realtime)</li>
+              <li>SQL migrations, row-level security</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Practices</h3>
+            <ul>
+              <li>Git and GitHub, CI workflows</li>
+              <li>Vitest, cross-checking shared rules across apps</li>
+              <li>Writing technical documentation and test plans</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="wrap">
+        <p class="eyebrow">Contact</p>
+        <h2>Let's talk</h2>
+        <p>
+          The fastest way to reach me is email. You can also find my code on GitHub.
+        </p>
+        <div class="cta">
+          <!-- Replace with your real email address. -->
+          <a class="btn primary" href="mailto:dacubayc@students.nu-dasma.edu.ph">Email me</a>
+          <a class="btn ghost" href="https://github.com/Yuri-37" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">© <span id="year"></span> Yuri. Built with plain HTML and CSS.</div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Theme toggle: remembers the choice for this browser only.
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme');
+      var saved = null;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+      btn.addEventListener('click', function () {
+        var dark = root.getAttribute('data-theme') === 'dark' ||
+          (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var next = dark ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    })();
+  </script>
+</body>
+</html>
